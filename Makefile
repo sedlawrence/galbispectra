@@ -12,7 +12,7 @@ CC = gcc
 AR = ar rv
 
 # Optimization flags
-OPTFLAG = -O3
+OPTFLAG = -O3 -Wall
 
 # Debug flags
 CFLAGS += -g
@@ -106,6 +106,7 @@ BESSEL2 = bessel2.o
 TRANSFER2 = transfer2.o
 BISPECTRA = bispectra.o
 BISPECTRA2 = bispectra2.o
+GALBISPECTRA2 = galbispectra2.o
 SPECTRA2 = spectra2.o
 FISHER = fisher.o
 
@@ -119,7 +120,7 @@ default: class song print_params print_sources1 print_sources2 print_transfers1 
 
 # CLASS executables
 .PHONY: libclass.a class test_background test_thermodynamics test_perturbations test_transfer classy tar
-libclass.a class test_background test_thermodynamics test_perturbations test_transfer classy tar: 
+libclass.a class test_background test_thermodynamics test_perturbations test_transfer classy tar:
 	cd $(CLASS_DIR);\
 	export WITH_SONG1=1;\
 	export WITH_SONG2=1;\
@@ -140,7 +141,7 @@ PRINT_TAU_SONG = print_tau_song.o
 PRINT_K_SONG = print_k_song.o
 
 song: $(SONG_TOOLS) $(SOURCE_CLASS) $(INPUT2) $(PERTURBATIONS2)\
-	$(BESSEL2) $(TRANSFER2) $(BISPECTRA2) $(SPECTRA2) $(OUTPUT) $(SONG)
+	$(BESSEL2) $(TRANSFER2) $(BISPECTRA2) $(GALBISPECTRA2) $(SPECTRA2) $(OUTPUT) $(SONG)
 	$(CC) $(LDFLAGS) -o  $@ $(addprefix build/,$(notdir $^)) -lm
 
 print_params: $(SONG_TOOLS) $(SOURCE_CLASS) $(INPUT2) $(PRINT_PARAMS)
@@ -203,5 +204,3 @@ print_initial_conditions_song: $(SONG_TOOLS) $(SOURCE_CLASS) $(PERTURBATIONS2) \
 
 print_kernel: $(SONG_TOOLS) $(SOURCE_CLASS) $(PERTURBATIONS2) $(PRINT_KERNEL)
 	$(CC) $(LDFLAGS) -o  $@ $(addprefix build/,$(notdir $^)) -lm
-
-
