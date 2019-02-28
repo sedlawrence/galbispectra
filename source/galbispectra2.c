@@ -1887,6 +1887,7 @@ int galbispectra2_init (
   /* Integrate over our integrand w.r.t. k*/
 
   printf("ptr->l_size[ppt->index_md_scalar] = %d\n", ptr->l_size[ppt->index_md_scalars] );
+  printf("ppt->selection_num = %d\n", ppt->selection_num);
 
 
 
@@ -1895,7 +1896,7 @@ int galbispectra2_init (
     for (int index_tau_first = 0; index_tau_first < ppt->tau_size; index_tau_first++){
       for(int index_tau_second = 0; index_tau_second < ppt->tau_size; index_tau_second++){
         pgb2->Cl[index_l][index_tau_first][index_tau_second] = integral(pba, pbs, pgb2, ppt, ppt->index_qs_delta_cdm, index_tau_first, index_tau_second, index_l);
-        printf("Cl[index_l = %d][index_tau_first = %d][index_tau_second = %d] = %g\n",index_l, index_tau_first, index_tau_second, pgb2->Cl[index_l][index_tau_first][index_tau_second]);
+        //printf("Cl[index_l = %d][index_tau_first = %d][index_tau_second = %d] = %g\n",index_l, index_tau_first, index_tau_second, pgb2->Cl[index_l][index_tau_first][index_tau_second]);
         //printf("%g\n", integrand(pba,pbs,pgb2, ppt, index_type, index_tau_first, index_tau_second, index_k, index_l));
         //printf("integral(index_l = %d, index_tau_first = %d, index_tau_second = %d) = %g\n",index_l,index_tau_first, index_tau_second, integral(pba, pbs, pgb2, ppt, ppt->index_qs_delta_cdm, index_tau_first, index_tau_second, index_l));
 
@@ -1914,7 +1915,8 @@ int galbispectra2_init (
     for (index_tau_first = 0; index_tau_first < ppt->tau_size; index_tau_first++){
       for(index_tau_second = 0; index_tau_second < ppt->tau_size; index_tau_second++){
         pgb2->Cl_final[index_l][bin1][bin2] += pgb2->Cl[index_l][index_tau_first][index_tau_second] * w_trapz[index_tau_first] * w_trapz[index_tau_second]
-            * selection[bin1][index_tau_first] * selection[bin2][index_tau_second];
+            * selection[ppt->selection_num][index_tau_first] * selection[ppt->selection_num][index_tau_second];
+        printf("pgb2->Cl_final[index_l = %d][bin1 = %d][bin2 = %d] = %g\n", ppt->selection_num, ppt->selection_num, pgb2->Cl_final[index_l][bin1][bin2]);
       }
     }
   }
@@ -1956,10 +1958,10 @@ printf("We are here 21!\n");
   int l_max = 200;
 
 
-  for(index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]-1; index_l++){
+  for(index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++){
     for (index_tau_first = 0; index_tau_first < ppt->tau_size; index_tau_first++){
       for(index_tau_second = 0; index_tau_second < ppt->tau_size; index_tau_second++){
-        printf("Test dens-dens angular power spectrum C_(%f)(%f,) \n", ptr->l[index_l] , ppt->tau_sampling[index_tau_first], ppt->tau_sampling[index_tau_second],
+        printf("Test dens-dens angular power spectrum C_%d(%g)(%g) \n", ptr->l[index_l] , ppt->tau_sampling[index_tau_first], ppt->tau_sampling[index_tau_second],
           pgb2->Cl_final[index_l][index_tau_first][index_tau_second]);
       }
     }
