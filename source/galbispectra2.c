@@ -1452,7 +1452,7 @@ double integrand(
     class_call(bessel_at_x(pbs,	x1, index_l, &j1),pgb2->error_message, pbs->error_message);
     class_call(bessel_at_x(pbs, x2 , index_l, &j2), pgb2->error_message, pbs->error_message);
 
-    double result = pow(ppt->k[ppt->index_md_scalars][index_k],-4.) * 4. * _PI_ * pgb2->first_order_sources[ppt->index_tp_delta_m][index_tau_first][index_k]
+    double result = pow(ppt->k[ppt->index_md_scalars][index_k],-4.) * 4. * _PI_ * pgb2->first_order_sources[ppt->index_qs_delta_cdm][index_tau_first][index_k]
       * pgb2->first_order_sources[ppt->index_qs_delta_cdm][index_tau_second][index_k]
         * j1 * j2 ;
 
@@ -1474,6 +1474,7 @@ double integral(
   double tmp = 0.;
   int k_size = ppt->k_size[ppt->index_md_scalars];
 
+
   class_alloc(pgb2->w_trapz_k,
               k_size * sizeof(double),
               ppt->error_message);
@@ -1485,15 +1486,21 @@ double integral(
                                        pgb2->error_message,
                                        pgb2->error_message);
 
+                                       /*
+  for (int index_k; index_k < k_size; index_k++){
+    printf("pgb2->w_trapz_k[index_k] = %g\n", pgb2->w_trapz_k[index_k]);
+  }
+  */
   for(int index_k = 0; index_k < k_size; index_k++){
 
 /* Using area of trapezoid, we can sum a number of areas of trapezoids to approximate the integral */
 
-    tmp+=integrand(pba, pbs, pgb2, ppt, index_type, index_tau_first, index_tau_second, index_k, index_l) * pgb2->w_trapz_k[index_k];
+    tmp+=integrand(pba, pbs, pgb2, ppt, index_type, index_tau_first, index_tau_second, index_k, index_l)
+      * pgb2->w_trapz_k[index_k];
 
     }
   return tmp;
-}; //End of integral()
+} //End of integral()
 
 /*
   double angbispectrum(
@@ -1569,6 +1576,8 @@ int galbispectra2_init (
       int index_tau_second;
       int index_type;
       int index_md;
+      int bin_first;
+      int bin_second;
       double * j;
       double * pvecback;
       double tau0 = pba->conformal_age;
@@ -1745,6 +1754,7 @@ int galbispectra2_init (
 
   printf("We are here 12!\n");
   printf("here %p %p \n",ptr,ptr->l_size);
+
   /* Allocate array for Cl[index_l][index_tau_first][index_tau_second] */
   class_alloc(pgb2->Cl, ptr->l_size[ppt->index_md_scalars] * sizeof(double **), ppt->error_message);
   for(int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++){
@@ -1753,6 +1763,16 @@ int galbispectra2_init (
       class_alloc(pgb2->Cl[index_l][index_tau_first], ppt->tau_size * sizeof(double), ppt->error_message);
     }
   }
+
+  /* Allocate array for Cl_final[index_l][bin_first][bin_second] */
+  class_alloc(pgb2->Cl_final, ptr->l_size[ppt->index_md_scalars] * sizeof(double **), ppt->error_message);
+  for(int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++){
+    class_alloc(pgb2->Cl_final[index_l], ppt->selection_num * sizeof(double *), ppt->error_message);
+    for (int bin_first = 0; bin_first < ppt->selection_num; bin_first++) {
+      class_alloc(pgb2->Cl_final[index_l][bin_first], ppt->selection_num * sizeof(double), ppt->error_message);
+    }
+  }
+
   printf("We are here 13!\n");
 /*
   class_alloc(pgb2->index_tau_first,
@@ -1799,6 +1819,7 @@ int galbispectra2_init (
                pgb2->error_message,
                pgb2->error_message);
   }
+
   printf("We are here 15!\n");
   printf("ppt->tp_size[index_md] = %d\n", ppt->tp_size[index_md]);
 
@@ -1820,10 +1841,9 @@ int galbispectra2_init (
 
 
       }
-       printf("first_order_sources[%d][%d][%d] = %g\n",ppt->index_qs_delta_cdm, index_tau, index_k,
-       pgb2->first_order_sources[ppt->index_qs_delta_cdm][index_tau][10] 
-       //ppt->quadsources[ppt->index_md_scalars][ppt->index_ic_ad*ppt->qs_size[ppt->index_md_scalars]+ppt->index_qs_delta_cdm][index_tau * ppt->k_size[ppt->index_md_scalars] + 10]
-     );
+       /*printf("first_order_sources[%d][%d][%d] = %g , %g\n",ppt->index_qs_delta_cdm, index_tau, index_k,
+        pgb2->first_order_sources[ppt->index_qs_delta_cdm][index_tau][10]);*/
+
     }
   //}
 
@@ -1848,7 +1868,7 @@ int galbispectra2_init (
 
 
   /* Set the pointer pgb2->first_order_sources equal to ppt->sources array. */
-/*
+
   for (int index_type = 0; index_type < ppt->tp_size[index_md]; index_type++) {
     for (int index_tau = 0; index_tau < ppt->tau_size; index_tau++) {
       for (int index_k = 0; index_k < ppt->k_size[index_md]; index_k++) {
@@ -1857,7 +1877,8 @@ int galbispectra2_init (
 
 
       }
-    }*/
+    }
+  }
   printf("We are here 18!\n");
 
 
@@ -1865,18 +1886,24 @@ int galbispectra2_init (
 
   /* Integrate over our integrand w.r.t. k*/
 
+  printf("ptr->l_size[ppt->index_md_scalar] = %d\n", ptr->l_size[ppt->index_md_scalars] );
+
 
 
   /* Write the result of the angular power spectrum integral into an array */
-  for(int index_l =0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++){
+  for(int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++){
     for (int index_tau_first = 0; index_tau_first < ppt->tau_size; index_tau_first++){
       for(int index_tau_second = 0; index_tau_second < ppt->tau_size; index_tau_second++){
         pgb2->Cl[index_l][index_tau_first][index_tau_second] = integral(pba, pbs, pgb2, ppt, ppt->index_qs_delta_cdm, index_tau_first, index_tau_second, index_l);
+        printf("Cl[index_l = %d][index_tau_first = %d][index_tau_second = %d] = %g\n",index_l, index_tau_first, index_tau_second, pgb2->Cl[index_l][index_tau_first][index_tau_second]);
+        //printf("%g\n", integrand(pba,pbs,pgb2, ppt, index_type, index_tau_first, index_tau_second, index_k, index_l));
+        //printf("integral(index_l = %d, index_tau_first = %d, index_tau_second = %d) = %g\n",index_l,index_tau_first, index_tau_second, integral(pba, pbs, pgb2, ppt, ppt->index_qs_delta_cdm, index_tau_first, index_tau_second, index_l));
+
       }
     }
   }
     printf("We are here 19!\n");
-// NOTE: Do these bins need to be linked to the .ini file that lists the bins?
+// NOTE: Do these bins need to be linked to the .ini file that lists the bins? selection_num needs to be defined correctly (check it's not null).
 
   int  bin1 = 0;
   int  bin2 = 0;
