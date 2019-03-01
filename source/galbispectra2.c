@@ -1734,7 +1734,7 @@ int galbispectra2_init (
 
 
   /* Define an array of values of first order transfer functions:
-              pgb2->first_order_sources[index_tp][index_tau][index_k] */
+              pgb2->first_order_sources[index_type][index_tau][index_k] */
 
   class_alloc(pgb2->first_order_sources, ppt->qs_size[ppt->index_md_scalars] * sizeof(double **), ppt->error_message);
     for (int index_type = 0; index_type < ppt->qs_size[ppt->index_md_scalars]; index_type++) {
@@ -1888,6 +1888,8 @@ int galbispectra2_init (
 
   printf("ptr->l_size[ppt->index_md_scalar] = %d\n", ptr->l_size[ppt->index_md_scalars] );
   printf("ppt->selection_num = %d\n", ppt->selection_num);
+  printf("ppt->selection_mean[0] = %d\n", ppt->selection_mean[0]);
+  printf("ppt->selection_width[0] = %d\n", ppt->selection_width[0]);
 
 
 
@@ -1908,6 +1910,14 @@ int galbispectra2_init (
 
   int  bin1 = 0;
   int  bin2 = 0;
+
+
+   /*
+  for(int index_l = 0; index_l < 120; index_l++){
+  pgb2->Cl_final[index_l][ppt->selection_num][ppt->selection_num] += pgb2->Cl[index_l][50][50] * w_trapz[50] * w_trapz[50]
+      * selection[ppt->selection_num][50] * selection[ppt->selection_num][50];
+  }
+  */
 
   /* Integrate over the window function */
   for(int index_l =0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++){
