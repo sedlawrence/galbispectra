@@ -1801,23 +1801,27 @@ int galbispectra2_init (
   for(int index_tau = 0; index_tau < ppt->tau_size; index_tau++){
     tau0_minus_tau[index_tau] = pba->conformal_age-ppt->tau_sampling[index_tau];
   }
+  /* Declaration of temporary pointer */
+  double ** selection;
 
-  double** selection;
-
+  /* Allocation of first dimension selection[bin] */
   class_alloc(selection,
-              ppt->selection_num* sizeof(double*),
+              ppt->selection_num * sizeof(double*),
               ppt->error_message);
 
   printf("ppt->selection_num = %d\n",ppt->selection_num);
 
+  /* Allocation of second dimension selection[bin][index_tau] */
   for(int bin = 0; bin < ppt->selection_num; bin++){
     printf("bin = %d\n",bin);
     class_alloc(selection[bin],
                 ppt->tau_size * sizeof(double),
                 ppt->error_message);
+    /* transfer_selection_compute prints in to selection[bin] */
     class_call(transfer_selection_compute(ppr, pba, ppt, ptr, selection[bin], tau0_minus_tau, w_trapz, ppt->tau_size, pvecback, tau0, bin),
                pgb2->error_message,
                pgb2->error_message);
+    printf("selection[%d] = %g\n", bin, selection[bin]);
   }
 
   printf("We are here 15!\n");
@@ -1881,6 +1885,9 @@ int galbispectra2_init (
   }
   printf("We are here 18!\n");
 
+  ppt->selection_mean[0] = 1.0;
+  ppt->selection_mean[1] = 1.5;
+  ppt->selection_mean[2] = 2.0;
 
 
 
@@ -1888,8 +1895,8 @@ int galbispectra2_init (
 
   printf("ptr->l_size[ppt->index_md_scalar] = %d\n", ptr->l_size[ppt->index_md_scalars] );
   printf("ppt->selection_num = %d\n", ppt->selection_num);
-  printf("ppt->selection_mean[0] = %d\n", ppt->selection_mean[0]);
-  printf("ppt->selection_width[0] = %d\n", ppt->selection_width[0]);
+  printf("ppt->selection_mean[0] = %g\n", ppt->selection_mean[0]);
+  printf("ppt->selection_width[0] = %g\n", ppt->selection_width[0]);
 
 
 
