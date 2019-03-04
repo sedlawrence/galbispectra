@@ -31,7 +31,7 @@
    ErrorMsg error_message;
 
    double * w_trapz_k; /* Corresponding to the array of trapezoidal weights w_trapz_k[index_k] for the k integration */
-
+   
  };
 
  struct galbispectra2_workspace{

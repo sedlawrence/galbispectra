@@ -1486,6 +1486,7 @@ double integral(
                                        pgb2->error_message,
                                        pgb2->error_message);
 
+
                                        /*
   for (int index_k; index_k < k_size; index_k++){
     printf("pgb2->w_trapz_k[index_k] = %g\n", pgb2->w_trapz_k[index_k]);
@@ -1753,7 +1754,7 @@ int galbispectra2_init (
   }
 
   printf("We are here 12!\n");
-  printf("here %p %p \n",ptr,ptr->l_size);
+  printf("here %d \n", ptr->l_size);
 
   /* Allocate array for Cl[index_l][index_tau_first][index_tau_second] */
   class_alloc(pgb2->Cl, ptr->l_size[ppt->index_md_scalars] * sizeof(double **), ppt->error_message);
@@ -1774,19 +1775,23 @@ int galbispectra2_init (
   }
 
   printf("We are here 13!\n");
-/*
-  class_alloc(pgb2->index_tau_first,
-              ppt->tau_size * sizeof(double),
-              ppt->error_message);
 
-  class_alloc(pgb2->index_tau_second,
-              ppt->tau_size * sizeof(double),
-              ppt->error_message);
-*/
+  /* Allocate and fill array for the trapezoidal weights for line of sight integration */
+  double * w_trapz_tau;
+  class_alloc(w_trapz_tau,
+             ppt->tau_size * sizeof(double),
+             ppt->error_message);
+
+  class_call(array_trapezoidal_weights(ppt->tau_sampling/*[index_tau]*/,
+                                       ppt->tau_size,
+                                       w_trapz_tau,
+                                       pgb2->error_message),
+                                       pgb2->error_message,
+                                       pgb2->error_message);
   class_alloc(tau0_minus_tau,
               ppt->tau_size * sizeof(double),
               ppt->error_message);
-
+  /* Allocate and fill array for the trapezoidal weights for chi integration */
   class_alloc(w_trapz,
               ppt->tau_size * sizeof(double),
               ppt->error_message);
@@ -1817,12 +1822,16 @@ int galbispectra2_init (
     class_alloc(selection[bin],
                 ppt->tau_size * sizeof(double),
                 ppt->error_message);
+
+  //  for(index_tau = 0; index_tau < ppt->tau_size; index_tau++){
     /* transfer_selection_compute prints in to selection[bin] */
-    class_call(transfer_selection_compute(ppr, pba, ppt, ptr, selection[bin], tau0_minus_tau, w_trapz, ppt->tau_size, pvecback, tau0, bin),
-               pgb2->error_message,
-               pgb2->error_message);
-    printf("selection[%d] = %g\n", bin, selection[bin]);
+      class_call(transfer_selection_compute(ppr, pba, ppt, ptr, selection[bin], tau0_minus_tau, w_trapz, ppt->tau_size, pvecback, tau0, bin),
+                 pgb2->error_message,
+                 pgb2->error_message);
+      printf("selection[bin = %d][index_tau %d] = %g\n", bin, selection[bin]);
+  //  }
   }
+
 
   printf("We are here 15!\n");
   printf("ppt->tp_size[index_md] = %d\n", ppt->tp_size[index_md]);
@@ -1888,7 +1897,7 @@ int galbispectra2_init (
   ppt->selection_mean[0] = 1.0;
   ppt->selection_mean[1] = 1.5;
   ppt->selection_mean[2] = 2.0;
-
+  ppt->selection_num = 3;
 
 
   /* Integrate over our integrand w.r.t. k*/
@@ -1905,6 +1914,8 @@ int galbispectra2_init (
     for (int index_tau_first = 0; index_tau_first < ppt->tau_size; index_tau_first++){
       for(int index_tau_second = 0; index_tau_second < ppt->tau_size; index_tau_second++){
         pgb2->Cl[index_l][index_tau_first][index_tau_second] = integral(pba, pbs, pgb2, ppt, ppt->index_qs_delta_cdm, index_tau_first, index_tau_second, index_l);
+        //printf("w_trapz_tau = %g\n", w_trapz_tau[index_tau_first]);
+      //  printf("selection[0][%d] = %g\n", index_tau_first, selection[0][index_tau_first]);
         //printf("Cl[index_l = %d][index_tau_first = %d][index_tau_second = %d] = %g\n",index_l, index_tau_first, index_tau_second, pgb2->Cl[index_l][index_tau_first][index_tau_second]);
         //printf("%g\n", integrand(pba,pbs,pgb2, ppt, index_type, index_tau_first, index_tau_second, index_k, index_l));
         //printf("integral(index_l = %d, index_tau_first = %d, index_tau_second = %d) = %g\n",index_l,index_tau_first, index_tau_second, integral(pba, pbs, pgb2, ppt, ppt->index_qs_delta_cdm, index_tau_first, index_tau_second, index_l));
@@ -1927,17 +1938,30 @@ int galbispectra2_init (
   */
 
   /* Integrate over the window function */
-  for(int index_l =0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++){
+/*  for(int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++){
     pgb2->Cl_final[index_l][bin1][bin2] = 0;
     for (index_tau_first = 0; index_tau_first < ppt->tau_size; index_tau_first++){
       for(index_tau_second = 0; index_tau_second < ppt->tau_size; index_tau_second++){
         pgb2->Cl_final[index_l][bin1][bin2] += pgb2->Cl[index_l][index_tau_first][index_tau_second] * w_trapz[index_tau_first] * w_trapz[index_tau_second]
-            * selection[ppt->selection_num][index_tau_first] * selection[ppt->selection_num][index_tau_second];
+            * selection[bin1][index_tau_first] * selection[bin2][index_tau_second];
         printf("pgb2->Cl_final[index_l = %d][bin1 = %d][bin2 = %d] = %g\n", ppt->selection_num, ppt->selection_num, pgb2->Cl_final[index_l][bin1][bin2]);
       }
     }
   }
+*/
+  for(int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++){
+    pgb2->Cl_final[index_l][bin1][bin2] = 0;
+    //for (bin1 = 0; bin1 < ppt->selection_num; bin1++){
+      //for(bin2 = 0; bin2 < ppt->selection_num; bin2++){
+        for (index_tau_first = 0; index_tau_first < ppt->tau_size; index_tau_first++){
+          for(index_tau_second = 0; index_tau_second < ppt->tau_size; index_tau_second++){
+            pgb2->Cl_final[index_l][0][0] += pgb2->Cl[index_l][index_tau_first][index_tau_second] * w_trapz_tau[index_tau_first] * w_trapz_tau[index_tau_second]
+                * selection[0][index_tau_first] * selection[0][index_tau_second];
 
+      //  printf("pgb2->Cl_final[index_l = %d][bin1 = 0][bin2 = 0] = %g\n", index_l, pgb2->Cl_final[index_l][0][0]);
+      }
+    }
+  }
   printf("We are here 20!\n");
 
   // ================================================================================
@@ -1974,7 +1998,7 @@ printf("We are here 21!\n");
   // ================================================================================
   int l_max = 200;
 
-
+/*
   for(index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++){
     for (index_tau_first = 0; index_tau_first < ppt->tau_size; index_tau_first++){
       for(index_tau_second = 0; index_tau_second < ppt->tau_size; index_tau_second++){
@@ -1983,7 +2007,7 @@ printf("We are here 21!\n");
       }
     }
   }
-
+*/
 printf("End of galbispectra2!\n");
   return _SUCCESS_;
 
