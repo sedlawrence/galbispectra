@@ -1584,6 +1584,15 @@ int galbispectra2_init (
       double tau0 = pba->conformal_age;
       double * w_trapz;
       double * tau0_minus_tau;
+
+
+      /* Manually set selection function paramters. NOTE: this should be accounted for in the .ini file */
+
+      //ppt->selection_mean[0] = 1.0;
+      //ppt->selection_mean[1] = 1.5;
+    //  ppt->selection_mean[2] = 2.0;
+    //  ppt->selection_num = 3;
+
   printf("We are here 1!\n");
   /*
   if (ppt2->has_perturbations2 == _FALSE_) {
@@ -1796,16 +1805,20 @@ int galbispectra2_init (
               ppt->tau_size * sizeof(double),
               ppt->error_message);
 
+//background_tau_of_z(biggest z) = smallest tau
+// tau0_minus_tau = conformal age - ( (conformal_age-smallest tau)*(index/ppt->tau_size) + smallest tau )
+  /* Fill the array ptw->tau0_minus_tau[index_tau] */
+  for(int index_tau = 0; index_tau < ppt->tau_size; index_tau++){
+    tau0_minus_tau[index_tau] = pba->conformal_age-ppt->tau_sampling[index_tau];
+  }
+
   class_call(array_trapezoidal_mweights(tau0_minus_tau,ppt->tau_size,w_trapz,pgb2->error_message),
                                         ppt2->error_message,
                                         ppt2->error_message);
   printf("We are here 14!\n");
 
-/* Fill the array ptw->tau0_minus_tau[index_tau] */
 
-  for(int index_tau = 0; index_tau < ppt->tau_size; index_tau++){
-    tau0_minus_tau[index_tau] = pba->conformal_age-ppt->tau_sampling[index_tau];
-  }
+
   /* Declaration of temporary pointer */
   double ** selection;
 
@@ -1825,12 +1838,16 @@ int galbispectra2_init (
 
   //  for(index_tau = 0; index_tau < ppt->tau_size; index_tau++){
     /* transfer_selection_compute prints in to selection[bin] */
-      class_call(transfer_selection_compute(ppr, pba, ppt, ptr, selection[bin], tau0_minus_tau, w_trapz, ppt->tau_size, pvecback, tau0, bin),
-                 pgb2->error_message,
-                 pgb2->error_message);
-      printf("selection[bin = %d][index_tau %d] = %g\n", bin, selection[bin]);
+    class_call(transfer_selection_compute(ppr, pba, ppt, ptr, selection[bin], tau0_minus_tau, w_trapz, ppt->tau_size, pvecback, tau0, bin),
+               pgb2->error_message,
+               pgb2->error_message);
+    //for (size_t i = 0; i < ppt->tau_size; i++) {
+  //    printf("selection[bin = %d] = %g\n", bin, selection[bin][i]);
+//    }
   //  }
   }
+
+
 
 
   printf("We are here 15!\n");
@@ -1894,10 +1911,6 @@ int galbispectra2_init (
   }
   printf("We are here 18!\n");
 
-  ppt->selection_mean[0] = 1.0;
-  ppt->selection_mean[1] = 1.5;
-  ppt->selection_mean[2] = 2.0;
-  ppt->selection_num = 3;
 
 
   /* Integrate over our integrand w.r.t. k*/
@@ -1915,7 +1928,7 @@ int galbispectra2_init (
       for(int index_tau_second = 0; index_tau_second < ppt->tau_size; index_tau_second++){
         pgb2->Cl[index_l][index_tau_first][index_tau_second] = integral(pba, pbs, pgb2, ppt, ppt->index_qs_delta_cdm, index_tau_first, index_tau_second, index_l);
         //printf("w_trapz_tau = %g\n", w_trapz_tau[index_tau_first]);
-      //  printf("selection[0][%d] = %g\n", index_tau_first, selection[0][index_tau_first]);
+        //printf("selection[0][%d] = %g\n", index_tau_first, selection[0][index_tau_first]);
         //printf("Cl[index_l = %d][index_tau_first = %d][index_tau_second = %d] = %g\n",index_l, index_tau_first, index_tau_second, pgb2->Cl[index_l][index_tau_first][index_tau_second]);
         //printf("%g\n", integrand(pba,pbs,pgb2, ppt, index_type, index_tau_first, index_tau_second, index_k, index_l));
         //printf("integral(index_l = %d, index_tau_first = %d, index_tau_second = %d) = %g\n",index_l,index_tau_first, index_tau_second, integral(pba, pbs, pgb2, ppt, ppt->index_qs_delta_cdm, index_tau_first, index_tau_second, index_l));
@@ -1957,8 +1970,8 @@ int galbispectra2_init (
           for(index_tau_second = 0; index_tau_second < ppt->tau_size; index_tau_second++){
             pgb2->Cl_final[index_l][0][0] += pgb2->Cl[index_l][index_tau_first][index_tau_second] * w_trapz_tau[index_tau_first] * w_trapz_tau[index_tau_second]
                 * selection[0][index_tau_first] * selection[0][index_tau_second];
-
-      //  printf("pgb2->Cl_final[index_l = %d][bin1 = 0][bin2 = 0] = %g\n", index_l, pgb2->Cl_final[index_l][0][0]);
+          printf("selection[0][index_tau_first] = %g\n", selection[0][index_tau_first] );
+          printf("pgb2->Cl_final[index_l = %d][bin1 = 0][bin2 = 0] = %g\n", index_l, pgb2->Cl_final[index_l][0][0]);
       }
     }
   }

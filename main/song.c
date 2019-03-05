@@ -37,12 +37,13 @@ int main(int argc, char **argv) {
     printf("\n\nError running input_init_from_arguments \n=>%s\n",errmsg);
     return _FAILURE_;
   }
-  
+  printf("Done with init 1st order \n");
   if (input2_init_from_arguments(argc,argv,&pr,&pr2,&ba,&th,
     &pt,&pt2,&tr,&bs,&bs2,&tr2,&pm, &sp,&nl,&le,&bi,&fi,&op,errmsg) == _FAILURE_) {
     printf("\n\nError running input_init_from_arguments \n=>%s\n",errmsg);
     return _FAILURE_;
   }
+  printf("Done with init 2nd order \n");
 
   /* This file is meant only for computations that involve second-order perturbations */
 /*  if (pt2.has_perturbations2 == _FALSE_) {
@@ -55,25 +56,14 @@ int main(int argc, char **argv) {
     printf("\n\nError running background_init \n=>%s\n",ba.error_message);
     return _FAILURE_;
   }
+  printf("Done with bg 1st order \n");
 
   /* Compute recombination and reionisation quantities */
   if (thermodynamics_init(&pr,&ba,&th) == _FAILURE_) {
     printf("\n\nError in thermodynamics_init \n=>%s\n",th.error_message);
     return _FAILURE_;
   }
-
-  /* Compute the first-order C_l */
-  if (pt.has_cls && compute_cls (&pr,&ba,&th,&pt,&sp,&le,errmsg) == _FAILURE_) {
-    printf("\n\nError in compute_cls \n=>%s\n",errmsg);
-    return _FAILURE_;
-  }
-////
-  /* Compute first and second-order perturbations */
-
-  /*if (perturb2_init(&pr,&pr2,&ba,&th,&pt,&pt2) == _FAILURE_) {
-    printf("\n\nError in perturb2_init \n=>%s\n",pt2.error_message);
-    return _FAILURE_;
-  }*/
+  printf("Done with thermo 1st order \n");
 
   class_call (perturb2_indices_of_perturbs(
                 &pr,
@@ -84,6 +74,7 @@ int main(int argc, char **argv) {
                &pt2),
   pt2.error_message,
   pt2.error_message);
+  printf("Done with indices perturb2 2nd order \n");
 
 
   /* Determine the time sampling for the sources */
@@ -97,26 +88,29 @@ int main(int argc, char **argv) {
                 &pt2),
     pt2.error_message,
     pt2.error_message);
+    printf("Done with perturb 2nd order indices \n");
 
   if (perturb_init(&pr,&ba,&th,&pt) == _FAILURE_) {
     printf("\n\nError in perturb_init \n=>%s\n",pt.error_message);
     return _FAILURE_;
   }
+  printf("Done with perturb 1st order \n");
 
-  printf("ppt->index_ic_ad = %d\n", pt.index_ic_ad);
-  printf("ppt->index_md_scalars = %d\n",pt.index_md_scalars);
-  printf("ppt->index_tp_delta_m = %d\n", pt.index_tp_delta_m);
   /* Compute primordial power spectrum from inflation */
   if (primordial_init(&pr,&pt,&pm) == _FAILURE_) {
     printf("\n\nError in primordial_init \n=>%s\n",pm.error_message);
     return _FAILURE_;
   }
+  printf("Done with prim 1st order \n");
 
   /* Compute nonlinear corrections */
   if (nonlinear_init(&pr,&ba,&th,&pt,&pm,&nl) == _FAILURE_) {
     printf("\n\nError in nonlinear_init \n=>%s\n",nl.error_message);
     return _FAILURE_;
   }
+  printf("Done with nonlin 1st order \n");
+
+
 
   /* Compute first-order transfer functions using the line of sight formalism */
   printf("THIS IS EQUAL TO %p ",&tr);
@@ -124,6 +118,7 @@ int main(int argc, char **argv) {
     printf("\n\nError in transfer_init \n=>%s\n",tr.error_message);
     return _FAILURE_;
   }
+  printf("Done with transfer 1st order \n");
 
   /* Compute geometrical factors needed for the bispectrum integration */
   printf("THIS IS EQUAL TO %p ",&tr);
@@ -131,7 +126,25 @@ int main(int argc, char **argv) {
     printf("\n\nError in bessel_init \n =>%s\n",bs.error_message);
     return _FAILURE_;
   }
+  printf("Done with bessel 1st order %p \n",&bs);
 
+////
+  /* Compute first and second-order perturbations */
+
+  /*if (perturb2_init(&pr,&pr2,&ba,&th,&pt,&pt2) == _FAILURE_) {
+    printf("\n\nError in perturb2_init \n=>%s\n",pt2.error_message);
+    return _FAILURE_;
+  }*/
+
+
+
+  /* Compute the first-order C_l */
+  if (pt.has_cls && compute_cls (&pr,&ba,&th,&pt,&sp,&le,errmsg) == _FAILURE_) {
+    printf("\n\nError in compute_cls \n=>%s\n",errmsg);
+    return _FAILURE_;
+  }
+  printf("Done with compute 1st order cl %p\n",&bs);
+    printf("THIS IS EQUAL TO pt %p  \n",&pt);
   printf("THIS IS EQUAL TO %p ",&tr);
   class_call(galbispectra2_init (
        &pr,
