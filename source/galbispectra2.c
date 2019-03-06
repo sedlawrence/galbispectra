@@ -1863,6 +1863,12 @@ int galbispectra2_init (
 
   printf("We are here 16!\n");
   printf("%g\n",ppt->quadsources[ppt->index_md_scalars][ppt->index_ic_ad*ppt->qs_size[ppt->index_md_scalars]+ppt->index_qs_delta_cdm][100 * ppt->k_size[ppt->index_md_scalars] + 20]);
+
+  /* Now fill this new pointer-array pgb2->first_order_sources[index_type][index_tau][index_k]
+    with information from the pre computed ppt->quadsources[index_md][index_ic*ppt->tp_size[index_md]+index_type]
+    [index_tau * ppt->k_size[index_md] + index_k]. */
+
+
   //for (int index_type = 0; index_type < ppt->tp_size[index_md]; index_type++) {
     for (int index_tau = 0; index_tau < ppt->tau_size; index_tau++) {
       for (int index_k = 0; index_k < ppt->k_size[ppt->index_md_scalars]; index_k++) {
@@ -1870,10 +1876,10 @@ int galbispectra2_init (
           ppt->quadsources[ppt->index_md_scalars][ppt->index_ic_ad*ppt->qs_size[ppt->index_md_scalars]+ppt->index_qs_delta_cdm][index_tau * ppt->k_size[ppt->index_md_scalars] + index_k];
 
 
-      }
-       /*printf("first_order_sources[%d][%d][%d] = %g , %g\n",ppt->index_qs_delta_cdm, index_tau, index_k,
-        pgb2->first_order_sources[ppt->index_qs_delta_cdm][index_tau][10]);*/
 
+      }
+
+      printf("first_order_sources[ppt->index_qs_delta_cdm][%d][50] = %g \n", index_tau, pgb2->first_order_sources[ppt->index_qs_delta_cdm][index_tau][10]);
     }
   //}
 
@@ -1892,13 +1898,11 @@ int galbispectra2_init (
 
   printf("We are here 17!\n");
 
-  /* Now fill this new pointer-array pgb2->first_order_sources[index_type][index_tau][index_k]
-    with information from the pre computed ppt->sources[index_md][index_ic*ppt->tp_size[index_md]+index_type]
-    [index_tau * ppt->k_size[index_md] + index_k]. */
+
 
 
   /* Set the pointer pgb2->first_order_sources equal to ppt->sources array. */
-
+/*
   for (int index_type = 0; index_type < ppt->tp_size[index_md]; index_type++) {
     for (int index_tau = 0; index_tau < ppt->tau_size; index_tau++) {
       for (int index_k = 0; index_k < ppt->k_size[index_md]; index_k++) {
@@ -1909,18 +1913,13 @@ int galbispectra2_init (
       }
     }
   }
+
+  */
   printf("We are here 18!\n");
 
 
 
   /* Integrate over our integrand w.r.t. k*/
-
-  printf("ptr->l_size[ppt->index_md_scalar] = %d\n", ptr->l_size[ppt->index_md_scalars] );
-  printf("ppt->selection_num = %d\n", ppt->selection_num);
-  printf("ppt->selection_mean[0] = %g\n", ppt->selection_mean[0]);
-  printf("ppt->selection_width[0] = %g\n", ppt->selection_width[0]);
-
-
 
   /* Write the result of the angular power spectrum integral into an array */
   for(int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++){
@@ -1937,6 +1936,7 @@ int galbispectra2_init (
     }
   }
     printf("We are here 19!\n");
+
 // NOTE: Do these bins need to be linked to the .ini file that lists the bins? selection_num needs to be defined correctly (check it's not null).
 
   int  bin1 = 0;
@@ -1970,10 +1970,12 @@ int galbispectra2_init (
           for(index_tau_second = 0; index_tau_second < ppt->tau_size; index_tau_second++){
             pgb2->Cl_final[index_l][0][0] += pgb2->Cl[index_l][index_tau_first][index_tau_second] * w_trapz_tau[index_tau_first] * w_trapz_tau[index_tau_second]
                 * selection[0][index_tau_first] * selection[0][index_tau_second];
-          printf("selection[0][index_tau_first] = %g\n", selection[0][index_tau_first] );
-          printf("pgb2->Cl_final[index_l = %d][bin1 = 0][bin2 = 0] = %g\n", index_l, pgb2->Cl_final[index_l][0][0]);
+        //  printf("selection[0][index_tau_first] = %g\n", selection[0][index_tau_first] );
+
       }
     }
+    //printf("pgb2->Cl_final[index_l = %d][bin1 = 0][bin2 = 0] = %g\n", index_l, pgb2->Cl_final[index_l][0][0]);
+    printf("%d      %g \n", ptr->l[index_l], (ptr->l[index_l] * (ptr->l[index_l] +1) * pgb2->Cl_final[index_l][0][0])/_PI_);
   }
   printf("We are here 20!\n");
 
