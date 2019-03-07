@@ -1473,6 +1473,7 @@ double integral(
   int index_md;
   double tmp = 0.;
   int k_size = ppt->k_size[ppt->index_md_scalars];
+  double * k = ppt->k[ppt->index_md_scalars];
 
 
   class_alloc(pgb2->w_trapz_k,
@@ -1496,8 +1497,10 @@ double integral(
 
 /* Using area of trapezoid, we can sum a number of areas of trapezoids to approximate the integral */
 
-    tmp+=integrand(pba, pbs, pgb2, ppt, index_type, index_tau_first, index_tau_second, index_k, index_l)
-      * pgb2->w_trapz_k[index_k];
+    /* tmp+=integrand(pba, pbs, pgb2, ppt, index_type, index_tau_first, index_tau_second, index_k, index_l)
+      * pgb2->w_trapz_k[index_k]; */
+
+      tmp += k[index_k] * k[index_k] * pgb2->w_trapz_k[index_k];
 
     }
   return tmp;
@@ -1787,6 +1790,7 @@ int galbispectra2_init (
 
   /* Allocate and fill array for the trapezoidal weights for line of sight integration */
   double * w_trapz_tau;
+
   class_alloc(w_trapz_tau,
              ppt->tau_size * sizeof(double),
              ppt->error_message);
@@ -1797,6 +1801,8 @@ int galbispectra2_init (
                                        pgb2->error_message),
                                        pgb2->error_message,
                                        pgb2->error_message);
+
+
   class_alloc(tau0_minus_tau,
               ppt->tau_size * sizeof(double),
               ppt->error_message);
@@ -1807,12 +1813,15 @@ int galbispectra2_init (
 
 //background_tau_of_z(biggest z) = smallest tau
 // tau0_minus_tau = conformal age - ( (conformal_age-smallest tau)*(index/ppt->tau_size) + smallest tau )
+
   /* Fill the array ptw->tau0_minus_tau[index_tau] */
   for(int index_tau = 0; index_tau < ppt->tau_size; index_tau++){
     tau0_minus_tau[index_tau] = pba->conformal_age-ppt->tau_sampling[index_tau];
   }
 
-  class_call(array_trapezoidal_mweights(tau0_minus_tau,ppt->tau_size,w_trapz,pgb2->error_message),
+  class_call(array_trapezoidal_mweights(tau0_minus_tau,ppt->tau_size,
+                                        w_trapz,
+                                        pgb2->error_message),
                                         ppt2->error_message,
                                         ppt2->error_message);
   printf("We are here 14!\n");
@@ -1827,11 +1836,9 @@ int galbispectra2_init (
               ppt->selection_num * sizeof(double*),
               ppt->error_message);
 
-  printf("ppt->selection_num = %d\n",ppt->selection_num);
 
   /* Allocation of second dimension selection[bin][index_tau] */
   for(int bin = 0; bin < ppt->selection_num; bin++){
-    printf("bin = %d\n",bin);
     class_alloc(selection[bin],
                 ppt->tau_size * sizeof(double),
                 ppt->error_message);
@@ -1862,7 +1869,7 @@ int galbispectra2_init (
 
 
   printf("We are here 16!\n");
-  printf("%g\n",ppt->quadsources[ppt->index_md_scalars][ppt->index_ic_ad*ppt->qs_size[ppt->index_md_scalars]+ppt->index_qs_delta_cdm][100 * ppt->k_size[ppt->index_md_scalars] + 20]);
+  //printf("%g\n",ppt->quadsources[ppt->index_md_scalars][ppt->index_ic_ad*ppt->qs_size[ppt->index_md_scalars]+ppt->index_qs_delta_cdm][100 * ppt->k_size[ppt->index_md_scalars] + 20]);
 
   /* Now fill this new pointer-array pgb2->first_order_sources[index_type][index_tau][index_k]
     with information from the pre computed ppt->quadsources[index_md][index_ic*ppt->tp_size[index_md]+index_type]
@@ -1870,16 +1877,20 @@ int galbispectra2_init (
 
 
   //for (int index_type = 0; index_type < ppt->tp_size[index_md]; index_type++) {
-    for (int index_tau = 0; index_tau < ppt->tau_size; index_tau++) {
+    //for (int index_tau = 0; index_tau < ppt->tau_size_quadsources; index_tau++){
+    for (int index_tau = 0; index_tau < ppt->tau_size_quadsources; index_tau++) {
       for (int index_k = 0; index_k < ppt->k_size[ppt->index_md_scalars]; index_k++) {
         pgb2->first_order_sources[ppt->index_qs_delta_cdm][index_tau][index_k] =
           ppt->quadsources[ppt->index_md_scalars][ppt->index_ic_ad*ppt->qs_size[ppt->index_md_scalars]+ppt->index_qs_delta_cdm][index_tau * ppt->k_size[ppt->index_md_scalars] + index_k];
+          //ppt->sources[ppt->index_md_scalars][ppt->index_ic_ad*ppt->tp_size[ppt->index_md_scalars]+ppt->index_tp_delta_cdm][index_tau * ppt->k_size[ppt->index_md_scalars] + index_k];
 
 
 
       }
 
-      printf("first_order_sources[ppt->index_qs_delta_cdm][%d][50] = %g \n", index_tau, pgb2->first_order_sources[ppt->index_qs_delta_cdm][index_tau][10]);
+      //printf("quadsources[cdm][%d][10] = %g , tau = %.10e \n", index_tau, pgb2->first_order_sources[ppt->index_qs_delta_cdm][index_tau][10],ppt->tau_sampling[index_tau]);
+
+      //printf("first_order_sources[ppt->index_qs_delta_cdm][%d][10] = %g \n", index_tau, pgb2->first_order_sources[ppt->index_qs_delta_cdm][index_tau][10]);
     }
   //}
 
@@ -1920,7 +1931,7 @@ int galbispectra2_init (
 
 
   /* Integrate over our integrand w.r.t. k*/
-
+  //printf("the integral of k^2 between [%g,%g] is %g\n", ppt->k[ppt->index_md_scalars][0],ppt->k[ppt->index_md_scalars][ppt->k_size[ppt->index_md_scalars]-1], integral(pba, pbs, pgb2, ppt, ppt->index_qs_delta_cdm, index_tau_first, index_tau_second, index_l));
   /* Write the result of the angular power spectrum integral into an array */
   for(int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++){
     for (int index_tau_first = 0; index_tau_first < ppt->tau_size; index_tau_first++){
@@ -1962,6 +1973,8 @@ int galbispectra2_init (
     }
   }
 */
+
+  double tmp2 = 0;
   for(int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++){
     pgb2->Cl_final[index_l][bin1][bin2] = 0;
     //for (bin1 = 0; bin1 < ppt->selection_num; bin1++){
@@ -1970,13 +1983,49 @@ int galbispectra2_init (
           for(index_tau_second = 0; index_tau_second < ppt->tau_size; index_tau_second++){
             pgb2->Cl_final[index_l][0][0] += pgb2->Cl[index_l][index_tau_first][index_tau_second] * w_trapz_tau[index_tau_first] * w_trapz_tau[index_tau_second]
                 * selection[0][index_tau_first] * selection[0][index_tau_second];
+
+             //* ppt->tau_sampling[index_tau_first]  * w_trapz_tau[index_tau_second];
         //  printf("selection[0][index_tau_first] = %g\n", selection[0][index_tau_first] );
 
       }
+      tmp2 += ppt->tau_sampling[index_tau_first] * w_trapz_tau[index_tau_first];
     }
     //printf("pgb2->Cl_final[index_l = %d][bin1 = 0][bin2 = 0] = %g\n", index_l, pgb2->Cl_final[index_l][0][0]);
-    printf("%d      %g \n", ptr->l[index_l], (ptr->l[index_l] * (ptr->l[index_l] +1) * pgb2->Cl_final[index_l][0][0])/_PI_);
+    //printf("%d      %g \n", ptr->l[index_l], (ptr->l[index_l] * (ptr->l[index_l] +1) * pgb2->Cl_final[index_l][0][0])/_PI_);
   }
+  
+
+  double tmp3 = 0;
+  double tmp4 = 0;
+
+  for(int index_tau_first = 0; index_tau_first < ppt->tau_size; index_tau_first++){
+
+    tmp4 += ppt->tau_sampling[index_tau_first] * w_trapz_tau[index_tau_first];
+  }
+
+  for(int index_tau_second = 0; index_tau_second < ppt->tau_size; index_tau_second++){
+
+    tmp3 += ppt->tau_sampling[index_tau_second] * w_trapz_tau[index_tau_second];
+  }
+  printf("the integral of tau1*tau2 integrated over [%g,%g] is %g\n", ppt->tau_sampling[0], ppt->tau_sampling[ppt->tau_size - 1], tmp3*tmp4 );
+
+  double tmp5 = 0;
+  double tmp6 = 0;
+
+
+
+
+  for(int index_tau_first = 0; index_tau_first < ppt->tau_size; index_tau_first++){
+    double tmp5 = 0;
+    for(int index_tau_second = 0; index_tau_second < ppt->tau_size; index_tau_second++){
+
+      tmp5 += ppt->tau_sampling[index_tau_second] * w_trapz_tau[index_tau_second];
+    }
+    tmp6 += ppt->tau_sampling[index_tau_first] * w_trapz_tau[index_tau_first];
+  }
+
+  printf("the integral of tau1*tau2 integrated over [%g,%g] is %g\n", ppt->tau_sampling[0], ppt->tau_sampling[ppt->tau_size - 1], tmp5*tmp6 );
+
   printf("We are here 20!\n");
 
   // ================================================================================
