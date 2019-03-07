@@ -13,8 +13,6 @@
 /*****************************************************************
 ##############       DEFINE K SAMPLING   #########################
 ******************************************************************
-
-
 /**
  * Determine the Fourier grid in (k1,k2,k3) that will be used to sample the line of
  * sight sources.
@@ -1201,11 +1199,8 @@ int galbispectra2_timesampling_for_sources (
 
       /* The next sampling point is determined by the lowest of two timescales: the time
       variation of the visibility function and the acceleration parameter. Schematically:
-
         next = previous + ppr2->perturb_sampling_stepsize_song * timescale_source
-
       where:
-
         timescale_source = 1 / (1/timescale_source1 + 1/timescale_source2)
         timescale_source1 = g/g_dot
         timescale_source2 = 1/sqrt |2*a_dot_dot/a - Hc^2| */
@@ -1599,10 +1594,8 @@ int galbispectra2_init (
   printf("We are here 1!\n");
   /*
   if (ppt2->has_perturbations2 == _FALSE_) {
-
     if (ppt2->perturbations2_verbose > 0)
       printf("No second-order sources requested. Second-order perturbations module skipped.\n");
-
     return _SUCCESS_;
   }
   */
@@ -1652,13 +1645,10 @@ int galbispectra2_init (
   // ====================================================================================
 
   /* Run the first-order perturbations module in order to:
-
     - Compute and store in ppt->quadsources the perturbations needed to solve the
       2nd-order system.
-
     - Compute and store in ppt->sources the line-of-sight sources needed to compute
       the first-order transfer functions (not the C_l's).
-
     The k-sampling for the first-order perturbations (ppt->k) has been already determined
     in perturb2_get_k_lists() and matches the one for the second-order sources (ppt2->k).
     Similarly, their time sampling (ppt->tau_sampling_quadsources) has been computed
@@ -1898,11 +1888,9 @@ int galbispectra2_init (
 /*  for (index_md = 0; index_md < ppt->md_size; index_md++) {
     for (index_ic = 0; index_ic < ppt->ic_size[index_md]; index_ic++) {
       for (index_type = 0; index_type < ppt->tp_size[index_md]; index_type++) {
-
         class_alloc(ppt->sources[index_md][index_ic*ppt->tp_size[index_md]+index_type],
                     ppt->k_size[index_md] * ppt->tau_size * sizeof(double),
                     ppt->error_message);
-
       }
     }
   }*/
@@ -1919,12 +1907,9 @@ int galbispectra2_init (
       for (int index_k = 0; index_k < ppt->k_size[index_md]; index_k++) {
         pgb2->first_order_sources[index_type][index_tau][index_k] =
           ppt->sources[ppt->index_md_scalars][ppt->index_ic_ad*ppt->tp_size[ppt->index_md_scalars]+index_type][index_tau * ppt->k_size[ppt->index_md_scalars] + index_k];
-
-
       }
     }
   }
-
   */
   printf("We are here 18!\n");
 
@@ -1954,27 +1939,10 @@ int galbispectra2_init (
   int  bin2 = 0;
 
 
-   /*
-  for(int index_l = 0; index_l < 120; index_l++){
-  pgb2->Cl_final[index_l][ppt->selection_num][ppt->selection_num] += pgb2->Cl[index_l][50][50] * w_trapz[50] * w_trapz[50]
-      * selection[ppt->selection_num][50] * selection[ppt->selection_num][50];
-  }
-  */
 
-  /* Integrate over the window function */
-/*  for(int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++){
-    pgb2->Cl_final[index_l][bin1][bin2] = 0;
-    for (index_tau_first = 0; index_tau_first < ppt->tau_size; index_tau_first++){
-      for(index_tau_second = 0; index_tau_second < ppt->tau_size; index_tau_second++){
-        pgb2->Cl_final[index_l][bin1][bin2] += pgb2->Cl[index_l][index_tau_first][index_tau_second] * w_trapz[index_tau_first] * w_trapz[index_tau_second]
-            * selection[bin1][index_tau_first] * selection[bin2][index_tau_second];
-        printf("pgb2->Cl_final[index_l = %d][bin1 = %d][bin2 = %d] = %g\n", ppt->selection_num, ppt->selection_num, pgb2->Cl_final[index_l][bin1][bin2]);
-      }
-    }
-  }
-*/
 
   double tmp2 = 0;
+  /*
   for(int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++){
     pgb2->Cl_final[index_l][bin1][bin2] = 0;
     //for (bin1 = 0; bin1 < ppt->selection_num; bin1++){
@@ -1992,8 +1960,33 @@ int galbispectra2_init (
     }
     //printf("pgb2->Cl_final[index_l = %d][bin1 = 0][bin2 = 0] = %g\n", index_l, pgb2->Cl_final[index_l][0][0]);
     //printf("%d      %g \n", ptr->l[index_l], (ptr->l[index_l] * (ptr->l[index_l] +1) * pgb2->Cl_final[index_l][0][0])/_PI_);
+  }*/
+
+  for(index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++){
+  //  for (bin1 = 0; bin1 < ppt->selection_num; bin1++){
+    //  for(bin2 = 0; bin2 < ppt->selection_num; bin2++){
+        for(index_tau_second = 0; index_tau_second < ppt->tau_size_quadsources; index_tau_second++){
+
+          double temp123 = 0.;
+
+          for(index_tau_first = 0; index_tau_first < ppt->tau_size_quadsources; index_tau_first++){
+            temp123 += pgb2->Cl[index_l][index_tau_first][index_tau_second] * w_trapz_tau[index_tau_first]
+                * selection[0][index_tau_first];
+
+          }
+
+          pgb2->Cl_final[index_l][0][0] += temp123 * w_trapz_tau[index_tau_second]
+              * selection[0][index_tau_second];
+
+        }
+    //  }
+  //  }
   }
-  
+
+  for  (index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
+
+  printf("Cl_final[%d][0][0] = %g\n",index_l, pgb2->Cl_final[index_l][0][0] );
+  }
 
   double tmp3 = 0;
   double tmp4 = 0;
