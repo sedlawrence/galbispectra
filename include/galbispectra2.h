@@ -31,7 +31,11 @@
    ErrorMsg error_message;
 
    double * w_trapz_k; /* Corresponding to the array of trapezoidal weights w_trapz_k[index_k] for the k integration */
-   
+
+   int tau_size_selection;
+
+   double ** tau_sampling_selection;
+
  };
 
  struct galbispectra2_workspace{
