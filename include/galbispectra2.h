@@ -26,6 +26,8 @@
 
    double *** Cl;
 
+   double * tau_sampling_cls;
+
    double *** Cl_final;
 
    ErrorMsg error_message;

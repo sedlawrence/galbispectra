@@ -113,7 +113,6 @@ int main(int argc, char **argv) {
 
 
   /* Compute first-order transfer functions using the line of sight formalism */
-  printf("THIS IS EQUAL TO %p ",&tr);
   if (transfer_init(&pr,&ba,&th,&pt,&nl,&tr) == _FAILURE_) {
     printf("\n\nError in transfer_init \n=>%s\n",tr.error_message);
     return _FAILURE_;
@@ -121,13 +120,12 @@ int main(int argc, char **argv) {
   printf("Done with transfer 1st order \n");
 
   /* Compute geometrical factors needed for the bispectrum integration */
-  printf("THIS IS EQUAL TO %p ",&tr);
   if (bessel_init(&pr,&ba,&th,&tr,&bs) == _FAILURE_) {
     printf("\n\nError in bessel_init \n =>%s\n",bs.error_message);
     return _FAILURE_;
   }
-  printf("Done with bessel 1st order %p \n",&bs);
-
+  printf("Done with bessel 1st order\n");
+  
 ////
   /* Compute first and second-order perturbations */
 
@@ -144,22 +142,10 @@ int main(int argc, char **argv) {
     return _FAILURE_;
   }
   printf("Done with compute 1st order cl %p\n",&bs);
-    printf("THIS IS EQUAL TO pt %p  \n",&pt);
-  printf("THIS IS EQUAL TO %p ",&tr);
-  class_call(galbispectra2_init (
-       &pr,
-       &pr2,
-       &ba,
-       &th,
-       &pt,
-       &pt2,
-       &gb2,
-       &bs,
-       &tr
-     ),
-     gb2.error_message,
-     gb2.error_message);
-     printf("THIS IS EQUAL TO %p ",&tr);
+  if (galbispectra2_init (&pr,&pr2,&ba,&th,&pt,&pt2,&gb2,&bs,&tr) == _FAILURE_) {
+    printf("\n\nError in galbispectra2_init \n =>%s\n",gb2.error_message);
+    return _FAILURE_;
+  }
 /*
   for(int index_l = 0; index_l < tr.l_size[pt.index_md_scalars]-1; index_l++){
     for (int index_tau_first = 0; index_tau_first < pt.tau_size; index_tau_first++){

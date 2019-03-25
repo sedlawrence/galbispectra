@@ -8,7 +8,7 @@
 
 # Setting l_max_scalars=100 results in an extremely low angular
 # resolution and an extremely quick run
-l_max_scalars = 100
+l_max_scalars = 300
 l_logstep = 1.35
 l_linstep = 50
 
@@ -24,11 +24,22 @@ l_linstep = 50
 
 ## Settings for about 10% precision of fnl_intrinsic
 k_min_tau0 = 0.05
-k_max_tau0_over_l_max = 2.8
+#k_max_tau0_over_l_max = 2.8
+#k_max_tau0_over_l_max = 2800
+k_max_tau0_over_l_max = 100
+
 k_step_sub = 0.1
 k_logstep_super = 1.2
 k_step_super = 0.025
 k_step_transition = 0.2
+#k_per_decade_for_bao = 50
+
+
+k_per_decade_for_pk = 50
+
+
+## the actual k max (ignores all others)
+k_max_for_pk = 10.
 
 ## Quick debug
 # k_min_tau0 = 0.05
@@ -45,7 +56,6 @@ k_step_transition = 0.2
 # k_step_super = 0.0015
 # k_logstep_super = 1.4
 # k_step_transition = 0.2
-
 
 
 # =============================================================================
@@ -97,17 +107,17 @@ transfer2_k3_sampling = smart
 # =============================================================================
 # =                              Interpolation                                =
 # =============================================================================
-	
+
 ## Interpolation parameters
 quadsources_time_interpolation = cubic
 sources_time_interpolation = linear
-bessels_interpolation = linear
+bessels_interpolation = cubic
 sources_k3_interpolation = linear
 transfers_k1_interpolation = linear
 transfers_k2_interpolation = linear
 
 
-	
+
 # =============================================================================
 # =                              Time sampling                                =
 # =============================================================================
@@ -128,7 +138,7 @@ perturb_sampling_stepsize_for_quadsources = 0.03
 custom_time_sampling_for_quadsources = no
 custom_tau_ini_quadsources = 0.1                # must be smaller than tau_ini_2nd_order_sources (best: 0.1)
 custom_tau_end_quadsources = 1000               # enter 0 to save sources up to today (best: 550)
-custom_tau_size_quadsources = 1000              
+custom_tau_size_quadsources = 1000
 custom_tau_mode_quadsources = log               # either lin, log or class (best: log)
 
 ## Timesampling for the first-order line-of-sight sources
@@ -188,13 +198,13 @@ l_max_ur = 15
 #  - If bispectra_r_sampling=custom, then r will be linearly sampled r_size
 # times between r_min and r_right.
 #
-#  - If bispectra_r_sampling=centred, then r will be linearly sampled r_size 
+#  - If bispectra_r_sampling=centred, then r will be linearly sampled r_size
 # times between (tau0-tau_rec)-tau_rec*r_left and (tau0-tau_rec)+tau_rec*r_right.
 #
 #  - If bispectra_r_sampling=sources, then r will have the same sampling as the
 # line of sight sources up to (tau0-tau_rec)-tau_rec*r_left; after that, r will
 # be sampled linearly until (tau0-tau_rec)+tau_rec*r_right with r_size points,
-# unless r_size=-1, in which case the step of the linear sampling will be 
+# unless r_size=-1, in which case the step of the linear sampling will be
 # the same as that of the sources at recombination (usually very small).
 #
 # This choice is justified by the fact that the transfer functions in the
@@ -278,7 +288,7 @@ enum ufa_method {ufa_mb,ufa_hu,ufa_CLASS,ufa_none};
 enum ncdmfa_method {ncdmfa_mb,ncdmfa_hu,ncdmfa_CLASS,ncdmfa_none};
 
 ## Same for the second-order perturbations. The only approximation that is
-## implemented is the no radiation approximation, described below. 
+## implemented is the no radiation approximation, described below.
 enum tca2_method {tca2_none, tca2_zero};
 enum rsa2_method {rsa2_none};
 enum ufa2_method {ufa2_none};
@@ -289,7 +299,7 @@ enum nra2_method {nra2_none, nra2_all, nra2_fluid};
 # -------------------------------------------------------------------
 
 ## TCA at first order.
-## In SONG, we have added the option to turn off the tight coupling 
+## In SONG, we have added the option to turn off the tight coupling
 ## approximation by setting the below parameter to 6.
 tight_coupling_approximation = 5
 tight_coupling_trigger_tau_c_over_tau_h = 0.01
@@ -310,7 +320,7 @@ tight_coupling_trigger_tau_c_over_tau_k_song = 0.007
 ## The RSA substitutes the crazy oscillations of the photon & neutrino moments
 ## at late times (after photon decoupling, inside the Hubble radius) with their
 ## average (see sec. 4 of Blas, Lesgourgues & Tram 2011).
-## To turn off the rsa approximation, set radiation_streaming_approximation = 3. 
+## To turn off the rsa approximation, set radiation_streaming_approximation = 3.
 ## This is not very useful, though, since the result will just be a big mess
 ## at late times for all photon & neutrino multipoles.  Probably, that won't affect
 ## the results, but it is unnecessary to compute all those oscillations, and anyway
@@ -362,5 +372,3 @@ ur_fluid_trigger_tau_over_tau_k_song = 30
 ## affect sources that are located at recombination.
 no_radiation_approximation_song = 0
 no_radiation_approximation_rho_m_over_rho_r_song = 100
-
-

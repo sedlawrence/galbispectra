@@ -1029,7 +1029,7 @@ int perturb2_indices_of_perturbs(
   // ===============================================================================
 
 
-  /* Define perturb2_timesampling_for_sourcesalues, and allocate the ppt2->sources array accordingly */
+  /* Define (k1,k2,k3) values, and allocate the ppt2->sources array accordingly */
 
   class_call (perturb2_get_k_lists(
                 ppr,
