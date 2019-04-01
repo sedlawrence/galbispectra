@@ -34,7 +34,13 @@
 
    double * w_trapz_k; /* Corresponding to the array of trapezoidal weights w_trapz_k[index_k] for the k integration */
 
+   double * test_weights;
+
    int tau_size_selection;
+
+   double * k_bessel;
+
+   int k_size_bessel; /* Number of points in the k_bessel grid */
 
    double ** tau_sampling_selection;
 
