@@ -127,8 +127,8 @@ int main(int argc, char **argv) {
     printf("\n\nError in bessel_init \n =>%s\n",bs.error_message);
     return _FAILURE_;
   }
-  printf("after bessel bs.x_max = %g\n",bs.x_max );
-  printf("Done with bessel 1st order\n");
+
+  printf("Done with Bessel 1st order\n");
 
 ////
   /* Compute first and second-order perturbations */
@@ -145,7 +145,7 @@ int main(int argc, char **argv) {
     printf("\n\nError in compute_cls \n=>%s\n",errmsg);
     return _FAILURE_;
   }
-  printf("before galbispectra2 bs.x_max = %g\n",bs.x_max );
+
   printf("Done with compute 1st order cl %p\n",&bs);
   if (galbispectra2_init (&pr,&pr2,&ba,&pm,&th,&pt,&pt2,&gb2,&bs,&tr) == _FAILURE_) {
     printf("\n\nError in galbispectra2_init \n =>%s\n",gb2.error_message);

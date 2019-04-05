@@ -44,6 +44,12 @@
 
    double ** tau_sampling_selection;
 
+   double **** integral_over_single_window;
+
+   double ***** asym_redgalbispectrum;
+
+   double ****** redgalbispectrum;
+
  };
 
  struct galbispectra2_workspace{
@@ -51,19 +57,6 @@
 
  };
 
-/*
- int galbispectra2_init (
-      struct precision * ppr,
-      struct precision2 * ppr2,
-      struct background * pba,
-      struct thermo * pth,
-      struct perturbs * ppt,
-      struct perturbs2 * ppt2,
-      struct galbispectra2 * pgb2,
-      struct bessels * pbs,
-      struct transfers * ptr
-    );
-    */
 
  #endif
 
