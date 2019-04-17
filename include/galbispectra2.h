@@ -24,11 +24,11 @@
 
    double *** first_order_sources;
 
-   double *** Cl;
+   double ***** Cl;
 
    double * tau_sampling_cls;
 
-   double *** Cl_final;
+   double ***** Cl_final;
 
    ErrorMsg error_message;
 
@@ -42,13 +42,19 @@
 
    int k_size_bessel; /* Number of points in the k_bessel grid */
 
+   int type_size; /* Number of different terms in the first_order_sources array */
+
+   int index_type_delta_cdm; /* The index type corresponding to the rsd term in the galaxy number overdensity. */
+
+   int index_type_rsd; /* The index type corresponding to the density term in the galaxy number overdensity.*/
+
    double ** tau_sampling_selection;
 
-   double **** integral_over_single_window;
+   double ****** integral_over_single_window;
 
-   double ***** asym_redgalbispectrum;
+   double ********* asym_redgalbispectrum;
 
-   double ****** redgalbispectrum;
+   double ********** redgalbispectrum;
 
  };
 
