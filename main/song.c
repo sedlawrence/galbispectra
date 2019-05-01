@@ -49,11 +49,11 @@ int main(int argc, char **argv) {
   printf("Done with init 2nd order \n");
 
   /* This file is meant only for computations that involve second-order perturbations */
-/*  if (pt2.has_perturbations2 == _FALSE_) {
+  if (pt2.has_perturbations2 == _FALSE_) {
     printf ("\nThe computation you requested is linear. Use 'class' rather than 'song'.\n");
     return _FAILURE_;
-  }/*
-/*
+  }
+
   /* Compute background quantities */
   if (background_init(&pr,&ba) == _FAILURE_) {
     printf("\n\nError running background_init \n=>%s\n",ba.error_message);
@@ -68,7 +68,18 @@ int main(int argc, char **argv) {
   }
   printf("Done with thermo 1st order \n");
 
-  class_call (perturb2_indices_of_perturbs(
+  /* Compute the first-order C_l */
+  if (pt.has_cls && compute_cls (&pr,&ba,&th,&pt,&sp,&le,errmsg) == _FAILURE_) {
+    printf("\n\nError in compute_cls \n=>%s\n",errmsg);
+    return _FAILURE_;
+  }
+  /* Compute first and second-order perturbations */
+  if (perturb2_init(&pr,&pr2,&ba,&th,&pt,&pt2) == _FAILURE_) {
+    printf("\n\nError in perturb2_init \n=>%s\n",pt2.error_message);
+    return _FAILURE_;
+  }
+
+/*  class_call (perturb2_indices_of_perturbs(
                 &pr,
                 &pr2,
                 &ba,
@@ -82,7 +93,7 @@ int main(int argc, char **argv) {
 
   /* Determine the time sampling for the sources */
 
-  class_call (perturb2_timesampling_for_sources (
+/*  class_call (perturb2_timesampling_for_sources (
                 &pr,
                 &pr2,
                 &ba,
@@ -140,11 +151,7 @@ int main(int argc, char **argv) {
 
 
 
-  /* Compute the first-order C_l */
-  if (pt.has_cls && compute_cls (&pr,&ba,&th,&pt,&sp,&le,errmsg) == _FAILURE_) {
-    printf("\n\nError in compute_cls \n=>%s\n",errmsg);
-    return _FAILURE_;
-  }
+
 
   printf("Done with compute 1st order cl %p\n",&bs);
   if (galbispectra2_init (&pr,&pr2,&ba,&pm,&th,&pt,&pt2,&gb2,&bs,&tr) == _FAILURE_) {

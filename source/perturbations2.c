@@ -313,7 +313,7 @@ int perturb2_init (
     for (int index_k2 = 0; index_k2 <= index_k1; ++index_k2) {
 
       for (int index_k3 = 0; index_k3 < ppt2->k3_size[index_k1][index_k2]; ++index_k3) {
-
+        printf("index_k1 = %d, index_k2 = %d, index_k3 = %d\n",index_k1,index_k2,index_k3);
         class_call_parallel (perturb2_solve (
                                ppr,
                                ppr2,
@@ -619,13 +619,13 @@ int perturb2_free_k1_level(
 
   int k1_size = ppt2->k_size;
 
-  for (int index_type = 0; index_type < ppt2->tp2_size; index_type++) {
-    for (int index_k2 = 0; index_k2 <= index_k1; index_k2++)
-        free(ppt2->sources[index_type][index_k1][index_k2]);
+  //for (int index_type = 0; index_type < ppt2->tp2_size; index_type++) {
+    //for (int index_k2 = 0; index_k2 <= index_k1; index_k2++)
+      //  free(ppt2->sources[index_type][index_k1][index_k2]);
 
-    free(ppt2->sources[index_type][index_k1]);
+  //  free(ppt2->sources[index_type][index_k1]);
 
-  } // end of for (index_type)
+//  } // end of for (index_type)
 
 
   /* We succesfully freed the k1 level of ppt2->sources */
@@ -838,6 +838,7 @@ int perturb2_indices_of_perturbs(
   ppt2->has_source_T = _FALSE_;
   ppt2->has_source_E = _FALSE_;
   ppt2->has_source_B = _FALSE_;
+  ppt2->has_source_M = _FALSE_;
   ppt2->has_source_delta_cdm = _FALSE_;
 
   // --------------------------------------------------------------------------
@@ -6508,10 +6509,16 @@ int perturb2_solve (
     extern int evolver_rk();
     extern int evolver_ndf15();
 
-    if(ppr->evolver == rk)
+    if(ppr->evolver == rk){
       generic_evolver = evolver_rk;
-    else
+      printf("generic_evolver = evolver_rk\n");
+    }
+    else{
       generic_evolver = evolver_ndf15;
+      printf("generic_evolver = evolver_ndf15\n");
+    }
+
+    printf("Starting generic_evolver\n" );
 
     /* Solve the differential system over the current time interval */
     class_call (generic_evolver(
@@ -6536,7 +6543,7 @@ int perturb2_solve (
       ppt2->error_message);
 
   } // end of for (index_interval)
-
+  printf("Finished generic_evolver\n" );
 
   /* Test that the sources where computed the right amount of times */
   class_test (ppw2->sources_calls != ppt2->tau_size,
@@ -7455,25 +7462,25 @@ int perturb2_free(
 
     free (ppt2->has_allocated_sources);
 
-    for (int index_type = 0; index_type < ppt2->tp2_size; index_type++)
-      free(ppt2->sources[index_type]);
+  //  for (int index_type = 0; index_type < ppt2->tp2_size; index_type++)
+    //  free(ppt2->sources[index_type]);
 
-    for (int index_k1 = 0; index_k1 < k1_size; ++index_k1) {
-      for (int index_k2 = 0; index_k2 <= index_k1; ++index_k2)
-        free (ppt2->k3[index_k1][index_k2]);
+    //for (int index_k1 = 0; index_k1 < k1_size; ++index_k1) {
+    //  for (int index_k2 = 0; index_k2 <= index_k1; ++index_k2)
+        //free (ppt2->k3[index_k1][index_k2]);
 
-      free (ppt2->k3[index_k1]);
-      free (ppt2->k3_size[index_k1]);
+      //free (ppt2->k3[index_k1]);
+      //free (ppt2->k3_size[index_k1]);
 
-    }
+    //}
 
-    free(ppt2->sources);
+    //free(ppt2->sources);
 
     free(ppt2->tau_sampling);
 
-    free(ppt2->k);
-    free(ppt2->k3);
-    free(ppt2->k3_size);
+    //free(ppt2->k);
+    //free(ppt2->k3);
+    //free(ppt2->k3_size);
 
     /* Free memory for the general coupling coefficients */
     int m1_min = -ppt2->l1_max;

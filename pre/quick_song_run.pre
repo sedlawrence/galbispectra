@@ -39,7 +39,7 @@ k_per_decade_for_pk = 50
 
 
 ## the actual k max (ignores all others)
-k_max_for_pk = 10.
+k_max_for_pk = 0.3
 
 ## Quick debug
 # k_min_tau0 = 0.05

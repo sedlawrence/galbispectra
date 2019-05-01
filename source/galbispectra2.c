@@ -481,6 +481,17 @@ int galbispectra2_init (
   if (ppt2->perturbations2_verbose > 0)
     printf("Computing second-order perturbations\n");
 
+  for (int index_k1 = ppt2->k_size-1; index_k1 >= 0; --index_k1) {
+
+    for (int index_k2 = 0; index_k2 <= index_k1; ++index_k2) {
+
+      for (int index_k3 = 0; index_k3 < ppt2->k3_size[index_k1][index_k2]; ++index_k3) {
+
+        printf("ppt2->sources[ppt2->index_tp2_delta_cdm][%d][%d][%d] = %g\n", index_k1, index_k2, index_k3, ppt2->sources[ppt2->index_tp2_delta_cdm][index_k1][index_k2][index_k3]);
+      }
+    }
+  }
+  
 
 
 
@@ -870,7 +881,7 @@ int galbispectra2_init (
 
   /* Define an array of values of first order transfer functions with integrals (lensing etc.), these source terms have an extra
     index (index_l):
-              pgb2->first_order_sources_integ[index_type][index_tau][index_k_bessel] */
+              pgb2->first_order_sources_integ[index_type][index_l][index_tau][index_k_bessel] */
 
 
   class_alloc(pgb2->first_order_sources_integ, pgb2->type_size * sizeof(double ***), ppt->error_message);
@@ -1118,7 +1129,7 @@ int galbispectra2_init (
 
             class_call(bessel_at_x(pbs, x, index_l, &j), pbs->error_message, pgb2->error_message);
 
-            lensing_result += ((r -r_lens)/r)*r_lens*pgb2->first_order_sources[pgb2->index_type_phi_plus_psi][index_tau][index_k_bessel]*pgb2->w_trapz_lens[index_tau_lens]*j;
+            lensing_result += ((r -r_lens)/r*r_lens)*pgb2->first_order_sources[pgb2->index_type_phi_plus_psi][index_tau][index_k_bessel]*pgb2->w_trapz_lens[index_tau_lens]*j;
             if ( index_k_bessel == 1000){
                //printf("x = %g, r = %g, r_lens = %g, j = %g,lensing_result = %g\n",x, r,   r_lens, j, lensing_result);
             }
@@ -1139,6 +1150,8 @@ int galbispectra2_init (
 
     free(phi_plus_psi);
     //exit(0);
+
+
 
 
 
