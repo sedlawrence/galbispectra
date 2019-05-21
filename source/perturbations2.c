@@ -6511,14 +6511,11 @@ int perturb2_solve (
 
     if(ppr->evolver == rk){
       generic_evolver = evolver_rk;
-      printf("generic_evolver = evolver_rk\n");
     }
     else{
       generic_evolver = evolver_ndf15;
-      printf("generic_evolver = evolver_ndf15\n");
     }
 
-    printf("Starting generic_evolver\n" );
 
     /* Solve the differential system over the current time interval */
     class_call (generic_evolver(
@@ -6543,7 +6540,6 @@ int perturb2_solve (
       ppt2->error_message);
 
   } // end of for (index_interval)
-  printf("Finished generic_evolver\n" );
 
   /* Test that the sources where computed the right amount of times */
   class_test (ppw2->sources_calls != ppt2->tau_size,
