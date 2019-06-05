@@ -79,6 +79,48 @@
  * -# If requested, store to disk the content of ppt2->sources and free the array.
  *
  */
+/*int k3_search_mod(double k,
+                  int index_k1,
+                  int index_k2,
+                  int * index_mark,
+                  double * a,
+                  struct perturbs2 * ppt2){
+
+  //int index_mark;
+  for (int index = 0; index < /*ppt2->k3_size[index_k1][index_k2]*///27100; index++) {
+  /*  printf("--\n");
+
+    double k3,k_diff;
+
+
+    k3 = ppt2->k3[index_k1][index_k2][index];
+    k_diff = k3-k;
+
+    a[index] = k_diff;
+
+    if (k_diff < 0) {
+      a[index]=-k_diff;
+    }
+    printf("a[%d] = %g, a[%d] = %g, diff = %g\n", index, a[index], index-1, a[index-1],a[index]-a[index-1]);
+    if(a[index]<a[index-1]){
+
+      *index_mark = index;
+    }
+    //b[index] = -k_diff;
+    printf("%g - %g = a[%d] = %g\n",k3, k, index, a[index]);
+    //printf("b[%d] = %g\n", index, b[index]);
+    printf("k3 = %g, index = %d\n", k3, index);
+    printf("index_mark  = %d\n",*index_mark);
+    printf("--\n");
+    //printf("k3-k = %g\n", k_diff);
+    //printf("k3-k = %g\n", k3-k);
+    //printf("mod_k3 = %g\n", mod_k3);
+    //printf("%s\n", );
+  }
+
+  return _SUCCESS_;
+}*/
+
 int perturb2_init (
      struct precision * ppr,
      struct precision2 * ppr2,
@@ -6516,6 +6558,104 @@ int perturb2_solve (
       generic_evolver = evolver_ndf15;
     }
 
+  
+    /*double a = 7.2;
+    double b = 4.1;
+    double * result;
+    class_call(mod(ppt2, -5.0, &result), ppt2->error_message,ppt2->error_message);
+    double kk = abs(-5.0);
+    printf("mod(5) = %g\n", result);
+    printf("abs(-5.0) = %g\n", kk );*/
+
+  /*  double * a;
+    double * b;
+    int * index_k3;
+    int index_k33;
+    index_k33 = 0;
+
+    class_alloc(a,
+              ppt2->k3_size[0][1] * sizeof(double),
+              ppt->error_message);
+
+    class_alloc(b,
+              (ppt2->k3_size[0][1]-1) * sizeof(double),
+              ppt->error_message);
+
+    k = 7e-06;
+    /*for (int index = 1; index < ppt2->k3_size[0][1]; index++) {
+      //k = ppt2->k3[0][1][index];
+      printf("inside loop %d/%d\n", index, ppt2->k3_size[0][1]);
+      a[index] = abs(k-ppt2->k3[0][1][index]);
+      printf("k = %g\n",k);
+      printf("ppt2->k3[0][1][%d] = %g\n", index, ppt2->k3[0][1][index]);
+      printf("a[%d] = %g\n",index, abs(k-ppt2->k3[0][1][index]));
+      //b[index] = abs(k-ppt2->k3[0][1][index-1]);
+      printf("a[%d] = %g\n",index-1, abs(k-ppt2->k3[0][1][index-1]));
+
+      if (a[index] <= a[index-1]) {
+        index_k33=index;
+      }
+
+    }*/
+
+    /*for (int index = 0; index < ppt2->k3_size[0][1]; index++) {
+      //k = ppt2->k3[0][1][index];
+      printf("inside loop %d/%d\n", index, ppt2->k3_size[0][1]);
+
+
+      a[index] = abs(k-ppt2->k3[0][1][index]);
+      //printf("k = %g\n",k);
+      printf("ppt2->k3[0][1][%d] = %g\n", index, ppt2->k3[0][1][index]);
+      printf("a[%d] = %g\n",index, abs(k-ppt2->k3[0][1][index]));
+
+
+    }*/
+    /*double * mod_k3;
+    int index_mark;
+    for (int index = 0; index < /*ppt2->k3_size[0][1]*///27100; index++) {
+
+
+      /*double k3,k,k_diff;
+
+      k = 7.0e-06;
+      k3 = ppt2->k3[0][1][index];
+      k_diff = k3-k;
+
+      a[index] = k_diff;
+
+      if (k_diff < 0) {
+        a[index]=-k_diff;
+      }
+
+      if(a[index]<a[index-1]){
+        index_mark = index;
+      }
+      //b[index] = -k_diff;
+      printf("a[%d] = %g\n", index, a[index]);
+      //printf("b[%d] = %g\n", index, b[index]);
+      printf("k3 = %g, index = %d\n", k3, index);
+      printf("k3-k = %g\n", k_diff);
+      printf("k3-k = %g\n", k3-k);
+      //printf("mod_k3 = %g\n", mod_k3);
+      //printf("%s\n", );
+    }*/
+
+
+
+    /*class_call(k3_search_mod(7.0e-06,
+                      0,
+                      1,
+                      &index_k3,
+                      a,
+                      ppt2),
+                      ppt2->error_message,
+                    ppt2->error_message)
+
+
+    printf("index_k3 = %d\n", index_k3 );
+    //printf("index_mark = %d\n", index_mark );
+    printf("k = %g, result = %g, ratio = %g\n", k, ppt2->k3[0][1][index_k33], k/ppt2->k3[0][1][index_k33]);
+    exit(0);
 
     /* Solve the differential system over the current time interval */
     class_call (generic_evolver(

@@ -4,6 +4,23 @@
 #include "galbispectra2.h"
 #include "perturbations2.h"
 
+/*double mod(struct perturbs2 * ppt2, double x, double * result){
+
+  if( x > 0){
+    *result = x;
+    //return result;
+  }
+
+  if(x < 0){
+    *result = -x;
+      }
+
+  else{
+    *result = 0.0;
+      }
+
+  return _SUCCESS_;
+}*/
 
 double bessel_at_x_second_deriv(struct galbispectra2 * pgb2,
                        struct bessels * pbs,
@@ -258,6 +275,32 @@ int index_of_tau_sampling_cls(double tau1,
                       }
                     }
                   }
+
+int index_of_tau_sampling_ppt2(double tau1,
+                 int * index_tau1,
+                 int * last_index,
+                 struct perturbs2 * ppt2){
+
+                 * index_tau1 = 0;
+                 * last_index = 0;
+                 double tau;
+/* Scan through the ppt2->tau_sampling grid and assign the index which gives the best estimate of tau1 and tau2 */
+
+                    for (int index = *last_index; index < ppt2->tau_size ; index++) {
+                      tau = ppt2->tau_sampling[index];
+
+                      if (tau > tau1 && *index_tau1 == 0) {
+                        *index_tau1=index;
+                      }
+
+
+
+                      if (*index_tau1 != 0){
+                        *last_index = *index_tau1;
+                        break;
+                      }
+                    }
+                  }
 /* index_of_tau_sampling_quadsources() - given some conformal time tau1, this function will output the (closest)
   corresponding index in the ppt->tau_sampling_quadsources[index_tau1] array.
 
@@ -282,22 +325,44 @@ int index_of_k_old(double k,
                int * last_index_k,
                struct perturbs * ppt){
   double k_start;
+  double k_end;
+  //printf("last_index_k = %d\n", *last_index_k);
 
 
   *index_k = -1;
   if (*last_index_k > 0){
-    printf("bigger than 0, prev val k = %e, cur k=%e, search k = %e\n", ppt->k[ppt->index_md_scalars][*last_index_k - 1],ppt->k[ppt->index_md_scalars][* last_index_k],k);
+    //printf("First, bigger than 0, prev val k = %e, cur k=%e, search k = %e\n", ppt->k[ppt->index_md_scalars][*last_index_k - 1],ppt->k[ppt->index_md_scalars][* last_index_k],k);
     k_start = ppt->k[ppt->index_md_scalars][*last_index_k - 1];
+    k_end = ppt->k[ppt->index_md_scalars][*last_index_k];
+
+    if(k_end == k){
+      *index_k=*last_index_k;
+    }
+
   }
   else{
-    printf("bigger than 0, prev val k = %e, cur k=%e, search k = %e\n", ppt->k[ppt->index_md_scalars][*last_index_k - 1],ppt->k[ppt->index_md_scalars][* last_index_k],k);
+    //printf("Second, bigger than 0, prev val k = %e, cur k=%e, search k = %e\n", ppt->k[ppt->index_md_scalars][*last_index_k - 1],ppt->k[ppt->index_md_scalars][* last_index_k],k);
+    //printf("*last_index_k = %d\n",*last_index_k);
     k_start = ppt->k[ppt->index_md_scalars][* last_index_k];
   }
 
   double k_ppt;
 
+  /*if (k == k_start){
+    printf("k == k3_start\n");
+    if (*last_index_k > 0){
+      *index_k=*last_index_k-1;
+    }
+
+    if (*last_index_k == 0){
+      *index_k=*last_index_k;
+    }
+
+  }*/
+
+
   if (k < k_start){ // need to search from beginning
-    printf("search for backward  k = %e, kstart = %e\n",k, k_start);
+    //printf("search for backward  k = %e, kstart = %e\n",k, k_start);
 
     for (int index = 0; index < *last_index_k; index++) {
       k_ppt = ppt->k[ppt->index_md_scalars][index];
@@ -312,13 +377,14 @@ int index_of_k_old(double k,
   }
 
   else {
+
     for (int index = *last_index_k; index < ppt->k_size[ppt->index_md_scalars]; index++) {
      k_ppt = ppt->k[ppt->index_md_scalars][index];
      //printf("%g\n", k_ppt);
-     if (k < k_ppt && *index_k == -1) {
+     if (k <= k_ppt && *index_k == -1) {
        *index_k=index;
        *last_index_k=index;
-       printf("found %d \n",*index_k);
+       //printf("found %d \n",*index_k);
        break;
      }
     }
@@ -327,6 +393,10 @@ int index_of_k_old(double k,
   if (*index_k == -1){
     printf("%s\n",'Search out of bounds in index_of_k()' );
   }
+
+  /*if (*index_k != -1){
+    printf("k = %g, k_ppt = %g \n", k, ppt->k[ppt->index_md_scalars][*index_k]);
+  }*/
 
   return _SUCCESS_;
 
@@ -340,24 +410,44 @@ int index_of_k3_old(double k,
   struct perturbs2 * ppt2){
   double k3_start;
   double k_max;
-
-  printf("last_index_k3 =  %d\n", *last_index_k3);
-  *index_k3 = -1;
-  if (*last_index_k3 > 0){
-    printf("bigger than 0, prev val k = %g, cur k=%g, search k = %g\n", ppt2->k3[index_k1][index_k2][*last_index_k3 - 1],ppt2->k3[index_k1][index_k2][* last_index_k3],k);
-    k3_start = ppt2->k3[index_k1][index_k2][*last_index_k3 - 1];
-    printf("first, k3_start = %g\n", k3_start);
-  }
-  if (*last_index_k3 == 0){
-    printf("bigger than 0, prev val k = %g, cur k=%g, search k = %g\n", ppt2->k3[index_k1][index_k2][*last_index_k3 - 1],ppt2->k3[index_k1][index_k2][* last_index_k3],k);
-    k3_start = ppt2->k3[index_k1][index_k2][* last_index_k3];
-    printf("second, k3_start = %g\n", k3_start);
-  }
-
+  double k3_ppt_last;
   double k3_ppt;
 
+  //printf("last_index_k3 =  %d\n", *last_index_k3);
+  *index_k3 = -1;
+  if (*last_index_k3 > 0){
+  //  printf("first, k3_start = %g\n", k3_start);
+    //printf("bigger than 0, prev val k = %g, cur k=%g, search k = %g\n", ppt2->k3[index_k1][index_k2][*last_index_k3 - 1],ppt2->k3[index_k1][index_k2][* last_index_k3],k);
+
+    k3_start = ppt2->k3[index_k1][index_k2][*last_index_k3 - 1];
+
+  }
+  if (*last_index_k3 == 0){
+  //  printf("second, k3_start = %g\n", k3_start);
+  //  printf("bigger than 0, prev val k = %g, cur k=%g, search k = %g\n", ppt2->k3[index_k1][index_k2][*last_index_k3 - 1],ppt2->k3[index_k1][index_k2][* last_index_k3],k);
+
+    k3_start = ppt2->k3[index_k1][index_k2][* last_index_k3];
+
+  }
+
+
+
+  /*if (k == k3_start){
+    printf("k == k3_start\n");
+    if (*last_index_k3 > 0){
+      *index_k3=*last_index_k3-1;
+    }
+
+    if (*last_index_k3 == 0){
+      *index_k3=*last_index_k3;
+    }
+
+  }*/
+
+
+
   if (k < k3_start){ // need to search from beginning
-    printf("search for backward  k = %g, k3_start = %g\n",k, k3_start);
+    //printf("search for backward  k = %g, k3_start = %g\n",k, k3_start);
 
     for (int index = 0; index < *last_index_k3; index++) {
       k3_ppt = ppt2->k3[index_k1][index_k2][index];
@@ -367,33 +457,47 @@ int index_of_k3_old(double k,
         *last_index_k3=index;
         break;
       }
-
     }
   }
-  k_max = ppt2->k3[index_k1][index_k2][ppt2->k3_size[index_k1][index_k2]-1];
 
-  if (k >= k_max){
-    *index_k3=ppt2->k3_size[index_k1][index_k2]-1;
+  //k_max = ppt2->k3[index_k1][index_k2][ppt2->k3_size[index_k1][index_k2]-1];
+
+  /*if (k >= k_max){
+    /* then take *index_k3 to be the index that corresponds to the largest value in ppt2->k3[index_k1][index_k2][index_k3]*/
+
+  /*  for(int index = 1; index < ppt2->k3_size[index_k1][index_k2]; index++){
+      k3_ppt = ppt2->k3[index_k1][index_k2][index];
+      k3_ppt_last = ppt2->k3[index_k1][index_k2][index-1];
+
+      if (abs(k3_ppt) > abs(k3_ppt_last)) {
+        *index_k3=index;
+      }
+    }
     printf("input k is larger than highest k on grid, index set to maximum.\n");
-    //break;
-  }
+  }*/
+
+
 
   else {
     for (int index = *last_index_k3; index < ppt2->k3_size[index_k1][index_k2]; index++) {
      k3_ppt = ppt2->k3[index_k1][index_k2][index];
 
      //printf("%g\n", k_ppt);
-     if (k < k3_ppt && *index_k3 == -1){
+     if (k <= k3_ppt && *index_k3 == -1){
        *index_k3=index;
        *last_index_k3=index;
-       printf("found %d \n",*index_k3);
+       //printf("found %d \n",*index_k3);
        break;
      }
     }
   }
 
-  /*if (*index_k3 == -1){
-    printf("%s\n",'Search out of bounds in index_of_k()' );
+  if (*index_k3 == -1){
+    //printf("%s\n",'Search out of bounds in index_of_k()' );
+  }
+
+/*  if (*index_k3 != -1){
+    printf("k3 = %g, k3_ppt = %g \n",k, k3_ppt = ppt2->k3[index_k1][index_k2][*index_k3]);
   }*/
 
 
@@ -401,6 +505,38 @@ int index_of_k3_old(double k,
   return _SUCCESS_;
 
 }
+
+int index_of_k3_mod(double k,
+  int index_k1,
+  int index_k2,
+  int * index_k3,
+  int * last_index_k3,
+  struct perturbs2 * ppt2){
+
+  *index_k3 = 0;
+
+  double a;
+  double b;
+
+  for (int index = 1; index < ppt2->k3[index_k1][index_k2]; index++) {
+    //printf("inside loop %d/%d\n", index, ppt2->k3[index_k1][index_k2]);
+    a = abs(k-ppt2->k3[index_k1][index_k2][index]);
+    //printf("k = %g\n",k);
+    //printf("ppt2->k3[%d][%d][%d] = %g\n",index_k1, index_k2, index, ppt2->k3[index_k1][index_k2][index]);
+    //printf("a = %g\n", a);
+    b = abs(k-ppt2->k3[index_k1][index_k2][index-1]);
+    //printf("b = %g\n",b);
+    if (a < b) {
+      *index_k3=index;
+    }
+  }
+
+
+  return _SUCCESS_;
+
+}
+
+
 
 int index_of_k(double k,
                int * index_k,
@@ -526,6 +662,48 @@ int index_of_k_bessel(double k,
 
     }
 
+int k3_search_mod(double k,
+                  int index_k1,
+                  int index_k2,
+                  int * index_mark,
+                  double * a,
+                  struct perturbs2 * ppt2){
+
+  //int index_mark;
+  for (int index = 0; index < ppt2->k3_size[index_k1][index_k2]; index++) {
+    //printf("--\n");
+
+    double k3,k_diff;
+
+
+    k3 = ppt2->k3[index_k1][index_k2][index];
+    k_diff = k3-k;
+
+    a[index] = k_diff;
+
+    if (k_diff < 0) {
+      a[index]=-k_diff;
+    }
+    //printf("a[%d] = %g, a[%d] = %g, diff = %g\n", index, a[index], index-1, a[index-1],a[index]-a[index-1]);
+    if(a[index]<a[index-1]){
+
+      *index_mark = index;
+    }
+    //b[index] = -k_diff;
+    //printf("%g - %g = a[%d] = %g\n",k3, k, index, a[index]);
+    //printf("b[%d] = %g\n", index, b[index]);
+    //printf("k3 = %g, index = %d\n", k3, index);
+    //printf("index_mark  = %d\n",*index_mark);
+    //printf("--\n");
+    //printf("k3-k = %g\n", k_diff);
+    //printf("k3-k = %g\n", k3-k);
+    //printf("mod_k3 = %g\n", mod_k3);
+    //printf("%s\n", );
+  }
+
+  return _SUCCESS_;
+}
+
 int index_of_tau_sampling_quadsources(double tau,
                  int * index_tau,
                  struct perturbs * ppt){
@@ -598,6 +776,7 @@ int galbispectra2_init (
   printf("Starting galaxy bispectra module...\n");
 
 
+  double * result;
 
   /* Fix k2 = 10e-5, find what this value is in both the ppt and ppt2 grids respectively */
   class_call(index_of_k1(0.00001,
@@ -606,89 +785,84 @@ int galbispectra2_init (
                  ppt2->error_message,
                  pgb2->error_message);
 
+  double *** a;
+  double * b;
+
+
+  class_alloc(a,
+        ppt2->k_size * sizeof(double**),
+        pgb2->error_message);
+
+
+  printf("k = 7e-06, result = %g, ratio = %g\n", ppt2->k3[0][1][index_k3], 7.0e-06/ppt2->k3[0][1][index_k3]);
+
   k2_fo = ppt2->k[index_k2];
 
   class_call(index_of_k(k2_fo, &index_k2_fo, ppt), ppt->error_message, pgb2->error_message);
 
   index_tau_qs = 0;
+  double tau_kernel;
+  class_call(background_tau_of_z(pba, 500.0, &tau_kernel),ppt->error_message,pgb2->error_message);
+
   /* Choose some time slice, for example tau = ppt2->tau_sampling[5], find the corresponding index in the tau_sampling_quadsources grid */
-  class_call(index_of_tau_sampling_quadsources(ppt2->tau_sampling[5], &index_tau_qs, ppt), ppt->error_message, pgb2->error_message);
+  class_call(index_of_tau_sampling_quadsources(tau_kernel, &index_tau_qs, ppt), ppt->error_message, pgb2->error_message);
+  int last_tau_kernel = 0;
+
+  class_call(index_of_tau_sampling_ppt2(tau_kernel,
+                 &index_tau,
+                 &last_tau_kernel,
+                 pgb2), pgb2->error_message, pgb2->error_message);
 
   printf("ppt2->tau_sampling[5] = %g, ppt->tau_sampling_quadsources[index_tau_qs] = %g \n", ppt2->tau_sampling[5], ppt->tau_sampling_quadsources[index_tau_qs]);
   printf("ppt2->k_size = %d\n", ppt2->k_size);
   printf("ppt2->tau_size = %d\n", ppt2->tau_size);
+
   /*Initialise some variables */
   index_k3 = 0;
   index_k1_fo = 0;
   last_index_k3 = 0;
-  int * last_i_k;
-  last_i_k = 0;
+  int index_k1p = 0;
+
 
   /* Check that the tau values on both time grid are equal */
   printf("index_tau_qs = %d, ppt->tau_sampling_quadsources[%d] = %g\n", index_tau_qs, index_tau_qs, ppt->tau_sampling_quadsources[index_tau_qs]);
 
-  //for (int index_k1 = ppt2->k_size-1; index_k1 >= 0; --index_k1) {
-  for (int index_k1 = 0; index_k1 < ppt2->k_size; index_k1++) {
-    printf("inside loop\n");
+  int * last_i_k;
+  int zero = 0;
+  last_i_k = &zero;
+  printf("last_i_k = %d\n", last_i_k);
+  printf("*last_i_k = %d\n", *last_i_k);
 
+  for (int index_k1 = ppt2->k_size-1; index_k1 > 0; --index_k1) {
 
-    /* Need to set k1 = k3 */
+    class_alloc(a,
+           ppt2->k3_size[index_k1][index_k2] * sizeof(double),
+           ppt->error_message);
+  /* Need to set k1 = k3 */
     k1_fo = ppt2->k[index_k1];
 
+    class_call(index_of_k_old(ppt2->k[index_k1], &index_k1_fo, last_i_k, ppt), pgb2->error_message, pgb2->error_message);
 
-    class_call(index_of_k_old(ppt2->k[index_k1], &index_k1_fo, &last_i_k, ppt), pgb2->error_message, pgb2->error_message);
-
-    //class_call(index_of_k(k1_fo, &index_k1_fo, ppt), ppt->error_message, pgb2->error_message);
-    printf("index_k1_fo = %d\n", index_k1_fo);
-    //class_call(index_of_k3(ppt2->k[index_k1], index_k1, index_k2, &index_k3, ppt2), pgb2->error_message, pgb2->error_message);
-
-    class_call(index_of_k3_old(ppt2->k[index_k1], index_k1, index_k2, &index_k3, &last_index_k3, ppt2), pgb2->error_message, pgb2->error_message);
-
-    printf("index_k3 = %d\n", index_k3);
+    class_call(k3_search_mod(ppt2->k[index_k1], index_k1, index_k2, &index_k3, a, ppt2), pgb2->error_message, pgb2->error_message);
 
     /* NOTE: index_k1 is looped over, index_k2 is fixed by k2=1e-05, index_k3 is searched (also fixed by k1=k2), index_k1_fo is also searched, index_k2_fo is fixed by k2=1e-15, both time indices are also fixed. */
 
     T1 = ppt->quadsources[ppt->index_md_scalars][ppt->index_ic_ad*ppt->qs_size[ppt->index_md_scalars]+ppt->index_qs_delta_cdm][index_tau_qs * ppt->k_size[ppt->index_md_scalars] + index_k1_fo];
-    printf("T1 = %g\n", T1);
 
     T2 = ppt->quadsources[ppt->index_md_scalars][ppt->index_ic_ad*ppt->qs_size[ppt->index_md_scalars]+ppt->index_qs_delta_cdm][index_tau_qs * ppt->k_size[ppt->index_md_scalars] + index_k2_fo];
-    printf("T2 = %g\n", T2);
 
-    T3 = ppt2->sources[ppt2->index_tp2_delta_cdm][index_k1][index_k2][5*index_k3];
-    printf("T3 = %g\n",T3);
-
-    kernel = 1/(T1*T2);
-    printf("kernel = %g\n", kernel );
+    T3 = ppt2->sources[ppt2->index_tp2_delta_cdm][index_k1][index_k2][index_tau*ppt2->k3_size[index_k1][index_k2]+index_k3];
 
 
-
-    //printf("index_k1 = %d, ppt2->k[%d] = %g\n", index_k1, index_k1, ppt2->k[index_k1]);
-    //printf("index_k2 = %d, ppt2->k[%d] = %g\n", index_k2, index_k2, ppt2->k[index_k2]);
-    printf("ppt2->k[%d] = %g, ppt2->k3[%d][%d][%d] = %g, %g\n", index_k1, ppt2->k[index_k1], index_k1, index_k2, index_k3, ppt2->k3[index_k1][index_k2][index_k3],ppt2->k[index_k1]/ppt2->k3[index_k1][index_k2][index_k3]);
-    printf("ppt2->k3[index_k1][index_k2][ppt2->k3_size[index_k1][index_k2]-1] = %g\n",ppt2->k3[index_k1][index_k2][ppt2->k3_size[index_k1][index_k2]-1] );
-    //printf("index_k1_fo = %d, ppt->k[%d] = %g\n", index_k1_fo, index_k1_fo, ppt->k[index_k1_fo]);
-    //printf("index_k2_fo = %d, ppt->k[%d] = %g\n", index_k2_fo, index_k2_fo, ppt->k[index_k2_fo]);
-
-
-    //q = ppt2->sources[ppt2->index_tp2_delta_cdm][index_k1][index_k2][index_k3];
-
-    //printf("%g  %g  %g = %g\n", ppt2->k[index_k1], ppt2->k[index_k2], ppt2->k3[index_k1][index_k2][index_k3], q);
-
+    kernel = T3/(T1*T2);
+    printf("%g  %g\n", ppt2->k[index_k1], kernel);
 
   }
-  printf("ppt2->tau_sampling[5] = %g, index_tau_qs = %d\n", ppt2->tau_sampling[5], &index_tau_qs);
+  printf("tau_kernel = %g\n",tau_kernel);
+  printf("ppt2->tau_sampling[%d] = %g, ppt->tau_sampling_quadsources[%d] = %g, ratio = %g\n",index_tau, ppt2->tau_sampling[index_tau], index_tau_qs, ppt->tau_sampling_quadsources[index_tau_qs],  ppt->tau_sampling_quadsources[index_tau_qs]/ppt2->tau_sampling[index_tau]);
   exit(0);
 
-/*  for (int index_k1 = ppt2->k_size-1; index_k1 >= 0; --index_k1) {
 
-    for (int index_k2 = 0; index_k2 <= index_k1; ++index_k2) {
-
-      for (int index_k3 = 0; index_k3 < ppt2->k3_size[index_k1][index_k2]; ++index_k3) {
-
-        printf("ppt2->sources[ppt2->index_tp2_delta_cdm][%d][index_k2][%d] = %g\n", index_k1, index_k3, ppt2->sources[ppt2->index_tp2_delta_cdm][index_k1][index_k2][index_k3]);
-      }
-    }
-  }*/
 
 
 
