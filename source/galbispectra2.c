@@ -4,23 +4,16 @@
 #include "galbispectra2.h"
 #include "perturbations2.h"
 
-/*double mod(struct perturbs2 * ppt2, double x, double * result){
 
-  if( x > 0){
-    *result = x;
-    //return result;
-  }
+/* bessel_at_x_second_deriv() - given the redshift and the index_l of the spherical Bessel function, this function
+  will compute its second derivative using a recursion relation, storing it as * result.
 
-  if(x < 0){
-    *result = -x;
-      }
 
-  else{
-    *result = 0.0;
-      }
-
-  return _SUCCESS_;
-}*/
+* @param galbispectra2          Input: galaxy bispectra structre
+* @param bessels                Input: Bessel structure
+* @param index_l                Input: l
+* @param result                 Output: j''_l(x) (second derivative of the spherical Bessel function)
+*/
 
 double bessel_at_x_second_deriv(struct galbispectra2 * pgb2,
                        struct bessels * pbs,
@@ -31,8 +24,6 @@ double bessel_at_x_second_deriv(struct galbispectra2 * pgb2,
     double out;
     double j1;
     double j2;
-
-
 
     if (pbs->l[index_l]==0){
       out = 0.0;
@@ -45,11 +36,12 @@ double bessel_at_x_second_deriv(struct galbispectra2 * pgb2,
     class_call(bessel_at_x(pbs, z, index_l, &j1), pbs->error_message, pgb2->error_message);
     class_call(bessel_j(pbs, pbs->l[index_l], z, &j2), pbs->error_message, pgb2->error_message);
 
-      out = ((pbs->l[index_l]*pbs->l[index_l]-pbs->l[index_l]-z*z)*j1+2*z*j2)/(z*z);
+    out = ((pbs->l[index_l]*pbs->l[index_l]-pbs->l[index_l]-z*z)*j1+2*z*j2)/(z*z);
 
     *result = out;
     return _SUCCESS_;
 }
+
 /* integral() - given two types of number count perturbations, this function will integrate over k
   the integral is over Pk, two Bessel functions, two transfer functions and a prefactor, ready to be
   integrated over time for subsequent angular power/bi spectra.
@@ -96,11 +88,11 @@ int integral(
   double type2;
 
   /* Pair input type with corresponding source type. Each type is made up of, the transfer function of the perturbation, a prefactor
-    and a Bessel function (or a derivative of). */
+    and a Bessel function (or a derivative of). For integrated terms inside pgb2->first_order_sources_integ, the spherical Bessel function
+    may have already been integrated over before this stage, thus is will not appear explicitly here. */
   int last_index1 = 0;
   int last_index2 = 0;
   int index_tau_lens;
-  double prefactor;
   double prefactor1;
   double prefactor2;
   double lensing_result1;
@@ -115,14 +107,13 @@ int integral(
     double r2 = pba->conformal_age - pgb2->tau_sampling_cls[index_tau_second];
 
     if(x1>pbs->x_max || x2 > pbs->x_max){
-    /*printf("ALERT! x1= %g x2 = %g \n",x1,x2);*/continue;}
-
+      printf("ALERT! x1= %g x2 = %g \n",x1,x2);continue;}
 
     class_call(primordial_spectrum_at_k(ppm, ppt->index_md_scalars, linear, pgb2->k_bessel[index_k_bessel], &Pk), ppm->error_message, pgb2->error_message);
 
+    /* First Type: Density */
 
     if( index_type_first == pgb2->index_type_delta_cdm){
-      //double x1 = pgb2->k_bessel[index_k_bessel]*(pba->conformal_age - pgb2->tau_sampling_cls[index_tau_first]);
 
       class_call(bessel_at_x(pbs, x1 , index_l, &j1), pbs->error_message, pgb2->error_message);
 
@@ -130,9 +121,9 @@ int integral(
 
     }
 
-    if( index_type_first == pgb2->index_type_rsd ){
+    /* First Type: RSD */
 
-      //double x1 = pgb2->k_bessel[index_k_bessel]*(pba->conformal_age - pgb2->tau_sampling_cls[index_tau_first]);
+    else if( index_type_first == pgb2->index_type_rsd ){
 
       class_call(bessel_at_x_second_deriv(pgb2, pbs, x1 , index_l, &j1), pbs->error_message, pgb2->error_message);
 
@@ -142,19 +133,18 @@ int integral(
                                    pba->inter_normal,
                                    &last_index1,
                                    pvecback),
-                pba->error_message,
-                pgb2->error_message);
+                                   pba->error_message,
+                                   pgb2->error_message);
 
-      prefactor = -1.0/pvecback[pba->index_bg_H];
+      prefactor1 = -1.0/pvecback[pba->index_bg_H];
 
-      type1 = prefactor * pgb2->k_bessel[index_k_bessel] * pgb2->k_bessel[index_k_bessel]
+      type1 = prefactor1 * pgb2->k_bessel[index_k_bessel] * pgb2->k_bessel[index_k_bessel]
                 * pgb2->first_order_sources[pgb2->index_type_rsd][index_tau_first][index_k_bessel] * j1;
     }
 
+    /* First Type: Lensing convergence */
 
-    /* Lensing convergence term */
-
-    if( index_type_first == pgb2->index_type_lens ){
+    else if( index_type_first == pgb2->index_type_lens ){
       int index_tau_source1;
       int last_index1;
       int index_tau_lens1;
@@ -162,26 +152,27 @@ int integral(
 
       prefactor1 = -ptr->l[index_l] * (ptr->l[index_l] + 1.);
 
-      //printf("r_lens = %g, x1 = %g, lensing_result = %g\n", r_lens, x1, lensing_result);
-
-
-
-      type1 = prefactor1 * pgb2->first_order_sources[pgb2->index_type_phi_plus_psi][index_tau_first][index_k_bessel]; /** j1;*/
+      type1 = prefactor1 * pgb2->first_order_sources_integ[pgb2->index_type_lens][index_l][index_tau_first][index_k_bessel];
     }
 
+    else {
+      type1 = 0.;
+    }
 
-  /* Establish terms that are called by index_type_second */
+    /* Establish terms that are called by index_type_second */
 
+    /* Second Type: Density */
 
     if( index_type_second == pgb2->index_type_delta_cdm){
 
       class_call(bessel_at_x(pbs, x2 , index_l, &j2), pbs->error_message, pgb2->error_message);
 
       type2 = pgb2->first_order_sources[pgb2->index_type_delta_cdm][index_tau_first][index_k_bessel] * j2;
-
     }
 
-    if( index_type_second == pgb2->index_type_rsd ){
+    /* Second Type: RSD */
+
+    else if( index_type_second == pgb2->index_type_rsd ){
 
       class_call(bessel_at_x_second_deriv(pgb2, pbs, x2 , index_l, &j2), pbs->error_message, pgb2->error_message);
 
@@ -191,45 +182,35 @@ int integral(
                                    pba->inter_normal,
                                    &last_index2,
                                    pvecback),
-                 pba->error_message,
-                 pgb2->error_message);
+                                   pba->error_message,
+                                   pgb2->error_message);
 
-      prefactor = -1/pvecback[pba->index_bg_H];
+      prefactor2 = -1/pvecback[pba->index_bg_H];
 
-      type2 = prefactor * pgb2->k_bessel[index_k_bessel] * pgb2->k_bessel[index_k_bessel]
+      type2 = prefactor2 * pgb2->k_bessel[index_k_bessel] * pgb2->k_bessel[index_k_bessel]
                 * pgb2->first_order_sources[pgb2->index_type_rsd][index_tau_second][index_k_bessel] * j2;
-
-      //printf("type2 = %g\n",type2 );
     }
 
-    if( index_type_second == pgb2->index_type_lens ){
-      int index_tau_source2;
-      int last_index2;
-      int index_tau_lens2;
-      double r_lens2;
+    /* Second Type: Lensing convergence */
 
+    else if( index_type_second == pgb2->index_type_lens ){
 
       prefactor2 = -ptr->l[index_l] * (ptr->l[index_l] + 1.);
 
-
-
-      type2 = prefactor2  * pgb2->first_order_sources[pgb2->index_type_lens][index_tau_second][index_k_bessel]; /**j2*/
-      //printf("type2 = %g\n",type2 );
+      type2 = prefactor2 * pgb2->first_order_sources_integ[pgb2->index_type_lens][index_l][index_tau_second][index_k_bessel];
     }
 
+    else {
+      type2 = 0.;
+    }
 
     // NOTE: Should have some CLASS test here to check whether the types called are valid.
 
 
 
-      /* Using area of trapezoid, we can sum a number of areas of trapezoids to approximate the integral */
+    /* Using area of trapezoid, we can sum a number of areas of trapezoids to approximate the integral */
     tmp += pow(pgb2->k_bessel[index_k_bessel],-1.0) * 4. * _PI_ *  Pk * type1 * type2  * pgb2->w_trapz_k[index_k_bessel];
-
     }
-
-    /*if (index_type_first == pgb2->index_type_lens || index_type_second == pgb2->index_type_lens) {
-      printf("type 1 = %g, type 2 = %g, index_tau_first = %d, index_tau_second = %d \n", type1, type2, index_tau_first, index_tau_second);
-    }*/
 
 
   *result = tmp;
@@ -247,34 +228,37 @@ int integral(
 
 * @param tau1                     Input: conformal time
 * @param index_tau1               Output: index in the array tau_sampling_cls
-* @param perturbs                 Input: perturbs structure
+* @param galbispectra2            Input: galbispectra2 structure
 */
+
 
 int index_of_tau_sampling_cls(double tau1,
                  int * index_tau1,
                  int * last_index,
                  struct galbispectra2 * pgb2){
 
-                 * index_tau1 = 0;
-                 * last_index = 0;
-                 double tau;
-/* Scan through the tau_sampling_cls grid and assign the index which gives the best estimate of tau1 and tau2 */
-
-                    for (int index = *last_index; index < pgb2->tau_size_selection ; index++) {
-                      tau = pgb2->tau_sampling_cls[index];
-
-                      if (tau > tau1 && *index_tau1 == 0) {
-                        *index_tau1=index;
-                      }
 
 
+                 double output = (tau1 - pgb2->tau_sampling_cls[0])/(pgb2->tau_sampling_cls[pgb2->tau_size_selection-1] - pgb2->tau_sampling_cls[0]) * (pgb2->tau_size_selection-1);
+                 * index_tau1 = (int) ceil(output);
+                 if (* index_tau1 < 1) {
+                   * index_tau1 = 1;
+                 }
+                 else if(* index_tau1 > pgb2->tau_size_selection -1){
+                   * index_tau1 = pgb2->tau_size_selection -1;
 
-                      if (*index_tau1 != 0){
-                        *last_index = *index_tau1;
-                        break;
-                      }
-                    }
-                  }
+                 }
+
+               }
+
+/* index_of_tau_sampling_ppt2() - given some conformal time tau1, this function will output the (closest)
+ corresponding index in the ppt2->tau_sampling[index_tau1] array.
+
+* @param tau1                     Input: conformal time
+* @param index_tau1               Output: index in the array tau_sampling_cls
+* @param perturbs                 Input: perturbs structure
+*/
+
 
 int index_of_tau_sampling_ppt2(double tau1,
                  int * index_tau1,
@@ -301,15 +285,6 @@ int index_of_tau_sampling_ppt2(double tau1,
                       }
                     }
                   }
-/* index_of_tau_sampling_quadsources() - given some conformal time tau1, this function will output the (closest)
-  corresponding index in the ppt->tau_sampling_quadsources[index_tau1] array.
-
-* @param tau1                     Input: conformal time
-* @param index_tau1               Output: index in the array tau_sampling_cls
-* @param perturbs                 Input: perturbs structure
-*/
-
-
 
 /* index_of_k() - function to output indices of ppt->k to a given input k value
 
@@ -318,31 +293,27 @@ int index_of_tau_sampling_ppt2(double tau1,
 * @param perturbs             Input: perturbs structure
 */
 
-
-
 int index_of_k_old(double k,
                int * index_k,
                int * last_index_k,
                struct perturbs * ppt){
   double k_start;
   double k_end;
-  //printf("last_index_k = %d\n", *last_index_k);
 
-
+  /* Initialise index_k to a value that does not exist within the grid, this will circumvent any chance of the
+    wrong index being assigned */
   *index_k = -1;
   if (*last_index_k > 0){
-    //printf("First, bigger than 0, prev val k = %e, cur k=%e, search k = %e\n", ppt->k[ppt->index_md_scalars][*last_index_k - 1],ppt->k[ppt->index_md_scalars][* last_index_k],k);
+
     k_start = ppt->k[ppt->index_md_scalars][*last_index_k - 1];
     k_end = ppt->k[ppt->index_md_scalars][*last_index_k];
 
     if(k_end == k){
       *index_k=*last_index_k;
     }
-
   }
+
   else{
-    //printf("Second, bigger than 0, prev val k = %e, cur k=%e, search k = %e\n", ppt->k[ppt->index_md_scalars][*last_index_k - 1],ppt->k[ppt->index_md_scalars][* last_index_k],k);
-    //printf("*last_index_k = %d\n",*last_index_k);
     k_start = ppt->k[ppt->index_md_scalars][* last_index_k];
   }
 
@@ -360,13 +331,11 @@ int index_of_k_old(double k,
 
   }*/
 
-
-  if (k < k_start){ // need to search from beginning
-    //printf("search for backward  k = %e, kstart = %e\n",k, k_start);
-
+  /* If k< k_start, search grid from index = 0 */
+  if (k < k_start){
     for (int index = 0; index < *last_index_k; index++) {
       k_ppt = ppt->k[ppt->index_md_scalars][index];
-      //printf("%g\n", k_ppt);
+
       if (k < k_ppt && *index_k == -1) {
         *index_k=index;
         *last_index_k=index;
@@ -380,11 +349,10 @@ int index_of_k_old(double k,
 
     for (int index = *last_index_k; index < ppt->k_size[ppt->index_md_scalars]; index++) {
      k_ppt = ppt->k[ppt->index_md_scalars][index];
-     //printf("%g\n", k_ppt);
+
      if (k <= k_ppt && *index_k == -1) {
        *index_k=index;
        *last_index_k=index;
-       //printf("found %d \n",*index_k);
        break;
      }
     }
@@ -394,12 +362,8 @@ int index_of_k_old(double k,
     printf("%s\n",'Search out of bounds in index_of_k()' );
   }
 
-  /*if (*index_k != -1){
-    printf("k = %g, k_ppt = %g \n", k, ppt->k[ppt->index_md_scalars][*index_k]);
-  }*/
 
   return _SUCCESS_;
-
 }
 
 int index_of_k3_old(double k,
@@ -413,21 +377,16 @@ int index_of_k3_old(double k,
   double k3_ppt_last;
   double k3_ppt;
 
-  //printf("last_index_k3 =  %d\n", *last_index_k3);
+
   *index_k3 = -1;
   if (*last_index_k3 > 0){
-  //  printf("first, k3_start = %g\n", k3_start);
-    //printf("bigger than 0, prev val k = %g, cur k=%g, search k = %g\n", ppt2->k3[index_k1][index_k2][*last_index_k3 - 1],ppt2->k3[index_k1][index_k2][* last_index_k3],k);
 
     k3_start = ppt2->k3[index_k1][index_k2][*last_index_k3 - 1];
-
   }
+
   if (*last_index_k3 == 0){
-  //  printf("second, k3_start = %g\n", k3_start);
-  //  printf("bigger than 0, prev val k = %g, cur k=%g, search k = %g\n", ppt2->k3[index_k1][index_k2][*last_index_k3 - 1],ppt2->k3[index_k1][index_k2][* last_index_k3],k);
 
     k3_start = ppt2->k3[index_k1][index_k2][* last_index_k3];
-
   }
 
 
@@ -519,13 +478,11 @@ int index_of_k3_mod(double k,
   double b;
 
   for (int index = 1; index < ppt2->k3[index_k1][index_k2]; index++) {
-    //printf("inside loop %d/%d\n", index, ppt2->k3[index_k1][index_k2]);
+
     a = abs(k-ppt2->k3[index_k1][index_k2][index]);
-    //printf("k = %g\n",k);
-    //printf("ppt2->k3[%d][%d][%d] = %g\n",index_k1, index_k2, index, ppt2->k3[index_k1][index_k2][index]);
-    //printf("a = %g\n", a);
+
     b = abs(k-ppt2->k3[index_k1][index_k2][index-1]);
-    //printf("b = %g\n",b);
+
     if (a < b) {
       *index_k3=index;
     }
@@ -533,7 +490,6 @@ int index_of_k3_mod(double k,
 
 
   return _SUCCESS_;
-
 }
 
 
@@ -555,7 +511,6 @@ int index_of_k(double k,
   }
 
   return _SUCCESS_;
-
 }
 
 /* For a given value of k, this function finds the index in the ppt2->k[index] grid. Both k1 and k2 live on this grid. */
@@ -576,8 +531,9 @@ int index_of_k1(double k,
   }
 
   return _SUCCESS_;
-
 }
+
+
 /* For a given value of k, index_k1, index_k2, this function finds the index_k3 in the ppt2->k2[index_k1][index_k2][index_k3] grid. */
 int index_of_k3(double k,
     int index_k1,
@@ -629,11 +585,11 @@ int index_of_k_bessel(double k,
 
                double k_bessel;
 
-/* Scan through the k_bessel grid pgb2->k_bessel[index] and assign the index which gives the closest estimate of k */
+               /* Scan through the k_bessel grid pgb2->k_bessel[index] and assign the index which gives the closest estimate of k */
                if (k < k_start){ // need to search from beginning
                   for (int index = *last_index; index < pgb2->k_size_bessel; index++) {
                     k_bessel = pgb2->k_bessel[index];
-    /* NOTE: the sign < >*/
+
                     if (k < k_bessel && *index_k_bessel == -1) {
                       *index_k_bessel=index;
                       break;
@@ -643,8 +599,9 @@ int index_of_k_bessel(double k,
 
               else {
                 for (int index = *last_index; index < pgb2->k_size_bessel; index++) {
+
                   k_bessel = pgb2->k_bessel[index];
-                  //printf("%g\n", k_ppt);
+
                   if (k < k_bessel && *index_k_bessel == -1) {
                     *index_k_bessel=index;
                     break;
@@ -658,8 +615,6 @@ int index_of_k_bessel(double k,
                 printf("%s\n",'Search out of bounds in index_of_k_bessel()' );
               }
               return _SUCCESS_;
-
-
     }
 
 int k3_search_mod(double k,
@@ -669,12 +624,9 @@ int k3_search_mod(double k,
                   double * a,
                   struct perturbs2 * ppt2){
 
-  //int index_mark;
   for (int index = 0; index < ppt2->k3_size[index_k1][index_k2]; index++) {
-    //printf("--\n");
 
     double k3,k_diff;
-
 
     k3 = ppt2->k3[index_k1][index_k2][index];
     k_diff = k3-k;
@@ -684,21 +636,11 @@ int k3_search_mod(double k,
     if (k_diff < 0) {
       a[index]=-k_diff;
     }
-    //printf("a[%d] = %g, a[%d] = %g, diff = %g\n", index, a[index], index-1, a[index-1],a[index]-a[index-1]);
+
     if(a[index]<a[index-1]){
 
       *index_mark = index;
     }
-    //b[index] = -k_diff;
-    //printf("%g - %g = a[%d] = %g\n",k3, k, index, a[index]);
-    //printf("b[%d] = %g\n", index, b[index]);
-    //printf("k3 = %g, index = %d\n", k3, index);
-    //printf("index_mark  = %d\n",*index_mark);
-    //printf("--\n");
-    //printf("k3-k = %g\n", k_diff);
-    //printf("k3-k = %g\n", k3-k);
-    //printf("mod_k3 = %g\n", mod_k3);
-    //printf("%s\n", );
   }
 
   return _SUCCESS_;
@@ -726,7 +668,21 @@ int index_of_tau_sampling_quadsources(double tau,
                  }
 
 
-/* Initialise the module, this function is called by the song.c main file. */
+/* galbispectra2_init - the main function of this module. Here we can compute all types of galaxy bispectra. This function
+  is called in the song.c main file. Note that all of the input structures should be filled before galbispectra2_init is
+  called i.e. all of the associated modules should be ran beforehand. The output of this function is stored in the galbispectra2
+  structure which is poined to via the pointer pgb2.
+
+* @param precision              Input: precision structure
+* @param precision2             Input: second-order precision structure
+* @param background             Input: background structure
+* @param primordial             Input: primordial structure
+* @param thermodynamics         Input: thermodynamics structure
+* @param perturbations          Input: perturbations structure
+* @param perturbations2         Input: perturbations2 structure
+* @param galbispectra2          Output: galaxy bispectra structre
+* @param bessels                Input: Bessel structure
+*/
 
 int galbispectra2_init (
      struct precision * ppr,
@@ -741,11 +697,11 @@ int galbispectra2_init (
      struct transfers * ptr
      )
 {
-    /* Define local variables */
-
+    /* Define local (stack) variables */
   int index_l;
   int index_k;
   int index_tau;
+  int index_tau_ppt2;
   int index_tau_first;
   int index_tau_second;
   int index_type;
@@ -771,15 +727,23 @@ int galbispectra2_init (
   double k1_fo;
   double k2_fo;
   double p,q;
+  // NOTE: Alert
+  /*the bessel grid is boosted by an integer factor to account for rapid oscillations. Perhaps the k grid should have a similar amount of points.*/
+  int bessel_boost = 100;
   pgb2->tau_size_selection = 50;
-  pgb2->k_size_bessel = 9000;
+  /* We wish to double the number of slots so that points in the two grids tau_sampling_cls and tau_sampling_bessel align. */
+  pgb2->tau_size_bessel = bessel_boost * (pgb2->tau_size_selection-1) + 1;
+  pgb2->k_size_bessel = 9000;  /*tau_size_bessel*/   /*k_size * boost*/
   printf("Starting galaxy bispectra module...\n");
 
 
   double * result;
 
+
+
+
   /* Fix k2 = 10e-5, find what this value is in both the ppt and ppt2 grids respectively */
-  class_call(index_of_k1(0.00001,
+  /*class_call(index_of_k1(0.00001,
                  &index_k2,
                  ppt2),
                  ppt2->error_message,
@@ -794,7 +758,7 @@ int galbispectra2_init (
         pgb2->error_message);
 
 
-  printf("k = 7e-06, result = %g, ratio = %g\n", ppt2->k3[0][1][index_k3], 7.0e-06/ppt2->k3[0][1][index_k3]);
+  //printf("k = 7e-06, result = %g, ratio = %g\n", ppt2->k3[0][1][index_k3], 7.0e-06/ppt2->k3[0][1][index_k3]);
 
   k2_fo = ppt2->k[index_k2];
 
@@ -805,11 +769,11 @@ int galbispectra2_init (
   class_call(background_tau_of_z(pba, 500.0, &tau_kernel),ppt->error_message,pgb2->error_message);
 
   /* Choose some time slice, for example tau = ppt2->tau_sampling[5], find the corresponding index in the tau_sampling_quadsources grid */
-  class_call(index_of_tau_sampling_quadsources(tau_kernel, &index_tau_qs, ppt), ppt->error_message, pgb2->error_message);
+  /*class_call(index_of_tau_sampling_quadsources(tau_kernel, &index_tau_qs, ppt), ppt->error_message, pgb2->error_message);
   int last_tau_kernel = 0;
 
   class_call(index_of_tau_sampling_ppt2(tau_kernel,
-                 &index_tau,
+                 &index_tau_ppt2,
                  &last_tau_kernel,
                  pgb2), pgb2->error_message, pgb2->error_message);
 
@@ -818,20 +782,20 @@ int galbispectra2_init (
   printf("ppt2->tau_size = %d\n", ppt2->tau_size);
 
   /*Initialise some variables */
-  index_k3 = 0;
+  /*index_k3 = 0;
   index_k1_fo = 0;
   last_index_k3 = 0;
   int index_k1p = 0;
 
 
   /* Check that the tau values on both time grid are equal */
-  printf("index_tau_qs = %d, ppt->tau_sampling_quadsources[%d] = %g\n", index_tau_qs, index_tau_qs, ppt->tau_sampling_quadsources[index_tau_qs]);
+  //printf("index_tau_qs = %d, ppt->tau_sampling_quadsources[%d] = %g\n", index_tau_qs, index_tau_qs, ppt->tau_sampling_quadsources[index_tau_qs]);
 
-  int * last_i_k;
+  /*int * last_i_k;
   int zero = 0;
   last_i_k = &zero;
-  printf("last_i_k = %d\n", last_i_k);
-  printf("*last_i_k = %d\n", *last_i_k);
+  //printf("last_i_k = %d\n", last_i_k);
+  //printf("*last_i_k = %d\n", *last_i_k);
 
   for (int index_k1 = ppt2->k_size-1; index_k1 > 0; --index_k1) {
 
@@ -839,7 +803,7 @@ int galbispectra2_init (
            ppt2->k3_size[index_k1][index_k2] * sizeof(double),
            ppt->error_message);
   /* Need to set k1 = k3 */
-    k1_fo = ppt2->k[index_k1];
+  /*  k1_fo = ppt2->k[index_k1];
 
     class_call(index_of_k_old(ppt2->k[index_k1], &index_k1_fo, last_i_k, ppt), pgb2->error_message, pgb2->error_message);
 
@@ -847,156 +811,23 @@ int galbispectra2_init (
 
     /* NOTE: index_k1 is looped over, index_k2 is fixed by k2=1e-05, index_k3 is searched (also fixed by k1=k2), index_k1_fo is also searched, index_k2_fo is fixed by k2=1e-15, both time indices are also fixed. */
 
-    T1 = ppt->quadsources[ppt->index_md_scalars][ppt->index_ic_ad*ppt->qs_size[ppt->index_md_scalars]+ppt->index_qs_delta_cdm][index_tau_qs * ppt->k_size[ppt->index_md_scalars] + index_k1_fo];
+  /*  T1 = ppt->quadsources[ppt->index_md_scalars][ppt->index_ic_ad*ppt->qs_size[ppt->index_md_scalars]+ppt->index_qs_delta_cdm][index_tau_qs * ppt->k_size[ppt->index_md_scalars] + index_k1_fo];
 
     T2 = ppt->quadsources[ppt->index_md_scalars][ppt->index_ic_ad*ppt->qs_size[ppt->index_md_scalars]+ppt->index_qs_delta_cdm][index_tau_qs * ppt->k_size[ppt->index_md_scalars] + index_k2_fo];
 
-    T3 = ppt2->sources[ppt2->index_tp2_delta_cdm][index_k1][index_k2][index_tau*ppt2->k3_size[index_k1][index_k2]+index_k3];
+    T3 = ppt2->sources[ppt2->index_tp2_delta_cdm][index_k1][index_k2][index_tau_ppt2*ppt2->k3_size[index_k1][index_k2]+index_k3];
 
 
     kernel = T3/(T1*T2);
-    printf("%g  %g\n", ppt2->k[index_k1], kernel);
+    //printf("%g  %g\n", ppt2->k[index_k1], kernel);
 
   }
-  printf("tau_kernel = %g\n",tau_kernel);
-  printf("ppt2->tau_sampling[%d] = %g, ppt->tau_sampling_quadsources[%d] = %g, ratio = %g\n",index_tau, ppt2->tau_sampling[index_tau], index_tau_qs, ppt->tau_sampling_quadsources[index_tau_qs],  ppt->tau_sampling_quadsources[index_tau_qs]/ppt2->tau_sampling[index_tau]);
-  exit(0);
+  //printf("tau_kernel = %g\n",tau_kernel);
+  //printf("ppt2->tau_sampling[%d] = %g, ppt->tau_sampling_quadsources[%d] = %g, ratio = %g\n",index_tau, ppt2->tau_sampling[index_tau], index_tau_qs, ppt->tau_sampling_quadsources[index_tau_qs],  ppt->tau_sampling_quadsources[index_tau_qs]/ppt2->tau_sampling[index_tau]);
 
 
 
-
-
-  // ====================================================================================
-  // =                              Indices and samplings                               =
-  // ====================================================================================
-
-  /* Determine which sources need to be computed and their k-sampling */
-
-/*  class_call( perturb2_indices_of_perturbs(
-                ppr,
-                ppr2,
-                pba,
-                pth,
-                ppt,
-                ppt2),
-  ppt2->error_message,
-  ppt2->error_message); */
-
-
-  /* Determine the time sampling for the sources */
-
-/*  class_call (perturb2_timesampling_for_sources (
-                ppr,
-                ppr2,
-                pba,
-                pth,
-                ppt,
-                ppt2),
-    ppt2->error_message,
-    ppt2->error_message); */
-
-
-  // ====================================================================================
-  // =                            Solve first-order system                              =
-  // ====================================================================================
-
-  /* Run the first-order perturbations module in order to:
-    - Compute and store in ppt->quadsources the perturbations needed to solve the
-      2nd-order system.
-    - Compute and store in ppt->sources the line-of-sight sources needed to compute
-      the first-order transfer functions (not the C_l's).
-    The k-sampling for the first-order perturbations (ppt->k) has been already determined
-    in perturb2_get_k_lists() and matches the one for the second-order sources (ppt2->k).
-    Similarly, their time sampling (ppt->tau_sampling_quadsources) has been computed
-    in perturb2_timesampling_for_sources().  */
-
-  /*class_call (perturb_init (
-                ppr,
-                pba,
-                pth,
-                ppt),
-    ppt->error_message, ppt2->error_message);*/
-
-
-  /* Stop here if the user asked to compute only the first-order perturbations */
-  if (ppt2->stop_at_perturbations1 == _TRUE_) {
-
-    ppt->has_perturbations = _FALSE_;
-    ppt->has_cls = _FALSE_;
-    ppt->has_cmb_bispectra = _FALSE_;
-    ppt2->has_cmb_spectra = _FALSE_;
-    ppt2->has_cmb_bispectra = _FALSE_;
-
-    if (ppt2->perturbations2_verbose > 0)
-      printf(" -> Exiting after computation of first-order perturbations\n");
-
-    return _SUCCESS_;
-  }
-
-  /* Print some info to screen */
-  if (ppt2->perturbations2_verbose > 0) {
-    printf(" -> computing %s2nd-order sources ",
-      ppt2->rescale_cmb_sources==_TRUE_ ? "RESCALED " : "");
-
-    if (ppt->gauge == newtonian)
-      printf("in Newtonian gauge ");
-    if (ppt->gauge == synchronous)
-      printf("in synchronous gauge ");
-
-    //printf ("for m=");
-    //for (int index_m=0; index_m < (ppr2->m_size-1); ++index_m)
-      //printf("%d,", ppr2->m[index_m]);
-    //printf("%d\n", ppr2->m[ppr2->m_size-1]);
-  }
-
-
-  /* Apart from ppt2->sources, all the arrays needed by the subsequent modules have been filled.
-  If the user requested to load the line of sight sources from disk, we can stop the execution of
-  this module now without regrets. */
-
-  if (ppr2->load_sources_from_disk == _TRUE_) {
-
-    if (ppt2->perturbations2_verbose > 0)
-      printf(" -> leaving perturbs2 module; line-of-sight sources will be read from disk\n");
-
-    /* Uncomment to produce the sources output files again */
-    // if ((ppt2->k_out_size > 0) || (ppt2->tau_out_size > 0))
-    //   class_call_parallel (perturb2_output (
-    //                          ppr,
-    //                          ppr2,
-    //                          pba,
-    //                          ppt,
-    //                          ppt2),
-    //      ppt2->error_message,
-    //      ppt2->error_message);
-
-    return _SUCCESS_;
-
-  }
-
-
-  /* Do not evaluate the subsequent modules if ppt2->stop_at_perturbations2 == _TRUE_ */
-  if (ppt2->stop_at_perturbations2 == _TRUE_) {
-    ppt->has_perturbations = _FALSE_;
-    ppt->has_cls = _FALSE_;
-    ppt->has_cmb_bispectra = _FALSE_;
-    ppt2->has_cmb_spectra = _FALSE_;
-    ppt2->has_cmb_bispectra = _FALSE_;
-  }
-
-
-
-
-
-
-
-
-
-
-
-
-
-  /* Allocate and fill array for the trapezoidal weights for line of sight integration */
+/* Allocate and fill array for the trapezoidal weights for line of sight integration */
 
 
   class_alloc(tau0_minus_tau,
@@ -1024,6 +855,10 @@ int galbispectra2_init (
 
   class_alloc(pgb2->tau_sampling_cls,
               pgb2->tau_size_selection * sizeof(double),
+              pgb2->error_message);
+
+  class_alloc(pgb2->tau_sampling_bessel,
+              pgb2->tau_size_bessel * sizeof(double),
               pgb2->error_message);
 
 
@@ -1080,6 +915,12 @@ int galbispectra2_init (
     pgb2->tau_sampling_cls[index_tau] = overall_tau_min + index_tau*(pba->conformal_age-overall_tau_min)/(pgb2->tau_size_selection-1);
   }
 
+  for (int index_tau_bessel = 0; index_tau_bessel < pgb2->tau_size_bessel; index_tau_bessel++) {
+    pgb2->tau_sampling_bessel[index_tau_bessel] = overall_tau_min + index_tau_bessel*(pba->conformal_age-overall_tau_min)/(pgb2->tau_size_bessel-1);
+  }
+
+
+
 
   /* New Bessel k-sampling to capture features of the Bessel oscillations */
 
@@ -1106,7 +947,7 @@ int galbispectra2_init (
 
 
 
-  /* Allocate and fill array for the trapezoidal weights for chi integration w_trapz[bin][index_tau] */
+  /* Allocate and fill array for the trapezoidal weights for Chi integration w_trapz[bin][index_tau] */
   class_alloc(w_trapz,
               ppt->selection_num * sizeof(double*),
               ppt->error_message);
@@ -1120,11 +961,11 @@ int galbispectra2_init (
 
   /* Allocate and fill array for the trapezoidal weights for chi integration in the lensing term w_trapz_lens[index_tau] */
   class_alloc(pgb2->w_trapz_lens,
-              pgb2->tau_size_selection * sizeof(double*),
+              pgb2->tau_size_bessel * sizeof(double*),
               ppt->error_message);
 
-  class_call(array_trapezoidal_weights(pgb2->tau_sampling_cls,
-                                       pgb2->tau_size_selection,
+  class_call(array_trapezoidal_weights(pgb2->tau_sampling_bessel,
+                                       pgb2->tau_size_bessel,
                                        pgb2->w_trapz_lens,
                                        pgb2->error_message),
                                        pgb2->error_message,
@@ -1155,6 +996,7 @@ int galbispectra2_init (
 
   /* Declaration of temporary pointer */
   double ** selection;
+  double * pvecback2;
 
 
   /* Allocation of first dimension selection[bin] */
@@ -1162,17 +1004,37 @@ int galbispectra2_init (
               ppt->selection_num * sizeof(double*),
               ppt->error_message);
 
+  printf("selection_num = %d\n",ppt->selection_num);
+  class_alloc(pvecback,
+              pba->bg_size*sizeof(double),
+              ptr->error_message);
 
   /* Allocation of second dimension selection[bin][index_tau] */
   for(int bin = 0; bin < ppt->selection_num; bin++){
+    printf("bin = %d\n", bin );
     class_alloc(selection[bin],
-                /*ppt->tau_size_quadsources*/ pgb2->tau_size_selection * sizeof(double),
+                pgb2->tau_size_selection * sizeof(double),
                 ppt->error_message);
 
-  /* transfer_selection_compute writes in to selection[bin] */
-  class_call(transfer_selection_compute(ppr, pba, ppt, ptr, selection[bin], tau0_minus_tau[bin], w_trapz[bin], pgb2->tau_size_selection, pvecback, tau0, bin),
-             pgb2->error_message,
-             pgb2->error_message);
+    printf("tau0_minus_tau[%d]= %g\n",bin, tau0_minus_tau[bin]);
+    printf("w_trapz[%d] = %g\n", bin, w_trapz[bin]);
+    printf("tau0 = %g\n", tau0 );
+    printf("pvecback = %g\n",pvecback);
+    printf("pvecback = %g\n",*pvecback);
+    /* transfer_selection_compute writes in to selection[bin] */
+    class_call(transfer_selection_compute(ppr,
+                                          pba,
+                                          ppt,
+                                          ptr,
+                                          selection[bin],
+                                          tau0_minus_tau[bin],
+                                          w_trapz[bin],
+                                          pgb2->tau_size_selection,
+                                          pvecback,
+                                          tau0,
+                                          bin),
+               pgb2->error_message,
+               pgb2->error_message);
 
   }
 
@@ -1189,7 +1051,7 @@ int galbispectra2_init (
   printf("ppt->k_size[ppt->index_md_scalars] = %d\n",ppt->k_size[ppt->index_md_scalars] );
   printf("ppt->tau_size_quadsources = %d\n", ppt->tau_size_quadsources);
   printf("pgb2->tau_size_selection = %d\n", pgb2->tau_size_selection );
-  printf("pgb2->k_bessel[0] = %g\n", pgb2->k_bessel[0] );
+  printf("pgb2->k_bessel[0] = %g\n", pgb2->k_bessel[0]);
 
   int dump = 0;
   double f,g;
@@ -1205,7 +1067,7 @@ int galbispectra2_init (
 
 /* NOTE: The following if statements should be dependent on the unser input */
 // if want delta_cdm
-  if (k5 == 5.0){
+/*  if (k5 == 5.0){
     pgb2->index_type_delta_cdm = index_type;
     index_type++;
   }
@@ -1214,17 +1076,17 @@ int galbispectra2_init (
   if (k5 == 5.0){
     pgb2->index_type_rsd = index_type;
     index_type++;
-  }
+  }*/
 
   if (k5 == 5.0){
     pgb2->index_type_phi_plus_psi = index_type;
     index_type++;
   }
 
-  /*if (k5 == 5.0){
+  if (k5 == 5.0){
     pgb2->index_type_lens = index_type;
     index_type++;
-  }*/
+  }
 
   pgb2->type_size = index_type;
   printf("type size = %d\n", pgb2->type_size );
@@ -1250,6 +1112,22 @@ int galbispectra2_init (
     }
   }
 
+  class_alloc(pgb2->first_order_sources_integrand, pgb2->type_size * sizeof(double **), ppt->error_message);
+    for (int index_type = 0; index_type < pgb2->type_size; index_type++) {
+      /* Allocate memory for pgb2->first_order_sources_integrand[index_type][index_tau] */
+      class_alloc(pgb2->first_order_sources_integrand[index_type],
+                  pgb2->tau_size_bessel * sizeof(double *),
+                  ppt->error_message);
+      /* Allocate memory for pgb2->first_order_sources_integrand[index_type] */
+      for (int index_tau = 0; index_tau < pgb2->tau_size_bessel; index_tau++) {
+          /* Loop over type and tau. For each of them, allocate memory
+           for pgb2->first_order_sources_integrand[index_type][index_tau][index_k_bessel]  */
+         class_alloc(pgb2->first_order_sources_integrand[index_type][index_tau],
+                      pgb2->k_size_bessel * sizeof(double),
+                      ppt->error_message);
+    }
+  }
+
   /* Define an array of values of first order transfer functions with integrals (lensing etc.), these source terms have an extra
     index (index_l):
               pgb2->first_order_sources_integ[index_type][index_l][index_tau][index_k_bessel] */
@@ -1257,6 +1135,7 @@ int galbispectra2_init (
 
   class_alloc(pgb2->first_order_sources_integ, pgb2->type_size * sizeof(double ***), ppt->error_message);
     for (int index_type = 0; index_type < pgb2->type_size; index_type++) {
+
       /* Allocate memory for pgb2->first_order_sources_integ[index_type][index_tau] */
       class_alloc(pgb2->first_order_sources_integ[index_type],
                   ptr->l_size[ppt->index_md_scalars] * sizeof(double **),
@@ -1269,6 +1148,7 @@ int galbispectra2_init (
                     ppt->error_message);
       /* Allocate memory for pgb2->first_order_sources_integ[index_type] */
         for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++) {
+
             /* Loop over type, l and tau. For each of them, allocate memory
              for pgb2->first_order_sources_integ[index_type][index_l][index_tau][index_k_bessel]  */
            class_alloc(pgb2->first_order_sources_integ[index_type][index_l][index_tau],
@@ -1277,6 +1157,7 @@ int galbispectra2_init (
         }
       }
     }
+
 
 
   //printf("%g\n",ppt->quadsources[ppt->index_md_scalars][ppt->index_ic_ad*ppt->qs_size[ppt->index_md_scalars]+ppt->index_qs_delta_cdm][100 * ppt->k_size[ppt->index_md_scalars] + 20]);
@@ -1434,10 +1315,6 @@ int galbispectra2_init (
         double lensing_result;
         double x;
 
-
-
-
-
         for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
           index = 0;
 
@@ -1464,113 +1341,238 @@ int galbispectra2_init (
 
           pgb2->first_order_sources[pgb2->index_type_phi_plus_psi][index_tau][index_k_bessel] = (g*intermediate_plus +(1-g)*intermediate);
 
-        //  printf("pgb2->first_order_sources[pgb2->index_phi_plus_psi][%d][%d][%d] = %g\n", index_l, index_tau, index_k_bessel,pgb2->first_order_sources[pgb2->index_type_phi_plus_psi][index_tau][index_k_bessel] = (g*intermediate_plus +(1-g)*intermediate));
+          //printf("pgb2->first_order_sources[pgb2->index_phi_plus_psi][%d][%d] = %g\n", index_tau, index_k_bessel,pgb2->first_order_sources[pgb2->index_type_phi_plus_psi][index_tau][index_k_bessel]);
 
         }
     }
 
+    for (int index_tau = 0; index_tau < pgb2->tau_size_bessel; index_tau++){
+
+        last_index_k = 0;
+        index_k_lens = 0;
+        int last_index;
+        int index_tau_lens;
+        double lensing_result;
+        f = 0.;
+        g = 0;
+
+        for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
+          index = 0;
+
+          double tau = pgb2->tau_sampling_bessel[index_tau];
+
+          class_call(index_of_tau_sampling_quadsources(tau, &index, ppt), pgb2->error_message, pgb2->error_message);
+
+          double k = pgb2->k_bessel[index_k_bessel];
+
+          //class_call(index_of_k(k, &index_k, ppt), pgb2->error_message, pgb2->error_message);
+          class_call(index_of_k_old(k,
+                         &index_k,
+                         &last_index_k,
+                         ppt),
+                         pgb2->error_message,
+                         pgb2->error_message);
+          //last_index_k = index_k;
+
+          f = (pgb2->tau_sampling_bessel[index_tau]-ppt->tau_sampling_quadsources[index])/(ppt->tau_sampling_quadsources[index+1]-ppt->tau_sampling_quadsources[index]);
+
+          intermediate  = f*phi_plus_psi[index+1][index_k]+(1-f)*phi_plus_psi[index][index_k];
+
+          intermediate_plus =  f*phi_plus_psi[index+1][index_k+1]+(1-f)*phi_plus_psi[index][index_k+1];
+
+          g = (pgb2->k_bessel[index_k_bessel]-ppt->k[ppt->index_md_scalars][index_k])/(ppt->k[ppt->index_md_scalars][index_k+1]-ppt->k[ppt->index_md_scalars][index_k]);
 
 
+
+          /*pgb2->first_order_sources_integrand[pgb2->index_type_phi_plus_psi][index_tau][index_k_bessel] = intermediate_plus*(pgb2->k_bessel[index_k_bessel]-ppt->k[ppt->index_md_scalars][index_k])/(ppt->k[ppt->index_md_scalars][index_k+1]-ppt->k[ppt->index_md_scalars][index_k])
+             + intermediate*(1-(pgb2->k_bessel[index_k_bessel]-ppt->k[ppt->index_md_scalars][index_k])/(ppt->k[ppt->index_md_scalars][index_k+1]-ppt->k[ppt->index_md_scalars][index_k]));*/
+          pgb2->first_order_sources_integrand[pgb2->index_type_phi_plus_psi][index_tau][index_k_bessel] = (g*intermediate_plus +(1-g)*intermediate);
+          /*if (index_k_bessel == 0) {
+            printf("tau_bessel = %g, tau_qs = %g\n", tau, ppt->tau_sampling_quadsources[index]);
+          }
+          if (index_tau == pgb2->tau_size_bessel -2) {
+            printf("%g    %g    %g    %g\n", k, pgb2->first_order_sources_integrand[pgb2->index_type_phi_plus_psi][index_tau][index_k_bessel], ppt->k[ppt->index_md_scalars][index_k], phi_plus_psi[index][index_k]);
+          }*/
+
+
+
+        //if (index_tau == 4900 ) {
+            //printf("pgb2->first_order_sources_integrand[pgb2->index_phi_plus_psi][%d][%d] = %g\n", index_tau, index_k_bessel, pgb2->first_order_sources_integrand[pgb2->index_type_phi_plus_psi][index_tau][index_k_bessel]);
+            //printf("f = %g\n",f);
+            //printf("g = %g\n",g);
+            //printf("intermediate = %g\n",intermediate );
+            //printf("intermediate_plus = %g\n",intermediate_plus );
+          //}
+          //printf(" \n");
+          //printf("phi_plus_psi[%d][%d] = *%g*, k = %g, tau_qs = %g\n", index, index_k, phi_plus_psi[index][index_k],ppt->k[ppt->index_md_scalars][index_k],ppt->tau_sampling_quadsources[index]);
+          //printf("pgb2->first_order_sources_integrand[pgb2->index_phi_plus_psi][%d][%d] = *%g*, k = %g, tau_bessel = %g\n", index_tau, index_k_bessel,pgb2->first_order_sources_integrand[pgb2->index_type_phi_plus_psi][index_tau][index_k_bessel], pgb2->k_bessel[index_k_bessel], pgb2->tau_sampling_bessel[index_tau]);
+          //printf("phi_plus_psi[%d][%d] = *%g*, k =%g, tau_qs = %g\n", index, index_k+1, phi_plus_psi[index][index_k+1], ppt->k[ppt->index_md_scalars][index_k+1],ppt->tau_sampling_quadsources[index]);
+        }
+    }
+    int index_kg = 5000;
+    int index_kg_ppt;
+    double kg = pgb2->k_bessel[index_kg];
+
+    class_call(index_of_k_old(kg,
+                   &index_kg_ppt,
+                   &last_index_k,
+                   ppt),
+                   pgb2->error_message,
+                   pgb2->error_message);
+
+    /*for (int index_tau = 0; index_tau < pgb2->tau_size_bessel; index_tau++){
+
+      tau = pgb2->tau_sampling_bessel[index_tau];
+
+      class_call(index_of_tau_sampling_quadsources(tau, &index, ppt), pgb2->error_message, pgb2->error_message);
+
+
+      printf("%s\n", printf("%g    %g    %g    %g\n", tau, pgb2->first_order_sources_integrand[pgb2->index_type_phi_plus_psi][index_tau][index_kg], ppt->tau_sampling_quadsources[index], phi_plus_psi[index][index_kg_ppt]));
+    }
+
+    exit(0);*/
+
+    int index_k_f = 5000;
+    double k_f;
+    index = 0;
+    last_index_k = 0;
+    // INTERPOLATION INTERPOLATE
+    for (int index_tau = 0; index_tau < pgb2->tau_size_bessel; index_tau++) {
+      last_index_k_lens = 0;
+      index_k_lens = 0;
+      int last_index;
+      int index_tau_lens;
+
+      double tau = pgb2->tau_sampling_bessel[index_tau];
+
+      class_call(index_of_tau_sampling_quadsources(tau, &index, ppt), pgb2->error_message, pgb2->error_message);
+      //class_call(index_of_k(k_f, &index_k, ppt), pgb2->error_message, pgb2->error_message);
+      k_f = pgb2->k_bessel[index_k_f];
+
+      //class_call(index_of_k(k_f, &index_k, ppt), pgb2->error_message, pgb2->error_message);
+      class_call(index_of_k_old(k_f,
+                     &index_k,
+                     &last_index_k,
+                     ppt),
+                     pgb2->error_message,
+                     pgb2->error_message);
+      //last_index_k = index_k;
+
+      /*pgb2->first_order_sources_integrand[pgb2->index_type_phi_plus_psi][index_tau][index_k_f] = intermediate_plus*(pgb2->k_bessel[index_k_f]-ppt->k[ppt->index_md_scalars][index_k])/(ppt->k[ppt->index_md_scalars][index_k+1]-ppt->k[ppt->index_md_scalars][index_k])
+         + intermediate*(1-(pgb2->k_bessel[index_k_f]-ppt->k[ppt->index_md_scalars][index_k])/(ppt->k[ppt->index_md_scalars][index_k+1]-ppt->k[ppt->index_md_scalars][index_k]));*/
+      pgb2->first_order_sources_integrand[pgb2->index_type_phi_plus_psi][index_tau][index_k_bessel] = (g*intermediate_plus +(1-g)*intermediate);
+      //printf(" \n");
+      //printf("k_qs = %g\n", ppt->k[ppt->index_md_scalars][index_k]);
+      //printf("k_bessel = %g\n", pgb2->k_bessel[index_k_f] );
+      //printf("k_qs+1 = %g\n", ppt->k[ppt->index_md_scalars][index_k+1]);
+      //printf("phi_plus_psi[%d][%d] = *%g*, k = %g, tau_qs = %g\n", index, index_k, phi_plus_psi[index][index_k],ppt->k[ppt->index_md_scalars][index_k],ppt->tau_sampling_quadsources[index]);
+      //printf("pgb2->first_order_sources_integrand[pgb2->index_phi_plus_psi][%d][%d] = *%g*, k = %g, tau_bessel = %g\n", index_tau, index_k_f,pgb2->first_order_sources_integrand[pgb2->index_type_phi_plus_psi][index_tau][index_k_f], pgb2->k_bessel[index_k_f], pgb2->tau_sampling_bessel[index_tau]);
+      //printf("phi_plus_psi[%d][%d] = *%g*, k =%g, tau_qs = %g\n", index+1, index_k, phi_plus_psi[index+1][index_k], ppt->k[ppt->index_md_scalars][index_k],ppt->tau_sampling_quadsources[index+1]);
+
+
+    }
+
+
+
+
+    double *** lensing_test_array;
+
+    class_alloc(lensing_test_array,
+                ptr->l_size[ppt->index_md_scalars] * sizeof(double**),
+                pgb2->error_message);
+    for (int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
+      class_alloc(lensing_test_array[index_l],
+                  pgb2->tau_size_selection * sizeof(double*),
+                  pgb2->error_message);
+      for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++) {
+        class_alloc(lensing_test_array[index_l][index_tau],
+                    pgb2->k_size_bessel * sizeof(double),
+                    pgb2->error_message);
+      }
+    }
+
+    /*int index_k_bessel2 = 4000;
+    for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++) {
+      printf(" \n");
+      printf("ORIGINAL[ppgb2->index_type_phi_plus_psi][tau[%d] = %g][k[%d] = %g] = %g\n", index_tau, pgb2->tau_sampling_cls[index_tau], index_k_bessel2, pgb2->k_bessel[index_k_bessel2], pgb2->k_bessel[index_k_bessel2], pgb2->first_order_sources[pgb2->index_type_phi_plus_psi][index_tau][index_k_bessel2]);
+      for (int index_tau_lens = (index_tau * bessel_boost); index_tau_lens < pgb2->tau_size_bessel-1; index_tau_lens++) {
+
+        if (index_tau_lens == index_tau * bessel_boost){
+          printf("NEW[pgb2->index_type_phi_plus_psi][tau_lens[%d] = %g][k[%d] = %g] = %g\n",index_tau_lens, pgb2->tau_sampling_bessel[index_tau_lens], index_k_bessel2, pgb2->k_bessel[index_k_bessel2], pgb2->first_order_sources_integrand[pgb2->index_type_phi_plus_psi][index_tau_lens][index_k_bessel2]);
+        }
+
+        if (index_tau_lens == ceil(((index_tau * bessel_boost)-pgb2->tau_size_bessel+2)/2)) {
+          printf("NEW[pgb2->index_type_phi_plus_psi][tau_lens[%d] = %g][k[%d] = %g] = %g\n",index_tau_lens, pgb2->tau_sampling_bessel[index_tau_lens], index_k_bessel2, pgb2->k_bessel[index_k_bessel2], pgb2->first_order_sources_integrand[pgb2->index_type_phi_plus_psi][index_tau_lens][index_k_bessel2]);
+        }
+
+        if (index_tau_lens == (pgb2->tau_size_bessel-2)) {
+          printf("NEW[pgb2->index_type_phi_plus_psi][tau_lens[%d] = %g][k[%d] = %g] = %g\n",index_tau_lens, pgb2->tau_sampling_bessel[index_tau_lens], index_k_bessel2, pgb2->k_bessel[index_k_bessel2], pgb2->first_order_sources_integrand[pgb2->index_type_phi_plus_psi][index_tau_lens][index_k_bessel2]);
+        }
+      }
+    }
+    exit(0);*/
+
+    /* This is the ratio between the two equally spaced time grids. */
+    // NOTE: ALERT l has been changed to run up to 4.
     for (int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
       for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++){
 
       last_index_k_lens = 0;
       index_k_lens = 0;
-      int index_tau_source;
+      int index_tau_cls;
       int last_index;
       int index_tau_lens;
+      int first_index_tau_in_lens;
       double r_lens;
       double r = pba->conformal_age - pgb2->tau_sampling_cls[index_tau];
       double lensing_result;
+      double f_minus, f_plus, w_minus, w_plus, f_interpolate, tau_lens;
+      double weight, end_weights;
       double x;
-      double j;
+      double j,j1;
 
       for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
 
           lensing_result = 0.;
+          first_index_tau_in_lens = index_tau * bessel_boost;
+          //printf("pgb2->first_order_sources[pgb2->index_type_phi_plus_psi][%d][%d] = %g\n",index_tau, index_k_bessel,pgb2->first_order_sources[pgb2->index_type_phi_plus_psi][index_tau][index_k_bessel]);
 
-          for (index_tau_lens = 0; index_tau_lens <= index_tau; index_tau_lens++) {
+          for (index_tau_lens = (index_tau * bessel_boost); index_tau_lens < pgb2->tau_size_bessel-1; index_tau_lens++) {
+            // NOTE that we skip the last index "pgb2->tau_size_bessel-1" to avoid the singularity. This would analytically drop out anyways
+            // for l not 1.
 
-            r_lens = pba->conformal_age - pgb2->tau_sampling_cls[index_tau_lens];
+            //printf("index_tau * bessel_boost = %d . %d\n", index_tau * bessel_boost, index_tau_lens );
+            tau_lens = pgb2->tau_sampling_bessel[index_tau_lens];
 
-            x = pgb2->k_bessel[index_k_bessel]*r_lens;
 
             if(x>pbs->x_max ){
-            /*printf("ALERT! x1= %g x2 = %g \n",x1,x2);*/continue;}
+            printf("ALERT! x= %g \n",x);continue;}
 
-            class_call(bessel_at_x(pbs, x, index_l, &j), pbs->error_message, pgb2->error_message);
 
-            lensing_result += ((r -r_lens)/r*r_lens)*pgb2->first_order_sources[pgb2->index_type_phi_plus_psi][index_tau][index_k_bessel]*pgb2->w_trapz_lens[index_tau_lens]*j;
-            if ( index_k_bessel == 1000){
-               //printf("x = %g, r = %g, r_lens = %g, j = %g,lensing_result = %g\n",x, r,   r_lens, j, lensing_result);
+
+            class_call(bessel_at_x(pbs,pgb2->k_bessel[index_k_bessel]*(pba->conformal_age -tau_lens), index_l, &j), pbs->error_message, pgb2->error_message);
+
+            index_of_tau_sampling_cls(tau_lens, &index_tau_cls, &last_index, pgb2);
+
+            first_index_tau_in_lens = index_tau * bessel_boost;
+
+            /* If we are taking the first or last trapezoidal weight then take the first weight, else take the other weight */
+            if (index_tau_lens == first_index_tau_in_lens || index_tau_lens == (pgb2->tau_size_bessel-1) ){
+              weight = (pgb2->tau_sampling_bessel[first_index_tau_in_lens]-pgb2->tau_sampling_bessel[pgb2->tau_size_bessel-1])/(2.0*((pgb2->tau_size_bessel-1)-first_index_tau_in_lens));
             }
-            //printf("pgb2->w_trapz_lens[%d] = %g\n",index_tau_lens, pgb2->w_trapz_lens[index_tau_lens]);
-            //pgb2->first_order_sources_integ[pgb2->index_type_lens][index_l][index_tau][index_k_bessel] = lensing_result;
 
-            //printf("pgb2->first_order_sources_integ[pgb2->index_type_lens][%d][%d][%d] = %g, lensing_result = %g\n", index_l, index_tau, index_k_bessel,pgb2->first_order_sources_integ[pgb2->index_type_lens][index_l][index_tau][index_k_bessel], lensing_result);
+            else{
+              weight = (pgb2->tau_sampling_bessel[first_index_tau_in_lens]-pgb2->tau_sampling_bessel[pgb2->tau_size_bessel-1])/((pgb2->tau_size_bessel-1)-first_index_tau_in_lens);
+            }
+
+            lensing_result += ((pba->conformal_age - pgb2->tau_sampling_bessel[index_tau_lens])-(pba->conformal_age - pgb2->tau_sampling_cls[index_tau]))
+              * j * weight * pgb2->first_order_sources_integrand[pgb2->index_type_phi_plus_psi][index_tau_lens][index_k_bessel]/((pba->conformal_age - pgb2->tau_sampling_bessel[index_tau_lens])*(pba->conformal_age - pgb2->tau_sampling_cls[index_tau]));
           }
 
           pgb2->first_order_sources_integ[pgb2->index_type_lens][index_l][index_tau][index_k_bessel] = lensing_result;
-          if ( index_k_bessel == 1000){
-             //printf("pgb2->first_order_sources_integ[pgb2->index_type_lens][%d][%d][%d] = %g, lensing_result = %g\n", index_l, index_tau, index_k_bessel,pgb2->first_order_sources_integ[pgb2->index_type_lens][index_l][index_tau][index_k_bessel], lensing_result);
-          }
-
         }
       }
     }
-
-    free(phi_plus_psi);
-    //exit(0);
-
-
-
-
-
-  //for (int index_type = 0; index_type < ppt->tp_size[index_md]; index_type++) {
-  /*  for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++){
-      last_index_k_lens = 0;
-      index_k_lens = 0;
-      for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
-        index = 0;
-        //last_index_k_rsd = 0;
-
-        double tau = pgb2->tau_sampling_cls[index_tau];
-
-        class_call(index_of_tau_sampling_quadsources(tau, &index, &last_index_lens, ppt), pgb2->error_message, pgb2->error_message);
-
-        double k = pgb2->k_bessel[index_k_bessel];
-
-        class_call(index_of_k(k, &index_k_lens, ppt), pgb2->error_message, pgb2->error_message);
-        //class_call(index_of_k(k, &index_k_lens, &last_index_k_lens, ppt), pgb2->error_message, pgb2->error_message);
-        //last_index_k = index_k;
-        double phi_plus_psi
-
-        f = (pgb2->tau_sampling_cls[index_tau]-ppt->tau_sampling_quadsources[index])/(ppt->tau_sampling_quadsources[index+1]-ppt->tau_sampling_quadsources[index]);
-
-        intermediate  = (f*ppt->quadsources[ppt->index_md_scalars][ppt->index_ic_ad*ppt->qs_size[ppt->index_md_scalars]+ppt->index_qs_phi][(index+1) * ppt->k_size[ppt->index_md_scalars] + index_k]+
-            (1-f)*ppt->quadsources[ppt->index_md_scalars][ppt->index_ic_ad*ppt->qs_size[ppt->index_md_scalars]+ppt->index_qs_phi][index * ppt->k_size[ppt->index_md_scalars] + index_k]);
-
-        intermediate_plus =  (f*ppt->quadsources[ppt->index_md_scalars][ppt->index_ic_ad*ppt->qs_size[ppt->index_md_scalars]+ppt->index_qs_phi][(index+1) * ppt->k_size[ppt->index_md_scalars] + index_k+1]+
-            (1-f)*ppt->quadsources[ppt->index_md_scalars][ppt->index_ic_ad*ppt->qs_size[ppt->index_md_scalars]+ppt->index_qs_phi][index * ppt->k_size[ppt->index_md_scalars] + index_k+1]);
-
-
-
-        g = (pgb2->k_bessel[index_k_bessel]-ppt->k[ppt->index_md_scalars][index_k])/(ppt->k[ppt->index_md_scalars][index_k+1]-ppt->k[ppt->index_md_scalars][index_k]);
-
-
-
-        pgb2->first_order_sources[pgb2->index_type_lens][index_tau][index_k_bessel] = (g*intermediate_plus +(1-g)*intermediate);
-
-        //printf("pgb2->first_order_sources[%d][%d][%d] = %g\n", pgb2->index_type_lens, index_tau, index_k_bessel, pgb2->first_order_sources[pgb2->index_type_lens][index_tau][index_k_bessel]);
-
-      }
-    }*/
-
-
-
-
-
-
 
   printf("First order source array filled.\n");
 
@@ -1581,7 +1583,6 @@ int galbispectra2_init (
   printf("Starting k-integration\n");
 
   /* Allocate array for Cl[index_type_first][index_type_second][index_l][index_tau_first][index_tau_second] */
-  //Cl[index_type_first][index_type_second][index_l][index_tau_first][index_tau_second]
   class_alloc(pgb2->Cl, pgb2->type_size * sizeof(double ****), pgb2->error_message);
   for (int index_type_first = 0; index_type_first < pgb2->type_size; index_type_first++){
     class_alloc(pgb2->Cl[index_type_first], pgb2->type_size * sizeof(double ***), pgb2->error_message);
@@ -1628,13 +1629,12 @@ int galbispectra2_init (
 
 
 
-  //herehere
   double integ, integ_dens_rsd;
   double result2;
 
 
-  printf("k lower bound = %g\n",ppt->k[ppt->index_md_scalars][0]);
-  printf("k upper bound = %g\n",ppt->k[ppt->index_md_scalars][ppt->k_size[ppt->index_md_scalars]-1] );
+  printf("integrating k between %g and %g\n",ppt->k[ppt->index_md_scalars][0],ppt->k[ppt->index_md_scalars][ppt->k_size[ppt->index_md_scalars]-1] );
+
   printf("pgb2->type_size = %d\n", pgb2->type_size);
 
 
@@ -1665,25 +1665,18 @@ int galbispectra2_init (
                                 &integ),
                        pgb2->error_message,
                        pgb2->error_message);
-             //printf("Indexing %ix%ix%ix%ix%i \n", index_type_first, index_type_second, index_l, index_tau_first, index_tau_second);
 
-            //printf("index_type_first = %d, index_type_second %d, index_l = %d, index_tau_first = %d, index_tau_second = %d, integ = %g\n", index_type_first, index_type_second, index_l, index_tau_first, index_tau_second, integ);
             pgb2->Cl[index_type_first][index_type_second][index_l][index_tau_first][index_tau_second] = integ;
-            /*if (index_type_first == pgb2->index_type_lens || index_type_second == pgb2->index_type_lens) {
-              printf("pgb2->Cl[%d][%d][%d][%d][%d] = %g\n", index_type_first, index_type_second, index_l, index_tau_first, index_tau_second,pgb2->Cl[index_type_first][index_type_second][index_l][index_tau_first][index_tau_second]);
-            }*/
 
-            //printf("pgb2->Cl[%d][%d][%d][%d][%d] = %g\n", index_type_first, index_type_second, index_l, index_tau_first, index_tau_second, pgb2->Cl[index_type_first][index_type_second][index_l][index_tau_first][index_tau_second]);
-
-
+            if (integ != integ) {
+              printf("pgb2->Cl[%d][%d][%d][%d][%d] = %g\n", index_type_first, index_type_second, index_l, index_tau_first, index_tau_second, pgb2->Cl[index_type_first][index_type_second][index_l][index_tau_first][index_tau_second]);
+            }
           }
         }
       }
     }
   }
 
-  free(pgb2->w_trapz_k);
-  free(pgb2->w_trapz_lens);
   printf("Done k-integration.\n");
 
 
@@ -1767,14 +1760,16 @@ int galbispectra2_init (
 
               double temp123 = 0.;
               double tau2 = pgb2->tau_sampling_selection[bin2][index_tau_second];
-              //printf("We are here 2\n");
+              ;
 
               for(index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++){
+                //printf("indexing %dx%dx%dx%dx%dx%dx%d\n",index_type_first, index_type_second, bin1, bin2, index_l,index_tau_second,index_tau_first);
 
                 double tau1 = pgb2->tau_sampling_selection[bin1][index_tau_first];
 
                 index_of_tau_sampling_cls(tau1, &index_tau1, &last_index1, pgb2);
                 index_of_tau_sampling_cls(tau2, &index_tau2, &last_index2, pgb2);
+
 
                 temp_minus = pgb2->Cl[index_type_first][index_type_second][index_l][index_tau1-1][index_tau2-1]*(pgb2->tau_sampling_cls[index_tau1]-tau1)
                               + pgb2->Cl[index_type_first][index_type_second][index_l][index_tau1][index_tau2-1]*(tau1-pgb2->tau_sampling_cls[index_tau1-1]);
@@ -1798,15 +1793,6 @@ int galbispectra2_init (
                   * selection[bin2][index_tau_second];
 
               pgb2->integral_over_single_window[index_type_first][index_type_second][index_l][bin1][bin2][index_tau_second] = temp123;
-
-            /*  printf("pgb2->integral_over_single_window[%d][%d][%d][%d][%d][%d] = %g\n",
-                      index_l,
-                      bin1,
-                      bin2,
-                      index_tau_second,
-                      pgb2->integral_over_single_window[index_type_first][index_type_second][index_l][bin1][bin2][index_tau_second]);*/
-
-
             }
           }
         }
@@ -1814,11 +1800,12 @@ int galbispectra2_init (
     }
   }
 
+printf("integrating between k =%g and %g\n",pgb2->k_bessel[index_k_bessel],pgb2->k_bessel[pgb2->k_size_bessel-1]);
 for  (index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
     //printf("l*(l+1)*Cl_final[%d][0][0] = %g\n",ptr->l[index_l], pgb2->Cl_final[index_type_first][index_type_second][index_l][0][0]*ptr->l[index_l]*(ptr->l[index_l]+1.));
-    printf("%d    %g\n",ptr->l[index_l], pgb2->Cl_final[pgb2->index_type_lens][pgb2->index_type_lens][index_l][0][0]*ptr->l[index_l]*(ptr->l[index_l]+1.));
+    printf("%d    %g\n",ptr->l[index_l], pgb2->Cl_final[pgb2->index_type_lens][pgb2->index_type_lens][index_l][0][0]*ptr->l[index_l]*(ptr->l[index_l]+1.)/(2*_PI_));
   }
-exit(0);
+//exit(0);
 
 
   printf("Starting bispectrum computation.\n");

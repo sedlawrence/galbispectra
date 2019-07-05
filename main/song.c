@@ -69,17 +69,20 @@ int main(int argc, char **argv) {
   printf("Done with thermo 1st order \n");
 
   /* Compute the first-order C_l */
-  if (pt.has_cls && compute_cls (&pr,&ba,&th,&pt,&sp,&le,errmsg) == _FAILURE_) {
+  /*if (pt.has_cls && compute_cls (&pr,&ba,&th,&pt,&sp,&le,errmsg) == _FAILURE_) {
     printf("\n\nError in compute_cls \n=>%s\n",errmsg);
     return _FAILURE_;
-  }
+  }*/
   /* Compute first and second-order perturbations */
-  if (perturb2_init(&pr,&pr2,&ba,&th,&pt,&pt2) == _FAILURE_) {
+  /*if (perturb2_init(&pr,&pr2,&ba,&th,&pt,&pt2) == _FAILURE_) {
     printf("\n\nError in perturb2_init \n=>%s\n",pt2.error_message);
     return _FAILURE_;
-  }
+  }*/
 
-/*  class_call (perturb2_indices_of_perturbs(
+
+  /* For testing first-order only, call perturb2_indices_of_perturbs(), perturb2_timesampling_for_sources()
+      and perturb_init() instead of perturb2_init(), remembering to comment out all things that call ppt2. */
+  class_call (perturb2_indices_of_perturbs(
                 &pr,
                 &pr2,
                 &ba,
@@ -93,7 +96,7 @@ int main(int argc, char **argv) {
 
   /* Determine the time sampling for the sources */
 
-/*  class_call (perturb2_timesampling_for_sources (
+  class_call (perturb2_timesampling_for_sources (
                 &pr,
                 &pr2,
                 &ba,

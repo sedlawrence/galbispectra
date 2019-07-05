@@ -24,11 +24,17 @@
 
    double *** first_order_sources;
 
+   double *** first_order_sources_integrand;
+
    double **** first_order_sources_integ;
+
+
 
    double ***** Cl;
 
    double * tau_sampling_cls;
+
+   double * tau_sampling_bessel;
 
    double ***** Cl_final;
 
@@ -41,6 +47,8 @@
    double * test_weights;
 
    int tau_size_selection;
+
+   int tau_size_bessel;
 
    double * k_bessel;
 
