@@ -52,17 +52,33 @@
 
    double * k_bessel;
 
+
+
    int k_size_bessel; /* Number of points in the k_bessel grid */
 
    int type_size; /* Number of different terms in the first_order_sources array */
 
    int index_type_delta_cdm; /* The index type corresponding to the rsd term in the galaxy number overdensity. */
 
-   int index_type_rsd; /* The index type corresponding to the density term in the galaxy number overdensity.*/
+   int index_type_rsd; /* The index type corresponding to the rsd term in the galaxy number overdensity.*/
+
+   int index_type_v; /* velocity */
+
+   int index_type_theta; /* velocity divergence, theta = -k*k*v */
+
+   int index_type_d1; /* Index type corresponding to the D1 (Doppler contribution) */
+
+   int index_type_d2; /* Index type corresponding to the D2 (Doppler contribution) */
+
+   int index_type_rsd_gr; /* Anisotropic stress is neglected such that Phi = Psi */
 
    int index_type_lens;
 
    int index_type_phi_plus_psi;
+
+   int index_type_phi_prime;
+
+   int index_type_phi;
 
    double ** tau_sampling_selection;
 
