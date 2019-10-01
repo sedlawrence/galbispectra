@@ -4,6 +4,34 @@
 #include "galbispectra2.h"
 #include "perturbations2.h"
 
+double bessel_at_x_first_deriv_old(struct galbispectra2 * pgb2,
+                       struct bessels * pbs,
+                       double z,
+                       int index_l,
+                       double * result){
+
+    double out;
+    double j1;
+    double j2;
+
+    if (z == 0.0) {
+      *result = 0.0;
+    }
+
+    else{
+     /*using recurrence relation https://dlmf.nist.gov/10.51 eq. 10.51.2 */
+      class_call(bessel_at_x(pbs, z, index_l, &j1), pbs->error_message, pgb2->error_message);
+      //class_call(bessel_j(pbs, pbs->l[index_l], z, &j1), pbs->error_message, pgb2->error_message);
+      class_call(bessel_j(pbs, pbs->l[index_l]+1, z, &j2), pbs->error_message, pgb2->error_message);
+
+      out = -j2 + (pbs->l[index_l]*j1)/z;
+
+      *result = out;
+    }
+
+    return _SUCCESS_;
+}
+
 double bessel_at_x_first_deriv(struct galbispectra2 * pgb2,
                        struct bessels * pbs,
                        double z,
@@ -14,13 +42,21 @@ double bessel_at_x_first_deriv(struct galbispectra2 * pgb2,
     double j1;
     double j2;
 
-    /*using recurrence relation https://dlmf.nist.gov/10.51 eq. 10.51.2 */
-    class_call(bessel_at_x(pbs, z, index_l, &j1), pbs->error_message, pgb2->error_message);
-    class_call(bessel_j(pbs, pbs->l[index_l]+1, z, &j2), pbs->error_message, pgb2->error_message);
+    if (z == 0.0) {
+      *result = 0.0;
+    }
 
-    out = -j2 + pbs->l[index_l]*j1/z;
+    else{
+     /*using recurrence relation https://dlmf.nist.gov/10.51 eq. 10.51.2 */
+      //class_call(bessel_at_x(pbs, z, index_l, &j1), pbs->error_message, pgb2->error_message);
+      class_call(bessel_j(pbs, pbs->l[index_l], z, &j1), pbs->error_message, pgb2->error_message);
+      class_call(bessel_j(pbs, pbs->l[index_l]+1, z, &j2), pbs->error_message, pgb2->error_message);
 
-    *result = out;
+      out = -j2 + (pbs->l[index_l]*j1)/z;
+
+      *result = out;
+    }
+
     return _SUCCESS_;
 }
 
@@ -43,6 +79,7 @@ double bessel_at_x_second_deriv(struct galbispectra2 * pgb2,
     double out;
     double j1;
     double j2;
+    double A,B,C,l;
 
     if (pbs->l[index_l]==0){
       out = 0.0;
@@ -53,6 +90,50 @@ double bessel_at_x_second_deriv(struct galbispectra2 * pgb2,
     /*using recurrence relation */
     else
     class_call(bessel_at_x(pbs, z, index_l, &j1), pbs->error_message, pgb2->error_message);
+    //class_call(bessel_j(pbs, pbs->l[index_l], z, &j1), pbs->error_message, pgb2->error_message);
+
+    // ALERT recurrence relation changed
+    class_call(bessel_at_x_first_deriv(pgb2,
+                           pbs,
+                           z,
+                           index_l,
+                           &j2),
+                           pbs->error_message,
+                           pgb2->error_message);
+
+    A = -2.0*j2;
+    B = -(z*z-pbs->l[index_l]*(pbs->l[index_l]+1.0))*j1;
+    C = z*z;
+    //out = (A+B)/C;
+    //out = (-2*j2-(z*z-pbs->l[index_l]*(pbs->l[index_l]+1))*j1)/z/z;
+    l = pbs->l[index_l];
+    out = (-2*z*j2-(z*z-l*(l+1))*j1)/(z*z);
+
+
+    *result = out;
+    return _SUCCESS_;
+}
+//herehere
+double bessel_at_x_second_deriv_old(struct galbispectra2 * pgb2,
+                       struct bessels * pbs,
+                       double z,
+                       int index_l,
+                       double * result){
+
+    double out;
+    double j1;
+    double j2;
+
+    if (pbs->l[index_l]==0){
+      out = 0.0;
+    }
+    else if(pbs->l[index_l]==1){
+      out = 0.0;
+    }
+    /*using recurrence relation */
+    else
+    //class_call(bessel_at_x(pbs, z, index_l, &j1), pbs->error_message, pgb2->error_message);
+    class_call(bessel_j(pbs, pbs->l[index_l], z, &j1), pbs->error_message, pgb2->error_message);
     class_call(bessel_j(pbs, pbs->l[index_l]+1, z, &j2), pbs->error_message, pgb2->error_message);
 
     out = ((pbs->l[index_l]*pbs->l[index_l]-pbs->l[index_l]-z*z)*j1+2*z*j2)/(z*z);
@@ -102,12 +183,15 @@ int integral(
   int index_md;
   double tmp = 0.;
   double lensing_result = 0.;
-  //double * pvecback1;
-  //double * pvecback2;
+
 
   double j1, j2;
   double f_evo1, f_evo2;
   double Pk;
+  double j1l;
+  double j1l_plus;
+  double j2l;
+  double j2l_plus;
   double type1, type2;
 
   /* Pair input type with corresponding source type. Each type is made up of, the transfer function of the perturbation, a prefactor, some k-factor,
@@ -120,39 +204,82 @@ int integral(
   double lensing_result1, lensing_result2;
   double velocity1, velocity2;
 
+  class_call(background_at_tau(pba,
+                               pgb2->tau_sampling_cls[index_tau_first],
+                               pba->long_info,
+                               pba->inter_normal,
+                               &last_index1,
+                               pvecback1),
+                               pba->error_message,
+                               pgb2->error_message);
+
+  class_call(background_at_tau(pba,
+                              pgb2->tau_sampling_cls[index_tau_second],
+                              pba->long_info,
+                              pba->inter_normal,
+                              &last_index2,
+                              pvecback2),
+                              pba->error_message,
+                              pgb2->error_message);
+
   for(int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++){
 
     double x1 = pgb2->k_bessel[index_k_bessel]*(pba->conformal_age - pgb2->tau_sampling_cls[index_tau_first]);
     double x2 = pgb2->k_bessel[index_k_bessel]*(pba->conformal_age - pgb2->tau_sampling_cls[index_tau_second]);
 
-    double r1 = pba->conformal_age - pgb2->tau_sampling_cls[index_tau_first];
-    double r2 = pba->conformal_age - pgb2->tau_sampling_cls[index_tau_second];
-
-
-
     if(x1>pbs->x_max || x2 > pbs->x_max){
       printf("ALERT! x1= %g x2 = %g \n",x1,x2);continue;}
 
+    /* Call primordial power spectrum (Fourier space)*/
     class_call(primordial_spectrum_at_k(ppm, ppt->index_md_scalars, linear, pgb2->k_bessel[index_k_bessel], &Pk), ppm->error_message, pgb2->error_message);
 
     /* First Type: Density */
 
-    if( index_type_first == pgb2->index_type_delta_cdm){
-      class_call(background_at_tau(pba,
-                                   pgb2->tau_sampling_cls[index_tau_first],
-                                   pba->long_info,
-                                   pba->inter_normal,
-                                   &last_index1,
-                                   pvecback1),
-                                   pba->error_message,
-                                   pgb2->error_message);
+    if( index_type_first == pgb2->index_type_density){
 
       class_call(bessel_at_x(pbs, x1 , index_l, &j1), pbs->error_message, pgb2->error_message);
 
-      //type1 = pgb2->first_order_sources[pgb2->index_type_delta_cdm][index_tau_first][index_k_bessel] * j1;
+      type1 = pgb2->first_order_sources[pgb2->index_source_delta_cdm][index_tau_first][index_k_bessel] * j1;
+      /*f_evo1 = 2.
+              /pvecback1[pba->index_bg_H]
+              /pvecback1[pba->index_bg_a]
+              /(pba->conformal_age - pgb2->tau_sampling_cls[index_tau_first])
+              +pvecback1[pba->index_bg_H_prime]
+              /pvecback1[pba->index_bg_H]
+              /pvecback1[pba->index_bg_H]
+              /pvecback1[pba->index_bg_a];*/
 
-      type1 = -pgb2->k_bessel[index_k_bessel]*pgb2->k_bessel[index_k_bessel]*pgb2->first_order_sources[pgb2->index_type_phi][index_tau_first][index_k_bessel]/
-        4*_PI_* pvecback2[pba->index_bg_rho_b];
+      /*type1 = j1
+              *(ptr->s_bias
+              *pgb2->first_order_sources[pgb2->index_source_delta_cdm][index_tau_first][index_k_bessel]
+              +(f_evo1-3.)
+              *pvecback1[pba->index_bg_H]
+              *pvecback1[pba->index_bg_a]
+              *pgb2->first_order_sources[pgb2->index_source_v][index_tau_first][index_k_bessel]
+              /pgb2->k_bessel[index_k_bessel]
+              -(3.*pgb2->first_order_sources[pgb2->index_source_phi][index_tau_first][index_k_bessel]));*/
+      /*type1 = j1
+              *(pvecback1[pba->index_bg_Omega_m]
+              +3.
+              *pvecback1[pba->index_bg_H]
+              *pvecback1[pba->index_bg_a]
+              *pgb2->first_order_sources[pgb2->index_source_theta][index_tau_first][index_k_bessel]
+              /pgb2->k_bessel[index_k_bessel]
+              /pgb2->k_bessel[index_k_bessel]);*/
+
+//ALERT POISSON EQUATION USED
+              /*type1 = j1
+                      *-2.
+                      *pgb2->k_bessel[index_k_bessel]
+                      *pgb2->k_bessel[index_k_bessel]
+                      *pgb2->first_order_sources[pgb2->index_source_phi][index_tau_first][index_k_bessel]
+                      /3.
+                      /pvecback1[pba->index_bg_H]
+                      /pvecback1[pba->index_bg_H]
+                      /pvecback1[pba->index_bg_a]
+                      /pvecback1[pba->index_bg_a]
+                      /pvecback1[pba->index_bg_Omega_m];*/
+
     }
 
     /* First Type: RSD */
@@ -161,23 +288,12 @@ int integral(
 
       class_call(bessel_at_x_second_deriv(pgb2, pbs, x1 , index_l, &j1), pbs->error_message, pgb2->error_message);
 
-      class_call(background_at_tau(pba,
-                                   pgb2->tau_sampling_cls[index_tau_first],
-                                   pba->long_info,
-                                   pba->inter_normal,
-                                   &last_index1,
-                                   pvecback1),
-                                   pba->error_message,
-                                   pgb2->error_message);
-
-      prefactor1 = -1.0
+      prefactor1 = 1.0
                    /pvecback1[pba->index_bg_H]
                    /pvecback1[pba->index_bg_a];
 
       type1 = prefactor1
-              *pgb2->k_bessel[index_k_bessel]
-              *pgb2->k_bessel[index_k_bessel]
-              *pgb2->first_order_sources[pgb2->index_type_rsd][index_tau_first][index_k_bessel]
+              *pgb2->first_order_sources[pgb2->index_source_theta][index_tau_first][index_k_bessel]
               *j1;
     }
 
@@ -186,15 +302,15 @@ int integral(
     else if( index_type_first == pgb2->index_type_d1 ){
 
       class_call(bessel_at_x_first_deriv(pgb2, pbs, x1 , index_l, &j1), pbs->error_message, pgb2->error_message);
+      /*if (x1 == 0) {
+        j1l = 0.0;
+        j1l_plus = 0.0;
+      }*/
 
-      class_call(background_at_tau(pba,
-                                   pgb2->tau_sampling_cls[index_tau_first],
-                                   pba->long_info,
-                                   pba->inter_normal,
-                                   &last_index1,
-                                   pvecback1),
-                                   pba->error_message,
-                                   pgb2->error_message);
+    /*else{
+        class_call(bessel_at_x(pbs, x1 , index_l, &j1l), pbs->error_message, pgb2->error_message);
+        class_call(bessel_at_x(pbs, x1 , index_l+1, &j1l_plus), pbs->error_message, pgb2->error_message);
+      }*/
 
       f_evo1 = 2.
                /pvecback1[pba->index_bg_H]
@@ -218,8 +334,8 @@ int integral(
                     -f_evo1);
 
       type1 = prefactor1
-              * pgb2->first_order_sources[pgb2->index_type_theta][index_tau_first][index_k_bessel]
-              * j1
+              *pgb2->first_order_sources[pgb2->index_source_theta][index_tau_first][index_k_bessel]
+              *j1
               /pgb2->k_bessel[index_k_bessel];
     }
 
@@ -229,14 +345,48 @@ int integral(
 
       class_call(bessel_at_x(pbs, x1 , index_l, &j1), pbs->error_message, pgb2->error_message);
 
-      class_call(background_at_tau(pba,
-                                   pgb2->tau_sampling_cls[index_tau_first],
-                                   pba->long_info,
-                                   pba->inter_normal,
-                                   &last_index1,
-                                   pvecback1),
-                                   pba->error_message,
-                                   pgb2->error_message);
+      f_evo1 = 2.
+               /pvecback1[pba->index_bg_H]
+               /pvecback1[pba->index_bg_a]
+               /(pba->conformal_age - pgb2->tau_sampling_cls[index_tau_first])
+               +pvecback1[pba->index_bg_H_prime]
+               /pvecback1[pba->index_bg_H]
+               /pvecback1[pba->index_bg_H]
+               /pvecback1[pba->index_bg_a];
+               //alert f_evo1 skipped
+      //prefactor1 = -3.0*pvecback1[pba->index_bg_a]*pvecback1[pba->index_bg_H];
+
+      type1 = (f_evo1-3.0)
+              *pvecback1[pba->index_bg_a]
+              *pvecback1[pba->index_bg_H]
+              *pgb2->first_order_sources[pgb2->index_source_theta][index_tau_first][index_k_bessel]
+              *j1
+              /pgb2->k_bessel[index_k_bessel]
+              /pgb2->k_bessel[index_k_bessel];
+
+      //printf("type1 = %g\n", type1 );
+
+    }
+
+    /* First Type: g1 (first of the GR terms) */
+
+    else if( index_type_first == pgb2->index_type_g1){
+
+      class_call(bessel_at_x(pbs, x1 , index_l, &j1), pbs->error_message, pgb2->error_message);
+
+
+      prefactor1 = -2.0+5.0*ptr->s_bias;
+
+      type1 = prefactor1
+              *pgb2->first_order_sources[pgb2->index_source_phi][index_tau_first][index_k_bessel]
+              *j1;
+    }
+
+    /* First Type: g2 */
+
+    else if( index_type_first == pgb2->index_type_g2 ){
+
+      class_call(bessel_at_x(pbs, x1 , index_l, &j1), pbs->error_message, pgb2->error_message);
 
       f_evo1 = 2.
                /pvecback1[pba->index_bg_H]
@@ -247,41 +397,53 @@ int integral(
                /pvecback1[pba->index_bg_H]
                /pvecback1[pba->index_bg_a];
 
-      prefactor1 = (f_evo1-3.0)
-                   *pvecback1[pba->index_bg_a]
-                   *pvecback1[pba->index_bg_H];
+      prefactor1 = (2.0
+                   +pvecback1[pba->index_bg_H_prime]
+                   /pvecback1[pba->index_bg_H]
+                   /pvecback1[pba->index_bg_H]
+                   /pvecback1[pba->index_bg_a]
+                   +(2.0-5.0*ptr->s_bias)
+                   /(pba->conformal_age - pgb2->tau_sampling_cls[index_tau_first])
+                   /pvecback1[pba->index_bg_H]
+                   /pvecback1[pba->index_bg_a]
+                   +5*ptr->s_bias
+                   -f_evo1);
 
       type1 = prefactor1
-              *pgb2->first_order_sources[pgb2->index_type_theta][index_tau_first][index_k_bessel]
-              *j1
-              /pgb2->k_bessel[index_k_bessel]
-              /pgb2->k_bessel[index_k_bessel];
+              *pgb2->first_order_sources[pgb2->index_source_psi][index_tau_first][index_k_bessel]
+              *j1;
+
     }
 
-    /* First Type: RSD (GR no Anisotropic stress Case) */
+    /* First Type: g3 */
+    else if( index_type_first == pgb2->index_type_g3 ){
 
-    else if( index_type_first == pgb2->index_type_rsd_gr ){
+      class_call(bessel_at_x(pbs, x1 , index_l, &j1), pbs->error_message, pgb2->error_message);
 
-      class_call(bessel_at_x_second_deriv(pgb2, pbs, x1 , index_l, &j1), pbs->error_message, pgb2->error_message);
 
-      class_call(background_at_tau(pba,
-                                   pgb2->tau_sampling_cls[index_tau_first],
-                                   pba->long_info,
-                                   pba->inter_normal,
-                                   &last_index1,
-                                   pvecback1),
-                                   pba->error_message,
-                                   pgb2->error_message);
+      prefactor1 = 1.0
+                   /pvecback1[pba->index_bg_H]
+                   /pvecback1[pba->index_bg_a];
 
-      prefactor1 = -1.0/ /*(pvecback[pba->index_bg_a]*/pvecback1[pba->index_bg_H];
-      // Eq 47 in 1105.5280
-      velocity1 = 2*pvecback1[pba->index_bg_a]*pgb2->k_bessel[index_k_bessel]
-        * (pvecback1[pba->index_bg_H]*pgb2->first_order_sources[pgb2->index_type_phi][index_tau_first][index_k_bessel]+
-            pgb2->first_order_sources[pgb2->index_type_phi_prime][index_tau_first][index_k_bessel])/
-              (3*pvecback1[pba->index_bg_Omega_m]*pba->H0*pba->H0);
-
-      type1 = prefactor1 * velocity1 * j1 * (1/(pgb2->k_bessel[index_k_bessel] * pgb2->k_bessel[index_k_bessel]));
+      type1 = prefactor1
+              *pgb2->first_order_sources[pgb2->index_source_phi_prime][index_tau_first][index_k_bessel]
+              *j1;
     }
+
+    /* First Type: g4 */
+
+    else if( index_type_first == pgb2->index_type_g4 ){
+
+      type2 = pgb2->first_order_sources_integ[pgb2->index_type_g4][index_l][index_tau_first][index_k_bessel];
+    }
+
+    /* First Type: g5 */
+
+    else if( index_type_first == pgb2->index_type_g5 ){
+
+      type2 = pgb2->first_order_sources_integ[pgb2->index_type_g5][index_l][index_tau_first][index_k_bessel];
+    }
+
 
     /* First Type: Lensing convergence */
 
@@ -304,23 +466,52 @@ int integral(
 
     /* Second Type: Density */
 
-    if( index_type_second == pgb2->index_type_delta_cdm){
-
-      class_call(background_at_tau(pba,
-                                   pgb2->tau_sampling_cls[index_tau_second],
-                                   pba->long_info,
-                                   pba->inter_normal,
-                                   &last_index2,
-                                   pvecback2),
-                                   pba->error_message,
-                                   pgb2->error_message);
+    if( index_type_second == pgb2->index_type_density){
 
       class_call(bessel_at_x(pbs, x2 , index_l, &j2), pbs->error_message, pgb2->error_message);
 
-      //type2 = pgb2->first_order_sources[pgb2->index_type_delta_cdm][index_tau_second][index_k_bessel] * j2;
+      type2 = pgb2->first_order_sources[pgb2->index_source_delta_cdm][index_tau_second][index_k_bessel] * j2;
+      f_evo2 = 2.
+              /pvecback2[pba->index_bg_H]
+              /pvecback2[pba->index_bg_a]
+              /(pba->conformal_age - pgb2->tau_sampling_cls[index_tau_second])
+              +pvecback2[pba->index_bg_H_prime]
+              /pvecback2[pba->index_bg_H]
+              /pvecback2[pba->index_bg_H]
+              /pvecback2[pba->index_bg_a];
 
-      type2 = -pgb2->k_bessel[index_k_bessel]*pgb2->k_bessel[index_k_bessel]*pgb2->first_order_sources[pgb2->index_type_phi][index_tau_second][index_k_bessel]/
-        4*_PI_* pvecback2[pba->index_bg_rho_b];
+      /*type2 = j2
+              *(ptr->s_bias*
+              pgb2->first_order_sources[pgb2->index_source_delta_cdm][index_tau_second][index_k_bessel]
+              +(f_evo2-3.)
+              *pvecback2[pba->index_bg_H]
+              *pvecback2[pba->index_bg_a]
+              *pgb2->first_order_sources[pgb2->index_source_v][index_tau_second][index_k_bessel]
+              /pgb2->k_bessel[index_k_bessel]
+              -(3.*pgb2->first_order_sources[pgb2->index_source_phi][index_tau_second][index_k_bessel]));*/
+
+
+      /*type2 = j2
+              *(pvecback2[pba->index_bg_Omega_m]
+              +3.
+              *pvecback2[pba->index_bg_H]
+              *pvecback2[pba->index_bg_a]
+              *pgb2->first_order_sources[pgb2->index_source_theta][index_tau_second][index_k_bessel]
+              /pgb2->k_bessel[index_k_bessel]
+              /pgb2->k_bessel[index_k_bessel]);*/
+
+     // Using Poisson eq. A.8 in [1307.1459]
+      /*type2 = j2
+              *-2.
+              *pgb2->k_bessel[index_k_bessel]
+              *pgb2->k_bessel[index_k_bessel]
+              *pgb2->first_order_sources[pgb2->index_source_phi][index_tau_second][index_k_bessel]
+              /3.
+              /pvecback2[pba->index_bg_H]
+              /pvecback2[pba->index_bg_H]
+              /pvecback2[pba->index_bg_a]
+              /pvecback2[pba->index_bg_a]
+              /pvecback2[pba->index_bg_Omega_m];*/
     }
 
     /* Second Type: RSD */
@@ -329,23 +520,12 @@ int integral(
 
       class_call(bessel_at_x_second_deriv(pgb2, pbs, x2 , index_l, &j2), pbs->error_message, pgb2->error_message);
 
-      class_call(background_at_tau(pba,
-                                   pgb2->tau_sampling_cls[index_tau_second],
-                                   pba->long_info,
-                                   pba->inter_normal,
-                                   &last_index2,
-                                   pvecback2),
-                                   pba->error_message,
-                                   pgb2->error_message);
-
-      prefactor2 = -1.0
+      prefactor2 = 1.0
                    /pvecback2[pba->index_bg_H]
                    /pvecback2[pba->index_bg_a];
 
       type2 = prefactor2
-              *pgb2->k_bessel[index_k_bessel]
-              *pgb2->k_bessel[index_k_bessel]
-              *pgb2->first_order_sources[pgb2->index_type_v][index_tau_second][index_k_bessel]
+              *pgb2->first_order_sources[pgb2->index_source_theta][index_tau_second][index_k_bessel]
               *j2;
     }
 
@@ -354,15 +534,6 @@ int integral(
     else if( index_type_second == pgb2->index_type_d1 ){
 
       class_call(bessel_at_x_first_deriv(pgb2, pbs, x2 , index_l, &j2), pbs->error_message, pgb2->error_message);
-
-      class_call(background_at_tau(pba,
-                                   pgb2->tau_sampling_cls[index_tau_second],
-                                   pba->long_info,
-                                   pba->inter_normal,
-                                   &last_index2,
-                                   pvecback2),
-                                   pba->error_message,
-                                   pgb2->error_message);
 
       f_evo2 = 2.
               /pvecback2[pba->index_bg_H]
@@ -386,7 +557,7 @@ int integral(
                     -f_evo2);
 
       type2 = prefactor2
-              *pgb2->first_order_sources[pgb2->index_type_theta][index_tau_second][index_k_bessel]
+              *pgb2->first_order_sources[pgb2->index_source_theta][index_tau_second][index_k_bessel]
               *j2
               /pgb2->k_bessel[index_k_bessel];
     }
@@ -397,14 +568,47 @@ int integral(
 
       class_call(bessel_at_x(pbs, x2 , index_l, &j2), pbs->error_message, pgb2->error_message);
 
-      class_call(background_at_tau(pba,
-                                   pgb2->tau_sampling_cls[index_tau_second],
-                                   pba->long_info,
-                                   pba->inter_normal,
-                                   &last_index2,
-                                   pvecback2),
-                                   pba->error_message,
-                                   pgb2->error_message);
+      f_evo2 = 2.
+               /pvecback2[pba->index_bg_H]
+               /pvecback2[pba->index_bg_a]
+               /(pba->conformal_age - pgb2->tau_sampling_cls[index_tau_second])
+               +pvecback2[pba->index_bg_H_prime]
+               /pvecback2[pba->index_bg_H]
+               /pvecback2[pba->index_bg_H]
+               /pvecback2[pba->index_bg_a];
+               //alert f_evo skipped
+      //prefactor2 = -3.0*pvecback2[pba->index_bg_a]*pvecback2[pba->index_bg_H];
+
+
+
+      type2 = (f_evo2-3.0)
+              *pvecback2[pba->index_bg_a]
+              *pvecback2[pba->index_bg_H]
+              *pgb2->first_order_sources[pgb2->index_source_theta][index_tau_second][index_k_bessel]
+              *j2
+              /pgb2->k_bessel[index_k_bessel]
+              /pgb2->k_bessel[index_k_bessel];
+    }
+
+    /* Second Type: g1 (first of the GR terms) */
+
+    else if( index_type_second == pgb2->index_type_g1 ){
+
+      class_call(bessel_at_x(pbs, x2 , index_l, &j2), pbs->error_message, pgb2->error_message);
+
+
+      prefactor2 = -2.0+5.0*ptr->s_bias;
+
+      type2 = prefactor2
+              *pgb2->first_order_sources[pgb2->index_source_phi][index_tau_second][index_k_bessel]
+              *j2;
+    }
+
+    /* Second Type: g2 */
+
+    else if( index_type_second == pgb2->index_type_g2 ){
+
+      class_call(bessel_at_x(pbs, x2 , index_l, &j2), pbs->error_message, pgb2->error_message);
 
       f_evo2 = 2.
                /pvecback2[pba->index_bg_H]
@@ -415,39 +619,54 @@ int integral(
                /pvecback2[pba->index_bg_H]
                /pvecback2[pba->index_bg_a];
 
-      prefactor2 = (f_evo1-3.0)
-                   *pvecback2[pba->index_bg_a]
-                   *pvecback2[pba->index_bg_H];
+      prefactor2 = (2.0
+                   +pvecback2[pba->index_bg_H_prime]
+                   /pvecback2[pba->index_bg_H]
+                   /pvecback2[pba->index_bg_H]
+                   /pvecback2[pba->index_bg_a]
+                   +(2.0-5.0*ptr->s_bias)
+                   /(pba->conformal_age - pgb2->tau_sampling_cls[index_tau_second])
+                   /pvecback2[pba->index_bg_H]
+                   /pvecback2[pba->index_bg_a]
+                   +5*ptr->s_bias
+                   -f_evo2);
 
       type2 = prefactor2
-              *pgb2->first_order_sources[pgb2->index_type_theta][index_tau_second][index_k_bessel]
-              *j2
-              /pgb2->k_bessel[index_k_bessel]
-              /pgb2->k_bessel[index_k_bessel];
+              *pgb2->first_order_sources[pgb2->index_source_psi][index_tau_second][index_k_bessel]
+              *j2;
+
     }
 
-    /* Second Type: RSD (GR no Anisotropic stress Case) */
-    else if( index_type_second == pgb2->index_type_rsd_gr ){
+    /* Second Type: g3 */
+    else if( index_type_second == pgb2->index_type_g3 ){
 
-      class_call(bessel_at_x_second_deriv(pgb2, pbs, x2 , index_l, &j2), pbs->error_message, pgb2->error_message);
+      class_call(bessel_at_x(pbs, x2 , index_l, &j2), pbs->error_message, pgb2->error_message);
 
-      class_call(background_at_tau(pba,
-                                   pgb2->tau_sampling_cls[index_tau_second],
-                                   pba->long_info,
-                                   pba->inter_normal,
-                                   &last_index1,
-                                   pvecback2),
-                                   pba->error_message,
-                                   pgb2->error_message);
 
-      prefactor2 = -1.0/ /*(pvecback2[pba->index_bg_a]*/pvecback2[pba->index_bg_H];
-      // Eq 47 in 1105.5280
-      velocity2 = 2*pvecback2[pba->index_bg_a]*pgb2->k_bessel[index_k_bessel]
-        * (pvecback2[pba->index_bg_H]*pgb2->first_order_sources[pgb2->index_type_phi][index_tau_second][index_k_bessel]+pgb2->first_order_sources[pgb2->index_type_phi_prime][index_tau_second][index_k_bessel])/
-          (3*pvecback2[pba->index_bg_Omega_m]*pba->H0*pba->H0);
+      prefactor2 = 1.0
+                   /pvecback2[pba->index_bg_H]
+                   /pvecback2[pba->index_bg_a];
 
-      type2 = prefactor2 * velocity2 * j2 * (1/(pgb2->k_bessel[index_k_bessel] * pgb2->k_bessel[index_k_bessel]));
+      type2 = prefactor2
+              *pgb2->first_order_sources[pgb2->index_source_phi_prime][index_tau_second][index_k_bessel]
+              *j2;
     }
+
+    /* Second Type: g4 */
+
+    else if( index_type_second == pgb2->index_type_g4 ){
+
+      type2 = pgb2->first_order_sources_integ[pgb2->index_type_g4][index_l][index_tau_second][index_k_bessel];
+    }
+
+    /* Second Type: g5 */
+
+    else if( index_type_second == pgb2->index_type_g5 ){
+
+      type2 = pgb2->first_order_sources_integ[pgb2->index_type_g5][index_l][index_tau_second][index_k_bessel];
+    }
+
+
 
     /* Second Type: Lensing convergence */
 
@@ -462,12 +681,18 @@ int integral(
       type2 = 0.;
     }
 
-    // NOTE: Should have some CLASS test here to check whether the types called are valid.
-
-
+    //printf("P(k = %g) = %g\n", pgb2->k_bessel[index_k_bessel], Pk);
 
     /* Using area of trapezoid, we can sum a number of areas of trapezoids to approximate the integral */
+    // ALERT PLAYING WITH tmp
     tmp += pow(pgb2->k_bessel[index_k_bessel],-1.0) * 4. * _PI_ *  Pk * type1 * type2  * pgb2->w_trapz_k[index_k_bessel];
+    //class_call(bessel_at_x_first_deriv(pgb2, pbs, x2 , index_l, &j2), pbs->error_message, pgb2->error_message);
+    //class_call(bessel_at_x_second_deriv_old(pgb2, pbs, x2 , index_l, &j2), pbs->error_message, pgb2->error_message);
+    //class_call(bessel_at_x(pbs, x2 , index_l, &j2), pbs->error_message, pgb2->error_message);
+    //herehere
+    //tmp += 1.0*pgb2->w_trapz_k[index_k_bessel];
+    //tmp += pow(pgb2->k_bessel[index_k_bessel],-1.0)*type1*type2*pgb2->w_trapz_k[index_k_bessel];
+    //tmp += pow(pgb2->k_bessel[index_k_bessel],-1.0)*j2*j2*pgb2->w_trapz_k[index_k_bessel];
     }
 
 
@@ -987,11 +1212,11 @@ int galbispectra2_init (
   double p,q;
   // NOTE: Alert
   /*the bessel grid is boosted by an integer factor to account for rapid oscillations. Perhaps the k grid should have a similar amount of points.*/
-  int bessel_boost = 100;
+  int bessel_boost = 50;
   pgb2->tau_size_selection = 50;
   /* We wish to double the number of slots so that points in the two grids tau_sampling_cls and tau_sampling_bessel align. */
   pgb2->tau_size_bessel = bessel_boost * (pgb2->tau_size_selection-1) + 1;
-  pgb2->k_size_bessel = 9000;  /*tau_size_bessel*/   /*k_size * boost*/
+  pgb2->k_size_bessel = 25000;  /*tau_size_bessel*/   /*k_size * boost*/
   printf("Starting galaxy bispectra module...\n");
 
 
@@ -1131,6 +1356,7 @@ int galbispectra2_init (
     double tau_min;
     double tau_max;
      double z_max, z_min;
+     //printf("ppt->selection_mean[%d]=%g, width = %g\n",bin,ppt->selection_mean[bin], ppt->selection_width[bin] );
      z_max =   ppt->selection_mean[bin]+ 5. * ppt->selection_width[bin];
      z_min =  ppt->selection_mean[bin]- 5. * ppt->selection_width[bin];
      if (z_max > 1000.) {
@@ -1144,13 +1370,16 @@ int galbispectra2_init (
     class_call(background_tau_of_z(
                             pba,
                             z_max,
-                            &tau_min
-                          ),ppt->error_message,ppt->error_message);
+                            &tau_min),
+                            ppt->error_message,
+                            ppt->error_message);
+
     class_call(background_tau_of_z(
                             pba,
                             z_min,
-                            &tau_max
-                          ),ppt->error_message,pgb2->error_message);
+                            &tau_max),
+                            ppt->error_message,
+                            pgb2->error_message);
 
     if (tau_max > ppt->tau_sampling_quadsources[ppt->tau_size_quadsources-1]) {
       tau_max = ppt->tau_sampling_quadsources[ppt->tau_size_quadsources-1];
@@ -1163,7 +1392,7 @@ int galbispectra2_init (
     }
 
     overall_tau_min = MIN(tau_min,overall_tau_min);
-
+    // ALERT SHOULD THE TIME GRIDS RUN TO conformal_age or tau_max
     for (index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++) {
       pgb2->tau_sampling_selection[bin][index_tau] = tau_min + index_tau*(tau_max-tau_min)/(pgb2->tau_size_selection-1);
     }
@@ -1178,7 +1407,31 @@ int galbispectra2_init (
   }
 
 
+  //DEBUG
+  /*
+  double tau_z_of_1;
+  class_call(background_tau_of_z(
+                          pba,
+                          1.0,
+                          &tau_z_of_1),
+                          ppt->error_message,
+                          pgb2->error_message);
 
+  printf("tau at z is %g\n",tau_z_of_1);
+
+`*/
+
+
+  //DEBUG
+  /*int index_tau_cls;
+  int last_index_tau;
+  for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++) {
+    double tau = pgb2->tau_sampling_selection[0][index_tau];
+
+    index_of_tau_sampling_cls(tau, &index_tau_cls, &last_index_tau, pgb2);
+    printf("tau_selection = %g, tau_cls = %g\n",tau, pgb2->tau_sampling_cls[index_tau_cls] );
+  }
+  exit(0);*/
 
   /* New Bessel k-sampling to capture features of the Bessel oscillations */
 
@@ -1245,7 +1498,7 @@ int galbispectra2_init (
                                           ppt2->error_message);
 
   }
-
+  free(tau0_minus_tau);
 
   /* Declaration of temporary pointer */
   double ** selection;
@@ -1284,32 +1537,107 @@ int galbispectra2_init (
 
   }
 
+  /* Allocate and fill pgb2->vecback, the array which is filled with background information. This will be used throughout
+    the module. It is faster to do this now and call the same array each time, rather than recompute it repeatedly. */
+  printf("Computing relevant background information...\n");
+  class_alloc(pgb2->vecback, pba->bg_size*sizeof(double), pba->error_message);
+  int last_index_bg;
+
+  for (int index_tau_lens = 0; index_tau_lens < pgb2->tau_size_bessel; index_tau_lens++) {
+
+    class_call(background_at_tau(pba,
+                                 pgb2->tau_sampling_bessel[index_tau_lens],
+                                 pba->long_info,
+                                 pba->inter_normal,
+                                 &last_index_bg,
+                                 pgb2->vecback),
+                                 pba->error_message,
+                                 pgb2->error_message);
+  }
+  printf("Background information complete.\n");
+
+
   /*double bessel_result;
+  double python_test_first_deriv,python_test2, python_test_first_deriv_old;
   double j_l, j_lplus1;
+  double b_at_x;
+  double b_j;
   double z;
   double out;
   int index_l_bessel_test = 2;
-  for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++) {
-    for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
-      class_call(bessel_at_x_second_deriv(pgb2,
+  double * w_trapz_test;
+  double * k_test;
+  double * test_array;
+
+  class_alloc(k_test,
+              4999 * sizeof(double),
+              ppt->error_message);
+
+
+  for (int index_k = 1; index_k < 6000; index_k++) {
+    k_test[index_k] = 0.002*index_k;
+  }
+
+
+  class_alloc(w_trapz_test,
+              4999 * sizeof(double),
+              pgb2->error_message);
+
+
+
+  class_call(array_trapezoidal_weights(k_test,
+                                       4999,
+                                       w_trapz_test,
+                                       pgb2->error_message),
+                                       pgb2->error_message,
+                                       pgb2->error_message);
+  //for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++) {
+  printf("pgb2->tau_sampling_cls[0]= %g\n", pgb2->tau_sampling_cls[0]);
+  double sum = 0.0;
+  double sum2 = 0.0;
+    for (int index_k_bessel = 1; index_k_bessel < /*pgb2->k_size_bessel*///5000; index_k_bessel++) {
+      /*class_call(bessel_at_x_first_deriv(pgb2,
                              pbs,
-                             pgb2->k_bessel[index_k_bessel]*(pba->conformal_age-pgb2->tau_sampling_cls[index_tau]),
+                             pgb2->k_bessel[index_k_bessel]*(pba->conformal_age-pgb2->tau_sampling_cls[0]),
                              index_l_bessel_test,
                              &bessel_result),
                              pgb2->error_message,
                              pgb2->error_message);
 
+      class_call(bessel_at_x_first_deriv(pgb2,
+                             pbs,
+                             0.002*index_k_bessel*(pba->conformal_age-pgb2->tau_sampling_cls[0]),
+                             index_l_bessel_test,
+                             &python_test_first_deriv),
+                             pgb2->error_message,
+                             pgb2->error_message);
+
+      class_call(bessel_at_x_first_deriv_old(pgb2,
+                            pbs,
+                            0.002*index_k_bessel*(pba->conformal_age-pgb2->tau_sampling_cls[0]),
+                            index_l_bessel_test,
+                            &python_test_first_deriv_old),
+                            pgb2->error_message,
+                            pgb2->error_message);
+
       class_call(bessel_at_x(pbs,
+                             0.002*index_k_bessel*(pba->conformal_age-pgb2->tau_sampling_cls[0]),
+                             index_l_bessel_test,
+                             &b_at_x),
+                             pbs->error_message,
+                             pgb2->error_message);
+
+      /*class_call(bessel_at_x(pbs,
                              pgb2->k_bessel[index_k_bessel]*(pba->conformal_age-pgb2->tau_sampling_cls[index_tau]),
                              index_l,
                              &j_l),
                              pbs->error_message,
-                             pgb2->error_message);
+                             pgb2->error_message);*/
 
-      class_call(bessel_j(pbs,
-                          pbs->l[index_l]+1,
-                          pgb2->k_bessel[index_k_bessel]*(pba->conformal_age-pgb2->tau_sampling_cls[index_tau]),
-                          &j_lplus1),
+      /*class_call(bessel_j(pbs,
+                          ptr->l[index_l_bessel_test],
+                          0.002*index_k_bessel*(pba->conformal_age-pgb2->tau_sampling_cls[0]),
+                          &b_j),
                           pbs->error_message,
                           pgb2->error_message);
 
@@ -1317,13 +1645,22 @@ int galbispectra2_init (
 
       out = ((pbs->l[index_l]*pbs->l[index_l]-pbs->l[index_l]-z*z)*j_l+2*z*j_lplus1)/(z*z);
 
-      printf("j''_%d(%g) = %g, %g \n",
-        pbs->l[index_l_bessel_test],
-        pgb2->k_bessel[index_k_bessel]*(pba->conformal_age-pgb2->tau_sampling_cls[index_tau]),
-        bessel_result,
-        out);
+      sum +=w_trapz_test[index_k_bessel-1]*0.002*index_k_bessel*python_test_first_deriv;
+
+      sum2 +=w_trapz_test[index_k_bessel-1]*0.002*index_k_bessel*python_test_first_deriv_old;
+
+      /*printf("%g   %g   %g    %g    %g\n",
+        w_trapz_test[index_k_bessel-1],
+        index_k_bessel*0.005,
+        python_test,
+        python_test_old,
+        python_test/python_test_old);*/
+
+      /*  printf("%g    %g\n",python_test_first_deriv, python_test_first_deriv_old);
     }
-  }
+    printf("sum = %g\n",sum);
+    printf("sum2 = %g\n",sum2);
+  //}
   exit(0);*/
 
   double t1,t2,k1;
@@ -1344,13 +1681,16 @@ int galbispectra2_init (
   int dump = 0;
   double f,g;
   int i2;
-  int index; index_type;
+  int index;
+  //int index_type;
+  int index_source;
   double tau;
   int last_index;
   int last_index_k;
 
   //NOTE: Fix this
   index_type = 0;
+  index_source = 0;
   double k5 = 5.0;
 
 /* NOTE: The following if statements should be dependent on the user input */
@@ -1364,71 +1704,105 @@ int galbispectra2_init (
     We initialise each type to a negative integer. It is easier this way to skip cointributions that are not required: loops over type start from
     index_type = 0 and will therefore avoid any of the types which are not requested. TODO: The turning on and off of different contributions should
     be the requested by the user in the input file. At present it is manual in the following lines.*/
+
+  pgb2->index_type_density = -1;
   pgb2->index_type_rsd = -1;
-  pgb2->index_type_v = -1;
-  pgb2->index_type_theta = -1;
+  pgb2->index_type_lens = -1;
   pgb2->index_type_d1 = -1;
   pgb2->index_type_d2 = -1;
-  pgb2->index_type_delta_cdm = -1;
-  pgb2->index_type_phi_plus_psi = -1;
-  pgb2->index_type_phi = -1;
-  pgb2->index_type_phi_prime = -1;
-  pgb2->index_type_lens = -1;
-  pgb2->index_type_rsd_gr = -1;
+  pgb2->index_type_g1 = -1;
+  pgb2->index_type_g2 = -1;
+  pgb2->index_type_g3 = -1;
+  pgb2->index_type_g4 = -1;
+  pgb2->index_type_g5 = -1;
 
+  pgb2->index_source_v = -1;
+  pgb2->index_source_theta = -1;
+  pgb2->index_source_delta_cdm = -1;
+  pgb2->index_source_phi_plus_psi = -1;
+  pgb2->index_source_phi_plus_psi_prime = -1;
+  pgb2->index_source_phi = -1;
+  pgb2->index_source_psi = -1;
+  pgb2->index_source_phi_prime = -1;
+
+
+  /* Next we want to turn on any source types (needed for interpolation) and make up the contribution types
+    needed by the integral function. For example pgb2->index_source_theta is needed for interpolation but not for
+    the integral (over k) function, therefore it is set to something other than -1 but is not counted in the pgb2->type_size.
+    This will speed up the code since it will not need to be checked in the integral function. */
 
   // turn on for delta_cdm
   /*if (k5 == 5.0){
-    pgb2->index_type_delta_cdm = index_type;
+    pgb2->index_source_delta_cdm = index_source;
+    index_source++;
+    pgb2->index_type_density = index_type;
     index_type++;
-  }*/
+    //pgb2->index_source_phi = index_source;
+    //index_source++;
+    /*pgb2->index_source_v = index_type;
+    index_source++;
+    pgb2->index_source_phi = index_type;
+    index_source++;*/
+  //}
   // turn on for rsd
+
   if (k5 == 5.0){
-    pgb2->index_type_v = index_type;
-    index_type++;
-    pgb2->index_type_theta = index_type;
-    index_type++;
+    pgb2->index_source_v = index_source;
+    index_source++;
+    pgb2->index_source_theta = index_source;
+    index_source++;
+
     pgb2->index_type_rsd = index_type;
     index_type++;
-    pgb2->index_type_d1 = index_type;
-    index_type++;
-    pgb2->index_type_d2 = index_type;
-    index_type++;
-
+    //pgb2->index_type_d1 = index_type;
+    //index_type++;
+    //pgb2->index_type_d2 = index_type;
+    //index_type++;
   }
 
-  /*if (k5 == 5.0){
-    pgb2->index_type_phi = index_type;
-    index_type++;
-  }
+/*  if (k5 == 5.0){
+    pgb2->index_source_psi = index_source;
+    index_source++;
+    pgb2->index_source_phi = index_source;
+    index_source++;
+    pgb2->index_source_phi_prime = index_source;
+    index_source++;
+    pgb2->index_source_phi_plus_psi = index_source;
+    index_source++;
+    pgb2->index_source_phi_plus_psi_prime = index_source;
+    index_source++;
 
-  if (k5 == 5.0){
-    pgb2->index_type_phi_prime = index_type;
-    index_type++;
-  }
 
-  if (k5 == 5.0){
-    pgb2->index_type_rsd_gr = index_type;
+    /*pgb2->index_type_g1 = index_type;
     index_type++;
-  }*/
+    pgb2->index_type_g2 = index_type;
+    index_type++;
+    pgb2->index_type_g3 = index_type;
+    index_type++;
+    pgb2->index_type_g4 = index_type;
+    index_type++;
+    pgb2->index_type_g5 = index_type;
+    index_type++;*/
+  //}
 
-  /*if (k5 == 5.0){
-    pgb2->index_type_phi_plus_psi = index_type;
-    index_type++;
-  }*/
+
 
   /*if (k5 == 5.0){
     pgb2->index_type_lens = index_type;
     index_type++;
   }*/
 
+  pgb2->source_size = index_source;
   pgb2->type_size = index_type;
   printf("type size = %d\n", pgb2->type_size );
+  printf("source size = %d\n", pgb2->source_size );
+  printf("tau_size_selection = %d\n", pgb2->tau_size_selection);
+  printf("k_size_bessel = %d\n",pgb2->k_size_bessel);
 
   /* Define an array of values of first order transfer functions:
               pgb2->first_order_sources[index_type][index_tau][index_k_bessel] */
-  class_alloc(pgb2->first_order_sources, pgb2->type_size * sizeof(double **), ppt->error_message);
-    for (int index_type = 0; index_type < pgb2->type_size; index_type++) {
+  class_alloc(pgb2->first_order_sources, pgb2->source_size * sizeof(double **), ppt->error_message);
+    for (int index_type = 0; index_type < pgb2->source_size; index_type++) {
       /* Allocate memory for pgb2->first_order_sources[index_type][index_tau] */
       class_alloc(pgb2->first_order_sources[index_type],
                   pgb2->tau_size_selection * sizeof(double *),
@@ -1437,14 +1811,16 @@ int galbispectra2_init (
       for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++) {
           /* Loop over type and tau. For each of them, allocate memory
            for pgb2->first_order_sources[index_type][index_tau][index_k_bessel]  */
-         class_alloc(pgb2->first_order_sources[index_type][index_tau],
-                      pgb2->k_size_bessel * sizeof(double),
-                      ppt->error_message);
+        class_alloc(pgb2->first_order_sources[index_type][index_tau],
+                    pgb2->k_size_bessel * sizeof(double),
+                    ppt->error_message);
     }
   }
 
-  class_alloc(pgb2->first_order_sources_integrand, pgb2->type_size * sizeof(double **), ppt->error_message);
-    for (int index_type = 0; index_type < pgb2->type_size; index_type++) {
+  printf("First order sources allocated\n" );
+
+  class_alloc(pgb2->first_order_sources_integrand, pgb2->source_size * sizeof(double **), ppt->error_message);
+    for (int index_type = 0; index_type < pgb2->source_size; index_type++) {
       /* Allocate memory for pgb2->first_order_sources_integrand[index_type][index_tau] */
       class_alloc(pgb2->first_order_sources_integrand[index_type],
                   pgb2->tau_size_bessel * sizeof(double *),
@@ -1458,6 +1834,8 @@ int galbispectra2_init (
                       ppt->error_message);
     }
   }
+
+  printf("First order sources_integrand allocated\n" );
 
   /* Define an array of values of first order transfer functions with integrals (lensing etc.), these source terms have an extra
     index (index_l):
@@ -1489,6 +1867,8 @@ int galbispectra2_init (
       }
     }
 
+    printf("First order sources_integ allocated\n" );
+
 
 
   //printf("%g\n",ppt->quadsources[ppt->index_md_scalars][ppt->index_ic_ad*ppt->qs_size[ppt->index_md_scalars]+ppt->index_qs_delta_cdm][100 * ppt->k_size[ppt->index_md_scalars] + 20]);
@@ -1514,10 +1894,10 @@ int galbispectra2_init (
     double intermediate_plus;
     double ** matter;
 
-    class_alloc(matter, ppt->tau_size_quadsources * sizeof(double *), ppt->error_message);
+    /*class_alloc(matter, ppt->tau_size_quadsources * sizeof(double *), ppt->error_message);
       for (int index = 0; index < ppt->tau_size_quadsources; index++) {
         /* Allocate memory for pgb2->first_order_sources[index_type][index_tau] */
-        class_alloc(matter[index],
+        /*class_alloc(matter[index],
                     ppt->k_size[ppt->index_md_scalars] * sizeof(double ),
                     ppt->error_message);
     }
@@ -1527,9 +1907,9 @@ int galbispectra2_init (
         matter[index][index_k] = ppt->quadsources[ppt->index_md_scalars][ppt->index_ic_ad*ppt->qs_size[ppt->index_md_scalars]+ppt->index_qs_delta_cdm][index * ppt->k_size[ppt->index_md_scalars] + index_k]
           + ppt->quadsources[ppt->index_md_scalars][ppt->index_ic_ad*ppt->qs_size[ppt->index_md_scalars]+ppt->index_qs_delta_b][index * ppt->k_size[ppt->index_md_scalars] + index_k];
       }
-    }
-
-    if (pgb2->index_type_delta_cdm != -1) {
+    }*/
+    //pgb2->first_order_sources[0][0][0] = 0.0;
+    if (pgb2->index_source_delta_cdm != -1) {
       for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++){
         index_k = 0;
 
@@ -1554,43 +1934,12 @@ int galbispectra2_init (
 
           g = (pgb2->k_bessel[index_k_bessel]-ppt->k[ppt->index_md_scalars][index_k])/(ppt->k[ppt->index_md_scalars][index_k+1]-ppt->k[ppt->index_md_scalars][index_k]);
 
-          pgb2->first_order_sources[pgb2->index_type_delta_cdm][index_tau][index_k_bessel] = g*intermediate_plus +(1-g)*intermediate;
+          pgb2->first_order_sources[pgb2->index_source_delta_cdm][index_tau][index_k_bessel] = g*intermediate_plus +(1-g)*intermediate;
 
 
         }
       }
     }
-
-    // NOTE: ALERT: We have simply added the two tranfer functions together, this causes C_l to be too large
-    /*if (pgb2->index_type_delta_cdm != -1) {
-      for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++){
-        index_k = 0;
-
-        for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
-          index = 0;
-
-          double tau = pgb2->tau_sampling_cls[index_tau];
-
-          class_call(index_of_tau_sampling_quadsources(tau, &index, ppt),ppt->error_message,pgb2->error_message);
-
-          double k = pgb2->k_bessel[index_k_bessel];
-
-          class_call(index_of_k(k, &index_k, ppt), ppt->error_message, pgb2->error_message);
-
-          f = (pgb2->tau_sampling_cls[index_tau]-ppt->tau_sampling_quadsources[index])/(ppt->tau_sampling_quadsources[index+1]-ppt->tau_sampling_quadsources[index]);
-
-          intermediate  = f*matter[index+1][index_k]+(1-f)*matter[index][index_k];
-
-          intermediate_plus =  f*matter[index+1][index_k+1]+(1-f)*matter[index][index_k+1];
-
-          g = (pgb2->k_bessel[index_k_bessel]-ppt->k[ppt->index_md_scalars][index_k])/(ppt->k[ppt->index_md_scalars][index_k+1]-ppt->k[ppt->index_md_scalars][index_k]);
-
-          pgb2->first_order_sources[pgb2->index_type_delta_cdm][index_tau][index_k_bessel] = g*intermediate_plus +(1-g)*intermediate;
-        }
-      }
-    }*/
-    //exit(0);
-    //free(matter);
     printf("Reach here1\n" );
 
     // set up sources for rsd
@@ -1608,14 +1957,15 @@ int galbispectra2_init (
 
     printf("ppt->tau_sampling_quadsources[%d] = %g\n",index_test_qs, ppt->tau_sampling_quadsources[index_test_qs]);
 
-    if (pgb2->index_type_v != -1) {
+    if (pgb2->index_source_v != -1) {
       for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++){
         // NOTE: ppt->index_qs_theta_cdm is equal to -ppt->index_qs_v_cdm/k*k velocity. v = -theta/(k*k)
         index_k_rsd = 0;
 
         for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
+          //Coarse time index
           index = 0;
-
+          //Coarse tau value
           double tau = pgb2->tau_sampling_cls[index_tau];
 
           class_call(index_of_tau_sampling_quadsources(tau, &index, ppt), pgb2->error_message, pgb2->error_message);
@@ -1633,8 +1983,8 @@ int galbispectra2_init (
               (1-f)*ppt->quadsources[ppt->index_md_scalars][ppt->index_ic_ad*ppt->qs_size[ppt->index_md_scalars]+ppt->index_qs_v_cdm][index * ppt->k_size[ppt->index_md_scalars] + index_k_rsd+1]);
 
           g = (pgb2->k_bessel[index_k_bessel]-ppt->k[ppt->index_md_scalars][index_k_rsd])/(ppt->k[ppt->index_md_scalars][index_k_rsd+1]-ppt->k[ppt->index_md_scalars][index_k_rsd]);
-
-          pgb2->first_order_sources[pgb2->index_type_v][index_tau][index_k_bessel] = (g*intermediate_plus +(1-g)*intermediate);
+          //printf("%d    %d    %d  %g\n", pgb2->index_source_v, index_tau, index_k_bessel, pgb2->first_order_sources[pgb2->index_source_v][index_tau][index_k_bessel]);
+          pgb2->first_order_sources[pgb2->index_source_v][index_tau][index_k_bessel] = (g*intermediate_plus +(1-g)*intermediate);
 
           /* Debug: Check the interpolation is working correctly. */
           //printf("%g  %g  %g  %g\n",
@@ -1651,7 +2001,7 @@ int galbispectra2_init (
       }
     }
 
-    if (pgb2->index_type_theta != -1) {
+    if (pgb2->index_source_theta != -1) {
       for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++){
         // NOTE: ppt->index_qs_theta_cdm is equal to -ppt->index_qs_v_cdm/k*k velocity. v = -theta/(k*k)
         index_k_rsd = 0;
@@ -1677,7 +2027,7 @@ int galbispectra2_init (
 
           g = (pgb2->k_bessel[index_k_bessel]-ppt->k[ppt->index_md_scalars][index_k_rsd])/(ppt->k[ppt->index_md_scalars][index_k_rsd+1]-ppt->k[ppt->index_md_scalars][index_k_rsd]);
 
-          pgb2->first_order_sources[pgb2->index_type_theta][index_tau][index_k_bessel] = (g*intermediate_plus +(1-g)*intermediate);
+          pgb2->first_order_sources[pgb2->index_source_theta][index_tau][index_k_bessel] = (g*intermediate_plus +(1-g)*intermediate);
 
           /* Debug: Check the interpolation is working correctly. */
           //printf("%g  %g  %g  %g\n",
@@ -1705,6 +2055,7 @@ int galbispectra2_init (
     int index_k_lens;
     double ** phi_plus_psi;
     double ** phi;
+    double ** psi;
     /* Allocate a temporary array phi_plus_psi[index_tau][index_k] that stores the quadsources transfer function for phi+psi
         purely for brevity*/
 
@@ -1717,9 +2068,14 @@ int galbispectra2_init (
       }
 
     class_alloc(phi, ppt->tau_size_quadsources * sizeof(double *), ppt->error_message);
+    class_alloc(psi, ppt->tau_size_quadsources * sizeof(double *), ppt->error_message);
       for (int index = 0; index < ppt->tau_size_quadsources; index++) {
         /* Allocate memory for pgb2->first_order_sources[index_type][index_tau] */
         class_alloc(phi[index],
+                    ppt->k_size[ppt->index_md_scalars] * sizeof(double ),
+                    ppt->error_message);
+
+        class_alloc(psi[index],
                     ppt->k_size[ppt->index_md_scalars] * sizeof(double ),
                     ppt->error_message);
       }
@@ -1730,46 +2086,15 @@ int galbispectra2_init (
           + ppt->quadsources[ppt->index_md_scalars][ppt->index_ic_ad*ppt->qs_size[ppt->index_md_scalars]+ppt->index_qs_psi][index * ppt->k_size[ppt->index_md_scalars] + index_k];
 
         phi[index][index_k] = ppt->quadsources[ppt->index_md_scalars][ppt->index_ic_ad*ppt->qs_size[ppt->index_md_scalars]+ppt->index_qs_phi][index * ppt->k_size[ppt->index_md_scalars] + index_k];
+
+        psi[index][index_k] = ppt->quadsources[ppt->index_md_scalars][ppt->index_ic_ad*ppt->qs_size[ppt->index_md_scalars]+ppt->index_qs_psi][index * ppt->k_size[ppt->index_md_scalars] + index_k];
       }
     }
 
 
     printf("starting pgb2->index_type_lens\n" );
-    /*for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++){
 
-        last_index_k_lens = 0;
-        index_k_lens = 0;
-        int index_tau_source;
-        int last_index;
-        int index_tau_lens;
-        double r_lens;
-        double r = pba->conformal_age - pgb2->tau_sampling_cls[index_tau];
-        double lensing_result;
-        double x;
-
-        for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
-          index = 0;
-
-          double tau = pgb2->tau_sampling_cls[index_tau];
-
-          class_call(index_of_tau_sampling_quadsources(tau, &index, ppt), pgb2->error_message, pgb2->error_message);
-
-          double k = pgb2->k_bessel[index_k_bessel];
-
-          class_call(index_of_k(k, &index_k_lens, ppt), pgb2->error_message, pgb2->error_message);
-
-          f = (pgb2->tau_sampling_cls[index_tau]-ppt->tau_sampling_quadsources[index])/(ppt->tau_sampling_quadsources[index+1]-ppt->tau_sampling_quadsources[index]);
-
-          intermediate  = f*phi_plus_psi[index+1][index_k]+(1-f)*phi_plus_psi[index][index_k];
-
-          intermediate_plus =  f*phi_plus_psi[index+1][index_k+1]+(1-f)*phi_plus_psi[index][index_k+1];
-
-          g = (pgb2->k_bessel[index_k_bessel]-ppt->k[ppt->index_md_scalars][index_k])/(ppt->k[ppt->index_md_scalars][index_k+1]-ppt->k[ppt->index_md_scalars][index_k]);
-
-          pgb2->first_order_sources[pgb2->index_type_phi_plus_psi][index_tau][index_k_bessel] = (g*intermediate_plus +(1-g)*intermediate);
-        }
-    }*/
-    if (pgb2->index_type_phi_plus_psi != -1) {
+    if (pgb2->index_source_phi_plus_psi != -1) {
       for (int index_tau = 0; index_tau < pgb2->tau_size_bessel; index_tau++){
 
           last_index_k = 0;
@@ -1805,12 +2130,12 @@ int galbispectra2_init (
 
             g = (pgb2->k_bessel[index_k_bessel]-ppt->k[ppt->index_md_scalars][index_k])/(ppt->k[ppt->index_md_scalars][index_k+1]-ppt->k[ppt->index_md_scalars][index_k]);
 
-            pgb2->first_order_sources_integrand[pgb2->index_type_phi_plus_psi][index_tau][index_k_bessel] = (g*intermediate_plus +(1-g)*intermediate);
+            pgb2->first_order_sources_integrand[pgb2->index_source_phi_plus_psi][index_tau][index_k_bessel] = (g*intermediate_plus +(1-g)*intermediate);
           }
       }
     }
 
-    if (pgb2->index_type_phi != -1) {
+    if (pgb2->index_source_phi != -1) {
       for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++){
 
           last_index_k = 0;
@@ -1847,26 +2172,77 @@ int galbispectra2_init (
 
             g = (pgb2->k_bessel[index_k_bessel]-ppt->k[ppt->index_md_scalars][index_k])/(ppt->k[ppt->index_md_scalars][index_k+1]-ppt->k[ppt->index_md_scalars][index_k]);
 
-            pgb2->first_order_sources[pgb2->index_type_phi][index_tau][index_k_bessel] = (g*intermediate_plus +(1-g)*intermediate);
+            pgb2->first_order_sources[pgb2->index_source_phi][index_tau][index_k_bessel] = (g*intermediate_plus +(1-g)*intermediate);
           }
       }
     }
 
-    /* Now using the interpolated phi transfer function, we will take the time derivatives to fill the pgb2->index_type_phi_prime
+    /* Interpolate Psi */
+    if (pgb2->index_source_psi != -1) {
+      for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++){
+
+          last_index_k = 0;
+          index_k_lens = 0;
+          int last_index;
+          int index_tau_lens;
+          double lensing_result;
+          f = 0.;
+          g = 0.;
+
+          for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
+            index = 0;
+
+            double tau = pgb2->tau_sampling_bessel[index_tau];
+
+            class_call(index_of_tau_sampling_quadsources(tau, &index, ppt), pgb2->error_message, pgb2->error_message);
+
+            double k = pgb2->k_bessel[index_k_bessel];
+
+            class_call(index_of_k_old(k,
+                           &index_k,
+                           &last_index_k,
+                           ppt),
+                           pgb2->error_message,
+                           pgb2->error_message);
+
+            f = (pgb2->tau_sampling_bessel[index_tau]-ppt->tau_sampling_quadsources[index])/(ppt->tau_sampling_quadsources[index+1]-ppt->tau_sampling_quadsources[index]);
+
+            intermediate  = f*psi[index+1][index_k]+(1-f)*psi[index][index_k];
+
+            intermediate_plus =  f*psi[index+1][index_k+1]+(1-f)*psi[index][index_k+1];
+
+            g = (pgb2->k_bessel[index_k_bessel]-ppt->k[ppt->index_md_scalars][index_k])/(ppt->k[ppt->index_md_scalars][index_k+1]-ppt->k[ppt->index_md_scalars][index_k]);
+
+            pgb2->first_order_sources[pgb2->index_source_psi][index_tau][index_k_bessel] = (g*intermediate_plus +(1-g)*intermediate);
+          }
+      }
+    }
+
+    /* Now using the interpolated phi transfer function, we will take the time derivatives to fill the pgb2->index_source_phi_prime
       transfer array, we take the derivatives of the end points and internal points separately. */
-    if (pgb2->index_type_phi_prime != -1) {
+    if (pgb2->index_source_phi_prime != -1 || pgb2->index_source_phi_plus_psi_prime != -1) {
       for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
-        pgb2->first_order_sources[pgb2->index_type_phi_prime][0][index_k_bessel] = (pgb2->first_order_sources[pgb2->index_type_phi][1][index_k_bessel]-pgb2->first_order_sources[pgb2->index_type_phi][0][index_k_bessel])/
+        pgb2->first_order_sources[pgb2->index_source_phi_prime][0][index_k_bessel] = (pgb2->first_order_sources[pgb2->index_source_phi][1][index_k_bessel]-pgb2->first_order_sources[pgb2->index_source_phi][0][index_k_bessel])/
           (pgb2->tau_sampling_cls[1]-pgb2->tau_sampling_cls[0]);
 
-        pgb2->first_order_sources[pgb2->index_type_phi_prime][pgb2->tau_size_selection-1][index_k_bessel] = (pgb2->first_order_sources[pgb2->index_type_phi][pgb2->tau_size_selection-1][index_k_bessel]-pgb2->first_order_sources[pgb2->index_type_phi][pgb2->tau_size_selection-2][index_k_bessel])/
+        pgb2->first_order_sources[pgb2->index_source_phi_prime][pgb2->tau_size_selection-1][index_k_bessel] = (pgb2->first_order_sources[pgb2->index_source_phi][pgb2->tau_size_selection-1][index_k_bessel]-pgb2->first_order_sources[pgb2->index_source_phi][pgb2->tau_size_selection-2][index_k_bessel])/
+          (pgb2->tau_sampling_cls[pgb2->tau_size_selection-1]-pgb2->tau_sampling_cls[pgb2->tau_size_selection-2]);
+
+
+        pgb2->first_order_sources[pgb2->index_source_phi_plus_psi_prime][0][index_k_bessel] = (pgb2->first_order_sources[pgb2->index_source_phi_plus_psi][1][index_k_bessel]-pgb2->first_order_sources[pgb2->index_source_phi_plus_psi][0][index_k_bessel])/
+          (pgb2->tau_sampling_cls[1]-pgb2->tau_sampling_cls[0]);
+
+        pgb2->first_order_sources[pgb2->index_source_phi_plus_psi_prime][pgb2->tau_size_selection-1][index_k_bessel] = (pgb2->first_order_sources[pgb2->index_source_phi_plus_psi][pgb2->tau_size_selection-1][index_k_bessel]-pgb2->first_order_sources[pgb2->index_source_phi_plus_psi][pgb2->tau_size_selection-2][index_k_bessel])/
           (pgb2->tau_sampling_cls[pgb2->tau_size_selection-1]-pgb2->tau_sampling_cls[pgb2->tau_size_selection-2]);
       }
 
 
       for (int index_tau = 1; index_tau < pgb2->tau_size_selection-1; index_tau++){
         for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
-          pgb2->first_order_sources[pgb2->index_type_phi_prime][index_tau][index_k_bessel] = (pgb2->first_order_sources[pgb2->index_type_phi][index_tau+1][index_k_bessel]-pgb2->first_order_sources[pgb2->index_type_phi][index_tau-1][index_k_bessel])/
+          pgb2->first_order_sources[pgb2->index_source_phi_prime][index_tau][index_k_bessel] = (pgb2->first_order_sources[pgb2->index_source_phi][index_tau+1][index_k_bessel]-pgb2->first_order_sources[pgb2->index_source_phi][index_tau-1][index_k_bessel])/
+            (pgb2->tau_sampling_cls[index_tau+1]-pgb2->tau_sampling_cls[index_tau-1]);
+
+          pgb2->first_order_sources[pgb2->index_source_phi_plus_psi_prime][index_tau][index_k_bessel] = (pgb2->first_order_sources[pgb2->index_source_phi_plus_psi][index_tau+1][index_k_bessel]-pgb2->first_order_sources[pgb2->index_source_phi_plus_psi][index_tau-1][index_k_bessel])/
             (pgb2->tau_sampling_cls[index_tau+1]-pgb2->tau_sampling_cls[index_tau-1]);
         }
       }
@@ -1877,6 +2253,7 @@ int galbispectra2_init (
 
     /* Lensing integral, at present this is the slowest part of the code. We check that this computation is required by the first if
       statement. */
+
     if (pgb2->index_type_lens != -1) {
       for (int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
         for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++){
@@ -1898,6 +2275,7 @@ int galbispectra2_init (
         for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
 
             lensing_result = 0.;
+
             first_index_tau_in_lens = index_tau * bessel_boost;
 
             for (index_tau_lens = (index_tau * bessel_boost); index_tau_lens < pgb2->tau_size_bessel-1; index_tau_lens++) {
@@ -1925,17 +2303,121 @@ int galbispectra2_init (
               }
 
               lensing_result += ((pba->conformal_age - pgb2->tau_sampling_bessel[index_tau_lens])-(pba->conformal_age - pgb2->tau_sampling_cls[index_tau]))
-                * j * weight * pgb2->first_order_sources_integrand[pgb2->index_type_phi_plus_psi][index_tau_lens][index_k_bessel]/((pba->conformal_age - pgb2->tau_sampling_bessel[index_tau_lens])*(pba->conformal_age - pgb2->tau_sampling_cls[index_tau]));
+                * j * weight * pgb2->first_order_sources_integrand[pgb2->index_source_phi_plus_psi][index_tau_lens][index_k_bessel]/((pba->conformal_age - pgb2->tau_sampling_bessel[index_tau_lens])*(pba->conformal_age - pgb2->tau_sampling_cls[index_tau]));
+
+
             }
 
             pgb2->first_order_sources_integ[pgb2->index_type_lens][index_l][index_tau][index_k_bessel] = lensing_result;
+
           }
         }
       }
     }
+    double * pvecbackg;
+    int last_index_g = 0;
+    class_alloc(pvecbackg, pba->bg_size*sizeof(double), pba->error_message);
 
+    /* Prepare the two integrated GR terms (g4 and g5) for the integral function */
+    if ((pgb2->index_type_g5 != -1) || (pgb2->index_type_g4 != -1)) {
+      printf("Integrating g4 and g5\n");
+
+      for (int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
+        for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++){
+
+        last_index_k_lens = 0;
+        index_k_lens = 0;
+
+        int first_index_tau_in_lens;
+        double f_minus, f_plus, w_minus, w_plus, f_interpolate, tau_lens;
+        double weight, end_weights;
+        double x;
+        double g5;
+        double g4;
+        double g5_prefactor;
+        double f_evo;
+        double j;
+
+        for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
+            g5 = 0.;
+            g4 = 0.;
+            first_index_tau_in_lens = index_tau * bessel_boost;
+
+            for (int index_tau_lens = (index_tau * bessel_boost); index_tau_lens < pgb2->tau_size_bessel-1; index_tau_lens++) {
+              // NOTE that we skip the last index "pgb2->tau_size_bessel-1" to avoid the singularity. This would analytically drop out anyways
+              // for l not 1.
+
+              class_call(background_at_tau(pba,
+                                           pgb2->tau_sampling_bessel[index_tau_lens],
+                                           pba->long_info,
+                                           pba->inter_normal,
+                                           &last_index_g,
+                                           pvecbackg),
+                                           pba->error_message,
+                                           pgb2->error_message);
+
+              f_evo = 2.
+                      /pvecbackg[pba->index_bg_H]
+                      /pvecbackg[pba->index_bg_a]
+                      /(pba->conformal_age - pgb2->tau_sampling_bessel[index_tau_lens])
+                      +pvecbackg[pba->index_bg_H_prime]
+                      /pvecbackg[pba->index_bg_H]
+                      /pvecbackg[pba->index_bg_H]
+                      /pvecbackg[pba->index_bg_a];
+
+              tau_lens = pgb2->tau_sampling_bessel[index_tau_lens];
+
+              if(x>pbs->x_max ){
+              printf("ALERT! x= %g \n",x);continue;}
+
+              class_call(bessel_at_x(pbs,pgb2->k_bessel[index_k_bessel]*(pba->conformal_age -tau_lens), index_l, &j), pbs->error_message, pgb2->error_message);
+
+              //index_of_tau_sampling_cls(tau_lens, &index_tau_cls, &last_index, pgb2);
+
+              first_index_tau_in_lens = index_tau * bessel_boost;
+
+              /* If we are taking the first or last trapezoidal weight then take the first weight, else take the other weight */
+              if (index_tau_lens == first_index_tau_in_lens || index_tau_lens == (pgb2->tau_size_bessel-1) ){
+                weight = (pgb2->tau_sampling_bessel[first_index_tau_in_lens]-pgb2->tau_sampling_bessel[pgb2->tau_size_bessel-1])/(2.0*((pgb2->tau_size_bessel-1)-first_index_tau_in_lens));
+              }
+
+              else{
+                weight = (pgb2->tau_sampling_bessel[first_index_tau_in_lens]-pgb2->tau_sampling_bessel[pgb2->tau_size_bessel-1])/((pgb2->tau_size_bessel-1)-first_index_tau_in_lens);
+              }
+
+              g5_prefactor = (1.0
+                            +pvecbackg[pba->index_bg_H_prime]
+                            /pvecbackg[pba->index_bg_a]
+                            /pvecbackg[pba->index_bg_H]
+                            /pvecbackg[pba->index_bg_H]
+                            +(2.0-5.0*ptr->s_bias)
+                            /(pba->conformal_age - pgb2->tau_sampling_bessel[index_tau_lens])
+                            /pvecbackg[pba->index_bg_a]
+                            /pvecbackg[pba->index_bg_H]
+                            +5.0*ptr->s_bias
+                            -f_evo);
+
+              g4 += (2.0-5.0*ptr->s_bias)
+                    *pgb2->first_order_sources_integrand[pgb2->index_source_phi_plus_psi][index_tau_lens][index_k_bessel]
+                    *j
+                    *weight
+                    /(pba->conformal_age - pgb2->tau_sampling_bessel[index_tau_lens]);
+
+              g5 += g5_prefactor
+                    *pgb2->first_order_sources_integrand[pgb2->index_source_phi_plus_psi_prime][index_tau_lens][index_k_bessel]
+                    *weight
+                    *j;
+            }
+            pgb2->first_order_sources_integ[pgb2->index_type_g4][index_l][index_tau][index_k_bessel] = g4;
+            pgb2->first_order_sources_integ[pgb2->index_type_g5][index_l][index_tau][index_k_bessel] = g5;
+          }
+        }
+      }
+    }
   printf("First order source array filled.\n");
 
+
+  /* Turn off types which are not needed for the integral function */
   /***************************************************************************
   ==========================   k-Integration =================================
   ****************************************************************************/
@@ -1996,23 +2478,59 @@ int galbispectra2_init (
   printf("integrating k between %g and %g\n",ppt->k[ppt->index_md_scalars][0],ppt->k[ppt->index_md_scalars][ppt->k_size[ppt->index_md_scalars]-1] );
 
   printf("pgb2->type_size = %d\n", pgb2->type_size);
+  printf("first weight =%g\n",pgb2->w_trapz_k[0]);
+  printf("mid weight =%g\n",pgb2->w_trapz_k[1]);
+  printf("end weight =%g\n",pgb2->w_trapz_k[pgb2->k_size_bessel-1]);
 
+  // Toy Integration Session
+  /*double integ_toy;
+  double pvec1;
+  double pvec2;
+  class_call(integral(pba,
+                      ppm,
+                      pbs,
+                      pgb2,
+                      ppt,
+                      ptr,
+                      pgb2->index_type_d1,
+                      pgb2->index_type_d1,
+                      0,
+                      0,
+                      16,
+                      &pvec1,
+                      &pvec2,
+                      &integ_toy),
+             pgb2->error_message,
+             pgb2->error_message);
 
+  printf("The k-integral between %g and %g with %d points and l = %d, tau = %g, tau0 = %g is ***%g***\n",
+          pgb2->k_bessel[0],
+          pgb2->k_bessel[pgb2->k_size_bessel-1],
+          pgb2->k_size_bessel,
+          pbs->l[16],
+          pgb2->tau_sampling_cls[0],
+          pba->conformal_age,
+          integ_toy);
+          //herehere
+  exit(0);*/
 
   double p1,p2,f1,f2,j1,j2;
   int k_test_index;
   double pvecback1;
   double pvecback2;
-
+  //TODO: make the background pointers be input parameters in to the integral function
+  // ALERT: the second type is counted up to the first type so (1,2) is counted but (2,1) is not.
+    // cannot make this short cut when z1 and z2 are not equivalent.
   /* Fill the array pgb2->Cl[index_type_first][index_type_second][index_l][index_tau_first][index_tau_second] by calling the integral() function */
   for(int index_type_first = 0; index_type_first < pgb2->type_size; index_type_first++){
     for (int k = 0; k < index_type_first+1; k++){
       printf("X");
     }
     printf("\n");
-
-    for(int index_type_second = 0; index_type_second < pgb2->type_size; index_type_second++){
-      for(int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++){
+// alert last tau width is missing
+    for(int index_type_second = 0; index_type_second < index_type_first+1; index_type_second++){
+      //alert we don't run over last index_l
+      for(int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]-1; index_l++){
         for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++){
           for(int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++){
 
@@ -2035,9 +2553,9 @@ int galbispectra2_init (
 
             pgb2->Cl[index_type_first][index_type_second][index_l][index_tau_first][index_tau_second] = integ;
 
-            /*if (integ != integ) {
-              printf("pgb2->Cl[%d][%d][%d][%d][%d] = %g\n", index_type_first, index_type_second, index_l, index_tau_first, index_tau_second, pgb2->Cl[index_type_first][index_type_second][index_l][index_tau_first][index_tau_second]);
-            }*/
+            //if (integ == 0.0) {
+            printf("pgb2->Cl[%d][%d][%d][%d][%d] = %g\n", index_type_first, index_type_second, index_l, index_tau_first, index_tau_second, pgb2->Cl[index_type_first][index_type_second][index_l][index_tau_first][index_tau_second]);
+            //}
           }
         }
       }
@@ -2045,9 +2563,6 @@ int galbispectra2_init (
   }
 
   printf("Done k-integration.\n");
-
-
-
 
 
 
@@ -2099,7 +2614,9 @@ int galbispectra2_init (
 
 
   printf("Starting time-integration.\n");
-
+  /*double x, selection;
+  x = fabs(z-ppt->selection_mean[0]);
+  selection =exp(-0.5*pow(x/ppt->selection_width[0],2))/ppt->selection_width[0]/sqrt(2.*_PI_);*/
 
   int  bin1 = 0;
   int  bin2 = 0;
@@ -2119,17 +2636,16 @@ int galbispectra2_init (
 
             pgb2->Cl_final[index_type_first][index_type_second][index_l][bin1][bin2] = 0.;
 
-
+            // ALERT NOT ALL TIME VALUES
     /* Final result Cl_final[index_type_first][index_type_second][index_l][bin1][bin2] is defined on the pgb2->tau_sampling_cls, so an interpolation is required
           from Cl[index_type_first][index_type_second][index_l][index_tau_first][index_tau_second] which is defined on pgb2->tau_size_selection[bin][index_tau]*/
-            for(index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++){
-
+            for(index_tau_second = 0; index_tau_second < 13 /*pgb2->tau_size_selection*/; index_tau_second++){
 
               double temp123 = 0.;
               double tau2 = pgb2->tau_sampling_selection[bin2][index_tau_second];
-              ;
 
-              for(index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++){
+
+              for(index_tau_first = 0; index_tau_first < 13 /*pgb2->tau_size_selection*/; index_tau_first++){
                 //printf("indexing %dx%dx%dx%dx%dx%dx%d\n",index_type_first, index_type_second, bin1, bin2, index_l,index_tau_second,index_tau_first);
 
                 double tau1 = pgb2->tau_sampling_selection[bin1][index_tau_first];
@@ -2151,14 +2667,12 @@ int galbispectra2_init (
 
                 temp /= (pgb2->tau_sampling_cls[index_tau2] - pgb2->tau_sampling_cls[index_tau2-1]);
 
-                temp123 += temp * w_trapz[bin1][index_tau_first] * selection[bin1][index_tau_first];
-
+                temp123 += temp * w_trapz[bin1][index_tau_first]*selection[bin1][index_tau_first];
               }
 
 
               pgb2->Cl_final[index_type_first][index_type_second][index_l][bin1][bin2] += temp123 * w_trapz[bin2][index_tau_second]
-                  * selection[bin2][index_tau_second];
-
+                  *selection[bin2][index_tau_second];
               pgb2->integral_over_single_window[index_type_first][index_type_second][index_l][bin1][bin2][index_tau_second] = temp123;
             }
           }
@@ -2167,22 +2681,72 @@ int galbispectra2_init (
     }
   }
 
+
 printf("integrating between k =%g and %g\n",pgb2->k_bessel[index_k_bessel],pgb2->k_bessel[pgb2->k_size_bessel-1]);
-for  (index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
-    //printf("l*(l+1)*Cl_final[%d][0][0] = %g\n",ptr->l[index_l], pgb2->Cl_final[index_type_first][index_type_second][index_l][0][0]*ptr->l[index_l]*(ptr->l[index_l]+1.));
-    printf("%d    %g\n",
+printf("#l       l(l+1)C_l/2pi\n");
+/*for  (index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
+
+    printf("%d    %g    %g    %g    %g    %g    %g    %g\n",
             ptr->l[index_l],
             (pgb2->Cl_final[pgb2->index_type_rsd][pgb2->index_type_rsd][index_l][0][0]
             +pgb2->Cl_final[pgb2->index_type_d1][pgb2->index_type_d1][index_l][0][0]
             +pgb2->Cl_final[pgb2->index_type_d2][pgb2->index_type_d2][index_l][0][0]
-            +pgb2->Cl_final[pgb2->index_type_rsd][pgb2->index_type_d1][index_l][0][0]
-            +pgb2->Cl_final[pgb2->index_type_d1][pgb2->index_type_d2][index_l][0][0]
-            +pgb2->Cl_final[pgb2->index_type_rsd][pgb2->index_type_d2][index_l][0][0])
-            *ptr->l[index_l]
-            *(ptr->l[index_l]+1.)
-            /(2*_PI_));
-  }
-exit(0);
+            +2*pgb2->Cl_final[pgb2->index_type_rsd][pgb2->index_type_d1][index_l][0][0]
+            +2*pgb2->Cl_final[pgb2->index_type_d1][pgb2->index_type_d2][index_l][0][0]
+            +2*pgb2->Cl_final[pgb2->index_type_rsd][pgb2->index_type_d2][index_l][0][0])
+            *ptr->l[index_l]*(ptr->l[index_l]+1.)/(2*_PI_),
+            pgb2->Cl_final[pgb2->index_type_rsd][pgb2->index_type_rsd][index_l][0][0]
+            *ptr->l[index_l]*(ptr->l[index_l]+1.)/(2*_PI_),
+            pgb2->Cl_final[pgb2->index_type_d1][pgb2->index_type_d1][index_l][0][0]
+            *ptr->l[index_l]*(ptr->l[index_l]+1.)/(2*_PI_),
+            pgb2->Cl_final[pgb2->index_type_d2][pgb2->index_type_d2][index_l][0][0]
+            *ptr->l[index_l]*(ptr->l[index_l]+1.)/(2*_PI_),
+            2*pgb2->Cl_final[pgb2->index_type_rsd][pgb2->index_type_d1][index_l][0][0]
+            *ptr->l[index_l]*(ptr->l[index_l]+1.)/(2*_PI_),
+            2*pgb2->Cl_final[pgb2->index_type_d1][pgb2->index_type_d2][index_l][0][0]
+            *ptr->l[index_l]*(ptr->l[index_l]+1.)/(2*_PI_),
+            2*pgb2->Cl_final[pgb2->index_type_rsd][pgb2->index_type_d2][index_l][0][0])
+            *ptr->l[index_l]*(ptr->l[index_l]+1.)/(2*_PI_);
+  }*/
+  printf("dens-dens\n");
+  printf("l   Cl_final(tau = 10766.3)   C_l(tau =10781.7)\n");
+  double norm;
+  for  (index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
+      norm = ptr->l[index_l]*(ptr->l[index_l]+1.)/(2*_PI_);
+
+      /*printf("%d    %g    %g    %g    %g    %g    %g\n",
+              ptr->l[index_l],
+              norm*pgb2->Cl_final[pgb2->index_type_density][pgb2->index_type_density][index_l][0][0],
+              norm*pgb2->Cl_final[pgb2->index_type_rsd][pgb2->index_type_rsd][index_l][0][0],
+              norm*pgb2->Cl_final[pgb2->index_type_d1][pgb2->index_type_d1][index_l][0][0],
+              norm*pgb2->Cl_final[pgb2->index_type_d2][pgb2->index_type_d2][index_l][0][0],
+              norm*pgb2->Cl_final[pgb2->index_type_lens][pgb2->index_type_lens][index_l][0][0],
+              norm*(pgb2->Cl_final[pgb2->index_type_g1][pgb2->index_type_g1][index_l][0][0],
+              +pgb2->Cl_final[pgb2->index_type_g2][pgb2->index_type_g2][index_l][0][0]
+              +pgb2->Cl_final[pgb2->index_type_g3][pgb2->index_type_g3][index_l][0][0]
+              +pgb2->Cl_final[pgb2->index_type_g4][pgb2->index_type_g4][index_l][0][0]
+              +pgb2->Cl_final[pgb2->index_type_g5][pgb2->index_type_g5][index_l][0][0]
+              +pgb2->Cl_final[pgb2->index_type_g5][pgb2->index_type_g1][index_l][0][0]
+              +pgb2->Cl_final[pgb2->index_type_g4][pgb2->index_type_g1][index_l][0][0]
+              +pgb2->Cl_final[pgb2->index_type_g3][pgb2->index_type_g1][index_l][0][0]
+              +pgb2->Cl_final[pgb2->index_type_g2][pgb2->index_type_g1][index_l][0][0]
+              +pgb2->Cl_final[pgb2->index_type_g5][pgb2->index_type_g2][index_l][0][0]
+              +pgb2->Cl_final[pgb2->index_type_g4][pgb2->index_type_g2][index_l][0][0]
+              +pgb2->Cl_final[pgb2->index_type_g3][pgb2->index_type_g2][index_l][0][0]
+              +pgb2->Cl_final[pgb2->index_type_g5][pgb2->index_type_g3][index_l][0][0]
+              +pgb2->Cl_final[pgb2->index_type_g4][pgb2->index_type_g3][index_l][0][0]
+              +pgb2->Cl_final[pgb2->index_type_g5][pgb2->index_type_g4][index_l][0][0]));*/
+
+              printf("%d    %g    %g\n",
+                      ptr->l[index_l],
+                      norm*pgb2->Cl_final[pgb2->index_type_rsd][pgb2->index_type_rsd][index_l][0][0],
+                      norm*pgb2->Cl[pgb2->index_type_rsd][pgb2->index_type_rsd][index_l][12][12]);
+
+    }
+
+
+  printf("K_MAX = %g \n",pgb2->k_bessel[pgb2->k_size_bessel-1] );
+  exit(0);
 
 
   printf("Starting bispectrum computation.\n");

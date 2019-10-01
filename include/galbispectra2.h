@@ -28,6 +28,7 @@
 
    double **** first_order_sources_integ;
 
+   double * vecback;
 
 
    double ***** Cl;
@@ -56,29 +57,47 @@
 
    int k_size_bessel; /* Number of points in the k_bessel grid */
 
-   int type_size; /* Number of different terms in the first_order_sources array */
+   int type_size; /* Number of number count contributions */
 
-   int index_type_delta_cdm; /* The index type corresponding to the rsd term in the galaxy number overdensity. */
+   int source_size; /* Number of distinct terms in the first_order_sources array */
 
-   int index_type_rsd; /* The index type corresponding to the rsd term in the galaxy number overdensity.*/
 
-   int index_type_v; /* velocity */
 
-   int index_type_theta; /* velocity divergence, theta = -k*k*v */
+   int index_type_density; /* The index type corresponding to the rsd term in the galaxy number overdensity. */
 
-   int index_type_d1; /* Index type corresponding to the D1 (Doppler contribution) */
+   int index_type_rsd; /* The index type corresponding to the density term in the galaxy number overdensity.*/
 
-   int index_type_d2; /* Index type corresponding to the D2 (Doppler contribution) */
+   int index_type_g1;
 
-   int index_type_rsd_gr; /* Anisotropic stress is neglected such that Phi = Psi */
+   int index_type_g2;
+
+   int index_type_g3;
 
    int index_type_lens;
 
-   int index_type_phi_plus_psi;
+   int index_type_g4;
 
-   int index_type_phi_prime;
+   int index_type_g5;
 
-   int index_type_phi;
+   int index_source_phi;
+
+   int index_source_psi;
+
+   int index_source_phi_plus_psi;
+
+   int index_source_phi_plus_psi_prime;
+
+   int index_source_phi_prime;
+
+   int index_source_delta_cdm;
+
+   int index_source_theta;  /* Velocity divergence = -k*k*v */
+
+   int index_source_v; /* velocity */
+
+   int index_type_d1; /* First Doppler term */
+
+   int index_type_d2; /* Second Doppler term */
 
    double ** tau_sampling_selection;
 
