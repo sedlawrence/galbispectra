@@ -37,8 +37,8 @@ int main(int argc, char **argv) {
     printf("\n\nError running input_init_from_arguments \n=>%s\n",errmsg);
     return _FAILURE_;
   }
+  printf("**WIDTH = %g**\n", pt.selection_width[0]);
 
-  printf("after input 1bs.x_max = %g\n",bs.x_max );
   printf("Done with init 1st order \n");
   if (input2_init_from_arguments(argc,argv,&pr,&pr2,&ba,&th,
     &pt,&pt2,&tr,&bs,&bs2,&tr2,&pm, &sp,&nl,&le,&bi,&fi,&op,errmsg) == _FAILURE_) {
@@ -60,7 +60,6 @@ int main(int argc, char **argv) {
     return _FAILURE_;
   }
   printf("Done with bg 1st order \n");
-
   /* Compute recombination and reionisation quantities */
   if (thermodynamics_init(&pr,&ba,&th) == _FAILURE_) {
     printf("\n\nError in thermodynamics_init \n=>%s\n",th.error_message);
@@ -69,10 +68,10 @@ int main(int argc, char **argv) {
   printf("Done with thermo 1st order \n");
 
   /* Compute the first-order C_l */
-  /*if (pt.has_cls && compute_cls (&pr,&ba,&th,&pt,&sp,&le,errmsg) == _FAILURE_) {
+  if (pt.has_cls && compute_cls (&pr,&ba,&th,&pt,&sp,&le,errmsg) == _FAILURE_) {
     printf("\n\nError in compute_cls \n=>%s\n",errmsg);
     return _FAILURE_;
-  }*/
+  }
   /* Compute first and second-order perturbations */
   /*if (perturb2_init(&pr,&pr2,&ba,&th,&pt,&pt2) == _FAILURE_) {
     printf("\n\nError in perturb2_init \n=>%s\n",pt2.error_message);
