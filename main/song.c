@@ -37,7 +37,6 @@ int main(int argc, char **argv) {
     printf("\n\nError running input_init_from_arguments \n=>%s\n",errmsg);
     return _FAILURE_;
   }
-  printf("**WIDTH = %g**\n", pt.selection_width[0]);
 
   printf("Done with init 1st order \n");
   if (input2_init_from_arguments(argc,argv,&pr,&pr2,&ba,&th,

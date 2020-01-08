@@ -28,16 +28,15 @@
 
    double **** first_order_sources_integ;
 
-   double * vecback;
 
 
-   double ***** Cl;
+   double ***** Dl;
 
    double * tau_sampling_cls;
 
    double * tau_sampling_bessel;
 
-   double ***** Cl_final;
+   double ***** Cl;
 
    ErrorMsg error_message;
 
@@ -52,6 +51,8 @@
    int tau_size_bessel;
 
    double * k_bessel;
+
+   double * vecback; /* Pointer to array filled with background information */
 
 
 
