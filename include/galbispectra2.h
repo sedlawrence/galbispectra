@@ -31,16 +31,23 @@
 
 
    double ***** Dl;
+   double ***** Dl2;
 
    double * tau_sampling_cls;
 
    double * tau_sampling_bessel;
+   double ** tau_rp;
+   double * test_array;
 
    double ***** Cl;
 
    ErrorMsg error_message;
 
    double * w_trapz_k; /* Corresponding to the array of trapezoidal weights w_trapz_k[index_k] for the k integration */
+
+   double * w_trapz_r;
+
+   double * w_trapz_alpha;
 
    double * w_trapz_lens;
 
@@ -54,7 +61,13 @@
 
    double * vecback; /* Pointer to array filled with background information */
 
+   int r_size;
 
+   int alpha_size;
+
+   double * r; /* Parameter to parameterise time grid */
+
+   double * alpha; /* Parameter to parameterise time grid */
 
    int k_size_bessel; /* Number of points in the k_bessel grid */
 
