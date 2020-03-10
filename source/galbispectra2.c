@@ -674,7 +674,7 @@ int index_of_tau_sampling_cls(double tau,
                  int * index_tau,
                  struct galbispectra2 * pgb2){
 
-                 double output = (tau - pgb2->tau_sampling_cls[0])/(pgb2->tau_sampling_cls[pgb2->tau_size_selection-1] - pgb2->tau_sampling_cls[0]) * (pgb2->tau_size_selection-1);
+                 double output = (tau - pgb2->tau_sampling_cls[0])/(pgb2->tau_sampling_cls[pgb2->tau_size_cls-1] - pgb2->tau_sampling_cls[0]) * (pgb2->tau_size_cls-1);
                  //printf("output = %g\n",output );
                  * index_tau = (int) ceil(output);
 
@@ -682,8 +682,8 @@ int index_of_tau_sampling_cls(double tau,
                    * index_tau = 1;
                  }
 
-                 else if(* index_tau > pgb2->tau_size_selection -1){
-                   * index_tau = pgb2->tau_size_selection -1;
+                 else if(* index_tau > pgb2->tau_size_cls -1){
+                   * index_tau = pgb2->tau_size_cls -1;
 
                  }
                  //printf("index_given = %d\n",*index_tau );
@@ -701,10 +701,11 @@ int index_of_tau_sampling_selection(double tau,
                 struct galbispectra2 * pgb2){
 
                 double output = (tau - pgb2->tau_sampling_selection[bin][0])/(pgb2->tau_sampling_selection[bin][pgb2->tau_size_selection-1] - pgb2->tau_sampling_selection[bin][0]) * (pgb2->tau_size_selection-1);
+                //Warning changed to floor from ceil
                 * index_tau = (int) ceil (output);
 
-                if (* index_tau < 1) {
-                  * index_tau = 1;
+                if (* index_tau < 0) {
+                  * index_tau = 0;
                 }
 
                 else if(* index_tau > pgb2->tau_size_selection -1){
@@ -713,34 +714,7 @@ int index_of_tau_sampling_selection(double tau,
                 }
               }
 
-int index_of_tau_rp(double tau1,
-                int * index_r_optimal,
-                int * index_alpha_optimal,
-                struct galbispectra2 * pgb2){
 
-                int index_r = -1;
-                int index_alpha = -1;
-                double  min_diff;
-                min_diff = 15000.0;
-                double diff;
-
-                for (int index_r = 0; index_r < pgb2->r_size; index_r++) {
-                  for (int index_alpha = pgb2->alpha_size; index_alpha < 2*pgb2->alpha_size-1; index_alpha++) {
-                    diff = abs(tau1-pgb2->tau_rp[index_r][index_alpha]);
-                    printf("tau_rp = %g\n", pgb2->tau_rp[index_r][index_alpha]);
-                    printf("diff = %g\n",diff);
-                    if (diff < min_diff) {
-                      printf("new diff = %g\n", min_diff);
-                      min_diff = diff;
-                      *index_r_optimal = index_r;
-                      *index_alpha_optimal = index_alpha;
-                    }
-                    else{
-                      continue;
-                    }
-                  }
-                }
-              }
 
 /* index_of_tau_sampling_ppt2() - given some conformal time tau1, this function will output the (closest)
  corresponding index in the ppt2->tau_sampling[index_tau1] array.
@@ -783,6 +757,42 @@ int index_of_tau_sampling_ppt2(double tau1,
 * @param index_tau1           Output: index in the array ppt->k
 * @param perturbs             Input: perturbs structure
 */
+int index_of_alpha(double alpha,
+                 int * index_alpha,
+                 struct galbispectra2 * pgb2){
+
+                 double output = (alpha - pgb2->alpha[0])/(pgb2->alpha[pgb2->alpha_size-1] - pgb2->alpha[0]) * (pgb2->alpha_size-1);
+                 //printf("output = %g\n",output );
+                 * index_alpha = (int) ceil(output);
+
+                 if (* index_alpha < 0) {
+                   * index_alpha = 0;
+                 }
+
+                 else if(* index_alpha > pgb2->alpha_size -1){
+                   * index_alpha = pgb2->alpha_size -1;
+
+                 }
+               }
+
+ int index_of_r(double r,
+                int index_alpha,
+                int * index_r,
+                struct galbispectra2 * pgb2){
+
+                  double output = (r - pgb2->r2[index_alpha][0])/(pgb2->r2[index_alpha][pgb2->r_size-1] - pgb2->r2[index_alpha][0]) * (pgb2->r_size-1);
+                  //printf("output = %g\n",output );
+                  * index_r = (int) ceil(output);
+
+                  if (* index_r < 0) {
+                    * index_r = 0;
+                  }
+
+                  else if(* index_r > pgb2->r_size -1){
+                    * index_r = pgb2->r_size -1;
+
+                  }
+                }
 
 int index_of_k_old(double k,
                int * index_k,
@@ -1118,6 +1128,35 @@ int index_of_tau_sampling_quadsources(double tau,
                  }
 
 
+int compute_simps_weights_selection(int bin,
+                double * weights,
+                struct galbispectra2 * pgb2){
+
+                int size = pgb2->tau_size_selection;
+                double delta_x;
+
+
+                delta_x = (pgb2->tau_sampling_selection[bin][size-1]-pgb2->tau_sampling_selection[bin][0])/(size-1);
+
+
+
+                /* End weights */
+                weights[0] = delta_x/3.0;
+                weights[size-1] = delta_x/3.0;
+                /* Even sums */
+                for (int index = 1; index < (size-3)/2+1; index++) {
+                  weights[2*index] = 2.0*delta_x/3.0;
+                  //printf("even inside function weights[%d]=%g\n",index, weights[index]);
+                }
+                /* Odd sums */
+                for (int index = 1; index < (size-3)/2+2; index++) {
+                  weights[2*index-1] = 4.0*delta_x/3.0;
+                  //printf("odd inside function weights[%d]=%g\n",index, weights[index]);
+                }
+
+                return _SUCCESS_;
+                }
+
 /* galbispectra2_init - the main function of this module. Here we can compute all types of galaxy bispectra. This function
   is called in the song.c main file. Note that all of the input structures should be filled before galbispectra2_init is
   called i.e. all of the associated modules should be ran beforehand. The output of this function is stored in the galbispectra2
@@ -1133,6 +1172,7 @@ int index_of_tau_sampling_quadsources(double tau,
 * @param galbispectra2          Output: galaxy bispectra structre
 * @param bessels                Input: Bessel structure
 */
+
 
 int galbispectra2_init (
      struct precision * ppr,
@@ -1179,13 +1219,16 @@ int galbispectra2_init (
   /*the bessel grid is boosted by an integer factor to account for rapid oscillations.*/
   int bessel_boost = 50;
   tau0 = pba->conformal_age;
-  /* Please ensure the pgb2->tau_size_selection grid is of a higher resolution than pgb2->r_size * pgb2->alpha_size = 13*/
-  pgb2->tau_size_selection = 1000;
+  /* SIZES */
 
-  pgb2->r_size = 75; //previously on 75
+
+  /* Please ensure the pgb2->tau_size_selection grid is of a higher resolution than pgb2->r_size * pgb2->alpha_size = 13*/
+  pgb2->tau_size_cls = 750;
+  pgb2->tau_size_selection = 601;
+  pgb2->r_size = 1000; //previously on 75
 
   /* alpha_size must be an odd positive-integer in order to correctly fill the pgb2->r and pgb2->alpha grids using symmetries */
-  pgb2->alpha_size = 13; //previously on 12
+  pgb2->alpha_size = 501; //previously on 13
 
   if (pgb2->alpha_size % 2 == 0) {
     printf("ERROR! alpha_size must be an ODD positive-integer\n" );
@@ -1193,7 +1236,7 @@ int galbispectra2_init (
   }
 
   /* We wish to double the number of slots such that points in the two grids tau_sampling_cls and tau_sampling_bessel align. */
-  pgb2->tau_size_bessel = bessel_boost * (pgb2->tau_size_selection-1) + 1;
+  pgb2->tau_size_bessel = bessel_boost * (pgb2->tau_size_cls-1) + 1;
   pgb2->k_size_bessel = 25000;  /*tau_size_bessel*/   /*k_size * boost*/
   printf("Starting galaxy bispectra module...\n");
   if (ppt->selection==gaussian) {
@@ -1297,6 +1340,7 @@ int galbispectra2_init (
 /* Allocate and fill array for the trapezoidal weights for line of sight integration */
 
 
+
   class_alloc(tau0_minus_tau,
               ppt->selection_num * sizeof(double*),
               ppt->error_message);
@@ -1321,7 +1365,7 @@ int galbispectra2_init (
   }
 
   class_alloc(pgb2->tau_sampling_cls,
-              pgb2->tau_size_selection * sizeof(double),
+              pgb2->tau_size_cls * sizeof(double),
               pgb2->error_message);
 
   class_alloc(pgb2->tau_sampling_bessel,
@@ -1350,6 +1394,7 @@ int galbispectra2_init (
 
 
   double overall_tau_min = 160000.;
+  double overall_tau_max = -1.;
 
 
   /* Define new tau_sampling_selection. This sampling is bin-dependent */
@@ -1402,6 +1447,7 @@ int galbispectra2_init (
     }
 
     overall_tau_min = MIN(tau_min,overall_tau_min);
+    overall_tau_max = MAX(tau_max,overall_tau_max);
     // ALERT SHOULD THE TIME GRIDS RUN TO conformal_age or tau_max
     for (index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++) {
       pgb2->tau_sampling_selection[bin][index_tau] = tau_min + index_tau*(tau_max-tau_min)/(pgb2->tau_size_selection-1);
@@ -1411,10 +1457,12 @@ int galbispectra2_init (
 
 
 
-  for (index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++) {
-    pgb2->tau_sampling_cls[index_tau] = overall_tau_min + index_tau*(pba->conformal_age-overall_tau_min)/(pgb2->tau_size_selection-1);
+  for (index_tau = 0; index_tau < pgb2->tau_size_cls; index_tau++) {
+    //pgb2->tau_sampling_cls[index_tau] = overall_tau_min + index_tau*(pba->conformal_age-overall_tau_min)/(pgb2->tau_size_cls-1);
+    pgb2->tau_sampling_cls[index_tau] = overall_tau_min + index_tau*(overall_tau_max-overall_tau_min)/(pgb2->tau_size_cls-1);
 
   }
+
   /* Find the ranges of alpha to span such that we sample within tau_sampling_cls[0] to tau_sampling_cls[pgb2->tau_size_selection-1]*/
 
   double r_max;
@@ -1426,20 +1474,19 @@ int galbispectra2_init (
   r_max = (1.0-pgb2->tau_sampling_cls[0]/pba->conformal_age);
 
 
-  printf("pgb2->tau_sampling_cls[0]=%g\n",pgb2->tau_sampling_cls[0]);
+  printf("tau_sampling_cls has %d points that span (%g, %g)\n", pgb2->tau_size_cls, pgb2->tau_sampling_cls[0], pgb2->tau_sampling_cls[pgb2->tau_size_cls-1]);
   printf("conformal_age = %g\n",pba->conformal_age);
 
   // Time-grid values for tau1 = tau0(1-r*sin(alpha)), tau2 = tau0(1-r*cos(alpha)). The motivation for this parameterisation is to
   // effectively sample highly oscillatory regions of upcoming integrands. We sample one dimension with fine precision and the other
   // with coarse precision. This way when we integrate over alpha and r we have fewer iterations since alpha_size * r_size < tau_size_selection^2.
-  printf("alpha size = %d\n", pgb2->alpha_size);
-  printf("r size = %d\n", pgb2->r_size );
 
 
 
   for (int index_alpha = 0; index_alpha < pgb2->alpha_size; index_alpha++) {
-
+    /* WARNING ALPHA RANGE IS CHANGED*/
     pgb2->alpha[index_alpha] =  index_alpha*(_PI_/2.0)/(pgb2->alpha_size-1);
+    //pgb2->alpha[index_alpha] =  0.36253846153846153+index_alpha*(1.2084615384615385-0.36253846153846153)/(pgb2->alpha_size-1);
     //printf("pgb2->alpha[%d] = %g,\n", index_alpha, pgb2->alpha[index_alpha]);
   }
 
@@ -1504,18 +1551,17 @@ int galbispectra2_init (
     }
   }
   free(r_max_per_alpha);
-  //exit(0);
 
 
 
 
-  for (int index_alpha = 0; index_alpha < pgb2->alpha_size; index_alpha++){
+  /*for (int index_alpha = 0; index_alpha < pgb2->alpha_size; index_alpha++){
     //printf("index_r = %d\n",index_r );
 
-    for (int index_r = 0; index_r < pgb2->r_size; index_r++) {
-
-      tau_one = pba->conformal_age*(1.0-pgb2->r2[index_alpha][index_r]*sin(pgb2->alpha[index_alpha]));
-      tau_two = pba->conformal_age*(1.0-pgb2->r2[index_alpha][index_r]*cos(pgb2->alpha[index_alpha]));
+    //for (int index_r = 0; index_r < pgb2->r_size; index_r++) {
+    int index_rp = pgb2->r_size-1;
+      tau_one = pba->conformal_age*(1.0-pgb2->r2[index_alpha][index_rp]*sin(pgb2->alpha[index_alpha]));
+      tau_two = pba->conformal_age*(1.0-pgb2->r2[index_alpha][index_rp]*cos(pgb2->alpha[index_alpha]));
 
       index_of_tau_sampling_cls(tau_one, &index_tau_one_cls,  pgb2);
       index_of_tau_sampling_cls(tau_two, &index_tau_two_cls, pgb2);
@@ -1525,8 +1571,11 @@ int galbispectra2_init (
       //printf("(tau_one,tau_cls,error)=(%g,%g,%g)\n",tau_one,tau_one_cls,(tau_one-tau_one_cls)*100./tau_one);
       //printf("(tau_two,tau_cls,error)=(%g,%g,%g)\n",tau_two,tau_two_cls,(tau_two-tau_two_cls)*100./tau_two);
       //printf("%g    %g\n", tau_one, tau_two);
-    }
-  }
+    //}
+    /*printf("%g    %g\n",
+          pba->conformal_age*(1.0-pgb2->r2[index_alpha][70]*sin(pgb2->alpha[index_alpha])),
+          pba->conformal_age*(1.0-pgb2->r2[index_alpha][70]*cos(pgb2->alpha[index_alpha])));*/
+  //}
 
 
   printf("tau_max = %g\n", pgb2->tau_sampling_selection[0][pgb2->tau_size_selection-1] );
@@ -1585,7 +1634,7 @@ int galbispectra2_init (
   for (int index_tau_bessel = 0; index_tau_bessel < pgb2->tau_size_bessel; index_tau_bessel++) {
     pgb2->tau_sampling_bessel[index_tau_bessel] = overall_tau_min + index_tau_bessel*(pba->conformal_age-overall_tau_min)/(pgb2->tau_size_bessel-1);
   }
-  //exit(0);
+
   /* New Bessel k-sampling to capture features of the Bessel oscillations */
 
   class_alloc(pgb2->k_bessel,
@@ -1625,6 +1674,19 @@ int galbispectra2_init (
                 ppt->error_message);
   }
 
+/* Allocate and fill the trapezoidal weights for the k-integration */
+  class_alloc(pgb2->w_trapz_k,
+              pgb2->k_size_bessel * sizeof(double),
+              ppt->error_message);
+
+
+  class_call(array_trapezoidal_weights(pgb2->k_bessel,
+                                       pgb2->k_size_bessel,
+                                       pgb2->w_trapz_k,
+                                       pgb2->error_message),
+                                       pgb2->error_message,
+                                       pgb2->error_message);
+
   class_alloc(w_trapz_r2,
               pgb2->alpha_size * sizeof(double*),
               ppt->error_message);
@@ -1642,6 +1704,7 @@ int galbispectra2_init (
                                          pgb2->error_message,
                                          pgb2->error_message);
   }
+
 
 
 
@@ -1679,13 +1742,12 @@ int galbispectra2_init (
       tau0_minus_tau[bin][index_tau] = tau0 - pgb2->tau_sampling_selection[bin][index_tau];
     }
 
-    class_call(array_trapezoidal_mweights(tau0_minus_tau[bin],
+    class_call(array_trapezoidal_mweights(tau0_minus_tau[bin]/*pgb2->tau_sampling_selection[bin]*/,
                                           pgb2->tau_size_selection,
                                           w_trapz[bin],
                                           pgb2->error_message),
                                           ppt2->error_message,
                                           ppt2->error_message);
-
   }
 
 
@@ -1726,7 +1788,7 @@ int galbispectra2_init (
                                           ppt,
                                           ptr,
                                           selection[bin],
-                                          tau0_minus_tau[bin],
+                                          tau0_minus_tau[bin]/*pgb2->tau_sampling_selection[bin]*/,
                                           w_trapz[bin],
                                           pgb2->tau_size_selection,
                                           pvecback,
@@ -1736,7 +1798,87 @@ int galbispectra2_init (
                pgb2->error_message);
   }
 
-  printf("selection[0][max] = %g\n", selection[0][pgb2->tau_size_selection-1]);
+
+  /* Experimenting with the Simpson's rule */
+
+
+
+  double ** simps_weights;
+
+  class_alloc(simps_weights,
+              ppt->selection_num * sizeof(double*),
+              pgb2->error_message);
+
+  /* Allocation of second dimension selection[bin][index_tau] */
+  for(int bin = 0; bin < ppt->selection_num; bin++){
+
+    class_alloc(simps_weights[bin],
+                pgb2->tau_size_selection * sizeof(double),
+                ppt->error_message);
+
+    compute_simps_weights_selection(bin,
+                    simps_weights[bin],
+                    pgb2);
+                    // ALERT simps_weights used
+    /*compute_simps_weights_selection(bin,
+                    w_trapz[bin],
+                    pgb2);*/
+
+
+  }
+
+
+
+
+
+
+  /*int index_test_l2 = 2;
+  double j_start;
+  double j_end;
+  double j_even;
+  double j_odd;
+  double j_simps;
+  printf("ptr->l[%d] = %d\n", index_test_l2, ptr->l[index_test_l2]);
+  //double tau0 = pba->conformal_age;
+  class_call(bessel_at_x(pbs, tau0 - pgb2->tau_sampling_selection[0][0] , index_test_l2, &j_start), pbs->error_message, pgb2->error_message);
+  class_call(bessel_at_x(pbs, tau0 - pgb2->tau_sampling_selection[0][pgb2->tau_size_selection-1] , index_test_l2, &j_end), pbs->error_message, pgb2->error_message);
+
+
+  double delta_x = (pgb2->tau_sampling_selection[0][pgb2->tau_size_selection-1]-pgb2->tau_sampling_selection[0][0])/(pgb2->tau_size_selection-1);
+  //double delta_x = (j_end-j_start)/(pgb2->tau_size_selection-1);
+  double simpsons_sum = 0.0;
+  double trapz_sum = 0.0;
+  double simps_weights_sum = 0.0;
+  //simpsons_sum += delta_x*(pow(pgb2->tau_sampling_selection[0][0],4)+pow(pgb2->tau_sampling_selection[0][pgb2->tau_size_selection-1],4))/3.0;
+  simpsons_sum += delta_x*(j_start*j_start+j_end*j_end)/3.0;
+  //count even sums
+  for (int i = 1; i < (pgb2->tau_size_selection-3)/2+1; i++) {
+    class_call(bessel_at_x(pbs, tau0 - pgb2->tau_sampling_selection[0][2*i] , index_test_l2, &j_even), pbs->error_message, pgb2->error_message);
+    //simpsons_sum += 2.0*delta_x*(pow(pgb2->tau_sampling_selection[0][2*i],4))/3.0;
+    simpsons_sum += 2.0*delta_x*(j_even*j_even)/3.0;
+    //printf("even weight = %g\n", 2.0*delta_x/3.0);
+  }
+  // count odd sums
+  for (int i = 1; i < (pgb2->tau_size_selection-3)/2+2; i++) {
+    //simpsons_sum += 4.0*delta_x*(pow(pgb2->tau_sampling_selection[0][2*i-1],4))/3.0;
+    class_call(bessel_at_x(pbs, tau0 - pgb2->tau_sampling_selection[0][2*i-1] , index_test_l2, &j_odd), pbs->error_message, pgb2->error_message);
+    simpsons_sum += 4.0*delta_x*(j_odd*j_odd)/3.0;
+    //printf("odd weight = %g\n", 4.0*delta_x/3.0);
+  }
+  // trapz_sum
+  for (int i = 0; i < pgb2->tau_size_selection; i++) {
+    //trapz_sum += pow(pgb2->tau_sampling_selection[0][i],4)*w_trapz[0][i];
+    class_call(bessel_at_x(pbs, tau0 - pgb2->tau_sampling_selection[0][i] , index_test_l2, &j_simps), pbs->error_message, pgb2->error_message);
+    trapz_sum += j_simps*j_simps*w_trapz[0][i];
+    simps_weights_sum += j_simps*j_simps*simps_weights[0][i];
+  }
+
+  printf("tau_sampling_selection[0][0] = %g, tau_sampling_selection[0][301] = %g\n", pgb2->tau_sampling_selection[0][0], pgb2->tau_sampling_selection[0][300]);
+  printf("simpsons_sum = %g\n",simpsons_sum);
+  printf("trapz_sum = %g\n",trapz_sum);
+  printf("simps_weights_sum = %g\n", simps_weights_sum);*/
+
+
 
 
   double tau_window;
@@ -1754,51 +1896,10 @@ int galbispectra2_init (
   test_sum = 0.0;
   class_alloc(bac_window, pba->bg_size * sizeof(double), pba->error_message);
 
-  for (int bin = 0; bin < ppt->selection_num; bin++) {
-    for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++) {
-      tau_window = pgb2->tau_sampling_selection[bin][index_tau];
-      /* get background quantitites at this time */
-      class_call(background_at_tau(pba,
-                                   pgb2->tau_sampling_selection[bin][index_tau],
-                                   pba->long_info,
-                                   pba->inter_normal,
-                                   &last_index_window,
-                                   bac_window),
-                 pba->error_message,
-                 pgb2->error_message);
-
-      z = pba->a_today/bac_window[pba->index_bg_a]-1.;
-
-      selection_test[bin][index_tau] = exp(-0.5*pow(fabs(z-ppt->selection_mean[bin])/ppt->selection_width[bin],2))/(2.0*_PI_)/ppt->selection_width[bin];
-      //printf("selection_test[%d][%d] = %g, should be \n", bin, index_tau, selection_test[bin][index_tau]/*, exp(-0.5*pow(fabs(z-ppt->selection_mean[bin])/ppt->selection_width[bin],2))/(2.0*_PI_)/ppt->selection_width[bin]*/);
-    }
-  }
-  double test_sum_selection = 0.0;
-  for (int bin = 0; bin < ppt->selection_num; bin++) {
-    normal = 0.0;
-    class_call(array_trapezoidal_integral(selection_test[bin],
-                                          pgb2->tau_size_selection,
-                                          w_trapz[bin],
-                                          &normal,
-                                          ptr->error_message),
-               pgb2->error_message,
-               pgb2->error_message);
-
-    for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++) {
 
 
 
-      selection_test[bin][index_tau] = selection_test[bin][index_tau]/normal;
 
-      //printf("tau = %g, selection[%d][%d] = %g\n", pgb2->tau_sampling_selection[bin][index_tau], bin, index_tau, selection[bin][index_tau]);
-      //printf("selection_test[%d] at tau = %g is = **%g**\n", index_tau, pgb2->tau_sampling_selection[bin][index_tau], selection_test[bin][index_tau]);
-      //printf("(selection_test[%d][%d], selection[%d][%d]) = (%g,%g)\n", bin, index_tau, bin, index_tau,selection_test[bin][index_tau], selection[bin][index_tau]);
-      test_sum += selection_test[bin][index_tau] * w_trapz[bin][index_tau];
-      test_sum_selection += selection[bin][index_tau] *w_trapz[bin][index_tau];
-    }
-  }
-
-  //exit(0);
   class_call(background_tau_of_z(
                           pba,
                           ppt->selection_mean[0],
@@ -1806,10 +1907,7 @@ int galbispectra2_init (
                           ppt->error_message,
                           pgb2->error_message);
 
-  //printf("selection mean tau = %g\n", selection_mean);
-  printf("test_sum = %g\n",test_sum);
-  printf("test_sum_selection = %g\n",test_sum_selection);
-  //exit(0);
+
   //free(tau0_minus_tau);
   /* Allocate and fill pgb2->vecback, the array which is filled with background information. This will be used throughout
     the module. It is faster to do this now and call the same array each time, rather than recompute it repeatedly. */
@@ -1836,7 +1934,7 @@ int galbispectra2_init (
   int index_k_bessel;
 
   printf("ppt->tau_sampling_quadsources has %d points sampled between (%g,%g)\n", ppt->tau_size_quadsources, ppt->tau_sampling_quadsources[0], ppt->tau_sampling_quadsources[ppt->tau_size_quadsources-1] );
-  printf("pgb2->tau_sampling_cls has %d points sampled between (%g,%g)\n", pgb2->tau_size_selection, pgb2->tau_sampling_cls[0], pgb2->tau_sampling_cls[pgb2->tau_size_selection-1] );
+  printf("pgb2->tau_sampling_cls has %d points sampled between (%g,%g)\n", pgb2->tau_size_cls, pgb2->tau_sampling_cls[0], pgb2->tau_sampling_cls[pgb2->tau_size_cls-1] );
   printf("pgb2->tau_sampling_selection has %d points sampled between (%g,%g)\n", pgb2->tau_size_selection, pgb2->tau_sampling_selection[0], pgb2->tau_sampling_selection[pgb2->tau_size_selection-1]);
 
   int dump = 0;
@@ -1955,6 +2053,8 @@ int galbispectra2_init (
   pgb2->source_size = index_source;
   pgb2->type_size = index_type;
 
+
+
   printf("type size = %d\n", pgb2->type_size );
   printf("source size = %d\n", pgb2->source_size );
   printf("tau_size_selection = %d\n", pgb2->tau_size_selection);
@@ -1966,10 +2066,10 @@ int galbispectra2_init (
     for (int index_type = 0; index_type < pgb2->source_size; index_type++) {
       /* Allocate memory for pgb2->first_order_sources[index_type][index_tau] */
       class_alloc(pgb2->first_order_sources[index_type],
-                  pgb2->tau_size_selection * sizeof(double *),
+                  pgb2->tau_size_cls * sizeof(double *),
                   ppt->error_message);
       /* Allocate memory for pgb2->first_order_sources[index_type] */
-      for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++) {
+      for (int index_tau = 0; index_tau < pgb2->tau_size_cls; index_tau++) {
           /* Loop over type and tau. For each of them, allocate memory
            for pgb2->first_order_sources[index_type][index_tau][index_k_bessel]  */
         class_alloc(pgb2->first_order_sources[index_type][index_tau],
@@ -2014,10 +2114,10 @@ int galbispectra2_init (
       for (int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
 
         class_alloc(pgb2->first_order_sources_integ[index_type][index_l],
-                    pgb2->tau_size_selection * sizeof(double *),
+                    pgb2->tau_size_cls * sizeof(double *),
                     ppt->error_message);
       /* Allocate memory for pgb2->first_order_sources_integ[index_type] */
-        for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++) {
+        for (int index_tau = 0; index_tau < pgb2->tau_size_cls; index_tau++) {
 
             /* Loop over type, l and tau. For each of them, allocate memory
              for pgb2->first_order_sources_integ[index_type][index_l][index_tau][index_k_bessel]  */
@@ -2072,7 +2172,7 @@ int galbispectra2_init (
     //pgb2->first_order_sources[0][0][0] = 0.0;
     if (pgb2->index_source_delta_cdm != -1) {
       printf("Preparing density source term..\n");
-      for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++){
+      for (int index_tau = 0; index_tau < pgb2->tau_size_cls; index_tau++){
         index_k = 0;
 
         for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
@@ -2103,7 +2203,7 @@ int galbispectra2_init (
       }
       double j1;
       for (int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
-        for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++){
+        for (int index_tau = 0; index_tau < pgb2->tau_size_cls; index_tau++){
           for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
             double x1 = pgb2->k_bessel[index_k_bessel]*(pba->conformal_age - pgb2->tau_sampling_cls[index_tau]);
             class_call(bessel_at_x(pbs, x1 , index_l, &j1), pbs->error_message, pgb2->error_message);
@@ -2132,7 +2232,7 @@ int galbispectra2_init (
     printf("ppt->tau_sampling_quadsources[%d] = %g\n",index_test_qs, ppt->tau_sampling_quadsources[index_test_qs]);
 
     if (pgb2->index_source_v != -1) {
-      for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++){
+      for (int index_tau = 0; index_tau < pgb2->tau_size_cls; index_tau++){
         // NOTE: ppt->index_qs_theta_cdm is equal to -ppt->index_qs_v_cdm/k*k velocity. v = -theta/(k*k)
         index_k_rsd = 0;
 
@@ -2177,7 +2277,7 @@ int galbispectra2_init (
 
     if (pgb2->index_source_theta != -1) {
       printf("Preparing RSD source term..\n");
-      for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++){
+      for (int index_tau = 0; index_tau < pgb2->tau_size_cls; index_tau++){
         // NOTE: ppt->index_qs_theta_cdm is equal to -ppt->index_qs_v_cdm/k*k velocity. v = -theta/(k*k)
         index_k_rsd = 0;
 
@@ -2251,7 +2351,7 @@ int galbispectra2_init (
         /* Density */
         if(pgb2->index_type_density != -1){
           for (int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
-            for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++){
+            for (int index_tau = 0; index_tau < pgb2->tau_size_cls; index_tau++){
               for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
                 double x = pgb2->k_bessel[index_k_bessel]*(pba->conformal_age - pgb2->tau_sampling_cls[index_tau]);
 
@@ -2266,7 +2366,7 @@ int galbispectra2_init (
         /* RSD */
         if (pgb2->index_type_rsd != -1) {
           for (int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
-            for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++){
+            for (int index_tau = 0; index_tau < pgb2->tau_size_cls; index_tau++){
               //printf("indexing index_l x index_tau = %dx%d\n", index_l, index_tau);
               class_call(background_at_tau(pba,
                                            pgb2->tau_sampling_cls[index_tau],
@@ -2304,7 +2404,7 @@ int galbispectra2_init (
         /* First Type: Doppler1 */
         if(pgb2->index_type_d1 != -1 ){
           for (int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
-            for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++){
+            for (int index_tau = 0; index_tau < pgb2->tau_size_cls; index_tau++){
               class_call(background_at_tau(pba,
                                            pgb2->tau_sampling_cls[index_tau],
                                            pba->long_info,
@@ -2353,7 +2453,7 @@ int galbispectra2_init (
         int last_index_d2;
         if(pgb2->index_type_d2 != -1){
           for (int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
-            for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++){
+            for (int index_tau = 0; index_tau < pgb2->tau_size_cls; index_tau++){
 
               class_call(background_at_tau(pba,
                                            pgb2->tau_sampling_cls[index_tau],
@@ -2394,7 +2494,7 @@ int galbispectra2_init (
         /* First Type: g1 (first of the GR terms) */
         if(pgb2->index_type_g1 != -1){
           for (int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
-            for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++){
+            for (int index_tau = 0; index_tau < pgb2->tau_size_cls; index_tau++){
               for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
 
                 double x = pgb2->k_bessel[index_k_bessel]*(pba->conformal_age - pgb2->tau_sampling_cls[index_tau]);
@@ -2417,7 +2517,7 @@ int galbispectra2_init (
         class_alloc(pvecback_g2, pba->bg_size * sizeof(double), pba->error_message);
         if(pgb2->index_type_g2 != -1 ){
           for (int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
-            for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++){
+            for (int index_tau = 0; index_tau < pgb2->tau_size_cls; index_tau++){
               for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
 
                 double x = pgb2->k_bessel[index_k_bessel]*(pba->conformal_age - pgb2->tau_sampling_cls[index_tau]);
@@ -2457,7 +2557,7 @@ int galbispectra2_init (
         class_alloc(pvecback_g2, pba->bg_size * sizeof(double), pba->error_message);
         if(pgb2->index_type_g3 != -1 ){
           for (int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
-            for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++){
+            for (int index_tau = 0; index_tau < pgb2->tau_size_cls; index_tau++){
               for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
                 double x = pgb2->k_bessel[index_k_bessel]*(pba->conformal_age - pgb2->tau_sampling_cls[index_tau]);
                 class_call(bessel_at_x(pbs, x , index_l, &j), pbs->error_message, pgb2->error_message);
@@ -2569,7 +2669,7 @@ int galbispectra2_init (
     }
 
     if (pgb2->index_source_phi != -1) {
-      for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++){
+      for (int index_tau = 0; index_tau < pgb2->tau_size_cls; index_tau++){
 
           last_index_k = 0;
           index_k_lens = 0;
@@ -2612,7 +2712,7 @@ int galbispectra2_init (
 
     /* Interpolate Psi */
     if (pgb2->index_source_psi != -1) {
-      for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++){
+      for (int index_tau = 0; index_tau < pgb2->tau_size_cls; index_tau++){
 
           last_index_k = 0;
           index_k_lens = 0;
@@ -2658,19 +2758,19 @@ int galbispectra2_init (
         pgb2->first_order_sources[pgb2->index_source_phi_prime][0][index_k_bessel] = (pgb2->first_order_sources[pgb2->index_source_phi][1][index_k_bessel]-pgb2->first_order_sources[pgb2->index_source_phi][0][index_k_bessel])/
           (pgb2->tau_sampling_cls[1]-pgb2->tau_sampling_cls[0]);
 
-        pgb2->first_order_sources[pgb2->index_source_phi_prime][pgb2->tau_size_selection-1][index_k_bessel] = (pgb2->first_order_sources[pgb2->index_source_phi][pgb2->tau_size_selection-1][index_k_bessel]-pgb2->first_order_sources[pgb2->index_source_phi][pgb2->tau_size_selection-2][index_k_bessel])/
-          (pgb2->tau_sampling_cls[pgb2->tau_size_selection-1]-pgb2->tau_sampling_cls[pgb2->tau_size_selection-2]);
+        pgb2->first_order_sources[pgb2->index_source_phi_prime][pgb2->tau_size_cls-1][index_k_bessel] = (pgb2->first_order_sources[pgb2->index_source_phi][pgb2->tau_size_cls-1][index_k_bessel]-pgb2->first_order_sources[pgb2->index_source_phi][pgb2->tau_size_cls-2][index_k_bessel])/
+          (pgb2->tau_sampling_cls[pgb2->tau_size_cls-1]-pgb2->tau_sampling_cls[pgb2->tau_size_cls-2]);
 
 
         pgb2->first_order_sources[pgb2->index_source_phi_plus_psi_prime][0][index_k_bessel] = (pgb2->first_order_sources[pgb2->index_source_phi_plus_psi][1][index_k_bessel]-pgb2->first_order_sources[pgb2->index_source_phi_plus_psi][0][index_k_bessel])/
           (pgb2->tau_sampling_cls[1]-pgb2->tau_sampling_cls[0]);
 
-        pgb2->first_order_sources[pgb2->index_source_phi_plus_psi_prime][pgb2->tau_size_selection-1][index_k_bessel] = (pgb2->first_order_sources[pgb2->index_source_phi_plus_psi][pgb2->tau_size_selection-1][index_k_bessel]-pgb2->first_order_sources[pgb2->index_source_phi_plus_psi][pgb2->tau_size_selection-2][index_k_bessel])/
-          (pgb2->tau_sampling_cls[pgb2->tau_size_selection-1]-pgb2->tau_sampling_cls[pgb2->tau_size_selection-2]);
+        pgb2->first_order_sources[pgb2->index_source_phi_plus_psi_prime][pgb2->tau_size_cls-1][index_k_bessel] = (pgb2->first_order_sources[pgb2->index_source_phi_plus_psi][pgb2->tau_size_cls-1][index_k_bessel]-pgb2->first_order_sources[pgb2->index_source_phi_plus_psi][pgb2->tau_size_cls-2][index_k_bessel])/
+          (pgb2->tau_sampling_cls[pgb2->tau_size_cls-1]-pgb2->tau_sampling_cls[pgb2->tau_size_cls-2]);
       }
 
 
-      for (int index_tau = 1; index_tau < pgb2->tau_size_selection-1; index_tau++){
+      for (int index_tau = 1; index_tau < pgb2->tau_size_cls-1; index_tau++){
         for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
           pgb2->first_order_sources[pgb2->index_source_phi_prime][index_tau][index_k_bessel] = (pgb2->first_order_sources[pgb2->index_source_phi][index_tau+1][index_k_bessel]-pgb2->first_order_sources[pgb2->index_source_phi][index_tau-1][index_k_bessel])/
             (pgb2->tau_sampling_cls[index_tau+1]-pgb2->tau_sampling_cls[index_tau-1]);
@@ -2687,7 +2787,7 @@ int galbispectra2_init (
 
     if (pgb2->index_type_lens != -1) {
       for (int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
-        for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++){
+        for (int index_tau = 0; index_tau < pgb2->tau_size_cls; index_tau++){
 
         last_index_k_lens = 0;
         index_k_lens = 0;
@@ -2754,7 +2854,7 @@ int galbispectra2_init (
       printf("Integrating g4 and g5\n");
 
       for (int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
-        for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++){
+        for (int index_tau = 0; index_tau < pgb2->tau_size_cls; index_tau++){
 
         last_index_k_lens = 0;
         index_k_lens = 0;
@@ -2859,9 +2959,9 @@ int galbispectra2_init (
     for(int index_type_second = 0; index_type_second < pgb2->type_size; index_type_second++){
       class_alloc(pgb2->Dl[index_type_first][index_type_second], ptr->l_size[ppt->index_md_scalars] * sizeof(double **), pgb2->error_message);
       for(int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++){
-        class_alloc(pgb2->Dl[index_type_first][index_type_second][index_l], pgb2->tau_size_selection * sizeof(double *), pgb2->error_message);
-        for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
-          class_alloc(pgb2->Dl[index_type_first][index_type_second][index_l][index_tau_first], pgb2->tau_size_selection * sizeof(double), pgb2->error_message);
+        class_alloc(pgb2->Dl[index_type_first][index_type_second][index_l], pgb2->tau_size_cls * sizeof(double *), pgb2->error_message);
+        for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_cls; index_tau_first++) {
+          class_alloc(pgb2->Dl[index_type_first][index_type_second][index_l][index_tau_first], pgb2->tau_size_cls * sizeof(double), pgb2->error_message);
         }
       }
     }
@@ -2875,14 +2975,14 @@ int galbispectra2_init (
     for(int index_type_second = 0; index_type_second < pgb2->type_size; index_type_second++){
       class_alloc(pgb2->Dl[index_type_first][index_type_second], ptr->l_size[ppt->index_md_scalars] * sizeof(double **), pgb2->error_message);
       for(int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++){
-        class_alloc(pgb2->Dl[index_type_first][index_type_second][index_l], pgb2->tau_size_selection * sizeof(double *), pgb2->error_message);
-        for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
-          class_alloc(pgb2->Dl[index_type_first][index_type_second][index_l][index_tau_first], pgb2->tau_size_selection * sizeof(double), pgb2->error_message);
+        class_alloc(pgb2->Dl[index_type_first][index_type_second][index_l], pgb2->tau_size_cls * sizeof(double *), pgb2->error_message);
+        for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_cls; index_tau_first++) {
+          class_alloc(pgb2->Dl[index_type_first][index_type_second][index_l][index_tau_first], pgb2->tau_size_cls * sizeof(double), pgb2->error_message);
         }
       }
     }
   }*/
-/* Allocate array for Dl[index_type_first][index_type_second][index_l][index_tau_first][index_tau_second] */
+/* Allocate array for Dl[index_type_first][index_type_second][index_l][index_alpha][index_r] */
   class_alloc(pgb2->Dl2, pgb2->type_size * sizeof(double ****), pgb2->error_message);
   for (int index_type_first = 0; index_type_first < pgb2->type_size; index_type_first++){
     class_alloc(pgb2->Dl2[index_type_first], pgb2->type_size * sizeof(double ***), pgb2->error_message);
@@ -2896,7 +2996,7 @@ int galbispectra2_init (
       }
     }
   }
-  printf("Allocating size %ix%ix%ix%ix%i bytes \n", pgb2->type_size, pgb2->type_size, ptr->l_size[ppt->index_md_scalars], pgb2->tau_size_selection, pgb2->tau_size_selection);
+  printf("Allocating size %ix%ix%ix%ix%i bytes \n", pgb2->type_size, pgb2->type_size, ptr->l_size[ppt->index_md_scalars], pgb2->tau_size_cls, pgb2->tau_size_cls);
 
   /* Allocate array for Cl[index_type_first][index_type_second][index_l][bin_first][bin_second] */
   class_alloc(pgb2->Cl, pgb2->type_size * sizeof(double ****), pgb2->error_message);
@@ -2914,19 +3014,23 @@ int galbispectra2_init (
   }
 
 
-/* Allocate and fill the trapezoidal weights for the k-integration */
-  class_alloc(pgb2->w_trapz_k,
-              pgb2->k_size_bessel * sizeof(double),
-              ppt->error_message);
 
 
-  class_call(array_trapezoidal_weights(pgb2->k_bessel,
-                                       pgb2->k_size_bessel,
-                                       pgb2->w_trapz_k,
-                                       pgb2->error_message),
-                                       pgb2->error_message,
-                                       pgb2->error_message);
+  int index1=0;
+  int index2=0;
 
+  /*for (int index_alpha = 0; index_alpha < pgb2->alpha_size; index_alpha++) {
+     //for(int index_r = 0; index_r < pgb2->r_size; index_r++){
+     int index_r = pgb2->r_size-1;
+     double tau1 = pba->conformal_age*(1.0-pgb2->r2[index_alpha][index_r]*sin(pgb2->alpha[index_alpha]));
+     double tau2 = pba->conformal_age*(1.0-pgb2->r2[index_alpha][index_r]*cos(pgb2->alpha[index_alpha]));
+
+     index_of_tau_sampling_cls(tau1, &index1, pgb2);
+     index_of_tau_sampling_cls(tau2, &index2, pgb2);
+
+     printf("%g   %g    %g    %g\n",pgb2->tau_sampling_cls[index1],pgb2->tau_sampling_cls[index2], tau1, tau2);
+     //}
+   }*/
 
 
   double integ, integ_dens_rsd;
@@ -2977,7 +3081,7 @@ if (file == NULL)
   int index_tau_first;
   int index_tau_second;
 
-
+  double type1_interp, type2_interp;
 
 
 
@@ -2988,7 +3092,7 @@ if (file == NULL)
     }
     printf("\n");
 // alert last tau width is missing
-  /* Allocate background vectors */
+  /* Allocate backgroundmake song vectors */
     double * backvec_z1;
     double * backvec_z2;
 
@@ -3002,17 +3106,22 @@ if (file == NULL)
       // ALERT l running
       //ALERT l start
       //for(int index_l = test_index_l; index_l < test_index_l+1/*ptr->l_size[ppt->index_md_scalars]-1*/; index_l++){
-      for(int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]-1; index_l++){
+      for(int index_l = 0; index_l < 5/*ptr->l_size[ppt->index_md_scalars]-1*/; index_l++){
+        printf("index_l = %d\n", index_l );
         //printf("\r          ");
         //printf("%d/%d\n",index_l, ptr->l_size[ppt->index_md_scalars]-1);
-        //for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++){
+        //for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_cls; index_tau_first++){
         for (int index_alpha = 0; index_alpha < pgb2->alpha_size; index_alpha++) {
-          for(int index_r = 0; index_r < pgb2->r_size; index_r++){
+          printf("index_alpha = %d\n",index_alpha);
+          for(int index_r = 1; index_r < pgb2->r_size; index_r++){
             tau_one = pba->conformal_age*(1.0-pgb2->r2[index_alpha][index_r]*sin(pgb2->alpha[index_alpha]));
             tau_two = pba->conformal_age*(1.0-pgb2->r2[index_alpha][index_r]*cos(pgb2->alpha[index_alpha]));
 
             index_of_tau_sampling_cls(tau_one, &index_tau_first, pgb2);
             index_of_tau_sampling_cls(tau_two, &index_tau_second, pgb2);
+
+
+
 
         //for (int index_tau_first = index_tau_first_test; index_tau_first < index_tau_first_test+1; index_tau_first++){
             class_call(background_at_tau(pba,
@@ -3026,8 +3135,8 @@ if (file == NULL)
 
             /* infer redhsift */
             double z1 = pba->a_today/backvec_z1[pba->index_bg_a]-1.;
-            //for(int index_tau_second = 0; index_tau_second < index_tau_first+1/*pgb2->tau_size_selection*/; index_tau_second++){
-            //for(int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++){
+            //for(int index_tau_second = 0; index_tau_second < index_tau_first+1/*pgb2->tau_size_cls*/; index_tau_second++){
+            //for(int index_tau_second = 0; index_tau_second < pgb2->tau_size_cls; index_tau_second++){
             /* Zero the integration sum */
             class_call(background_at_tau(pba,
                                          pgb2->tau_sampling_cls[index_tau_second],
@@ -3048,14 +3157,41 @@ if (file == NULL)
               class_call(primordial_spectrum_at_k(ppm, ppt->index_md_scalars, linear, pgb2->k_bessel[index_k_bessel], &Pk), ppm->error_message, pgb2->error_message);
               //herehere
               //printf("tau_one = %g\n",tau_one );
+              /*printf("%dx%dx%dx%dx%dx%d\n",
+              index_type_first,
+              index_type_second,
+              index_l,
+              index_alpha,
+              index_r,
+              index_k_bessel);
+              printf("index_tau_first = %d, index_tau_second = %d \n", index_tau_first, index_tau_second);*/
+
               type1 = pgb2->first_order_sources_integ[index_type_first][index_l][index_tau_first][index_k_bessel];
               //printf("type1 = %g\n", type1);
               //printf("type2 = %g\n", type2);
               type2 = pgb2->first_order_sources_integ[index_type_second][index_l][index_tau_second][index_k_bessel];
 
+              /* Interpolate between the two indices found on the tau_sampling_cls grid to find the exact tau_one and tau_two */
+
+              type1_interp = pgb2->first_order_sources_integ[index_type_first][index_l][index_tau_first-1][index_k_bessel]*(pgb2->tau_sampling_cls[index_tau_first]-tau_one)
+                            + pgb2->first_order_sources_integ[index_type_first][index_l][index_tau_first][index_k_bessel]*(tau_one-pgb2->tau_sampling_cls[index_tau_first-1]);
+              type1_interp /= (pgb2->tau_sampling_cls[index_tau_first] - pgb2->tau_sampling_cls[index_tau_first-1]);
+
+              type2_interp = pgb2->first_order_sources_integ[index_type_second][index_l][index_tau_second-1][index_k_bessel]*(pgb2->tau_sampling_cls[index_tau_second]-tau_two)
+                            + pgb2->first_order_sources_integ[index_type_second][index_l][index_tau_second][index_k_bessel]*(tau_two-pgb2->tau_sampling_cls[index_tau_second-1]);
+
+              type2_interp /= (pgb2->tau_sampling_cls[index_tau_second] - pgb2->tau_sampling_cls[index_tau_second-1]);
+
+              /*printf("minus(%g) = %g, interp(%g) = %g, plus(%g) = %g\n",
+              pgb2->tau_sampling_cls[index_tau_first-1],
+              pgb2->first_order_sources_integ[index_type_first][index_l][index_tau_first-1][index_k_bessel],
+              tau_one,
+              type1_interp,
+              pgb2->tau_sampling_cls[index_tau_first],
+              pgb2->first_order_sources_integ[index_type_first][index_l][index_tau_first][index_k_bessel]);*/
 
               /* Using area of trapezoid, we can sum a number of areas of trapezoids to approximate the integral */
-              integ += pow(pgb2->k_bessel[index_k_bessel],-1.0) * 4. * _PI_ *  Pk * type1 * type2  * pgb2->w_trapz_k[index_k_bessel];
+              integ += pow(pgb2->k_bessel[index_k_bessel],-1.0) * 4. * _PI_ *  Pk * type1_interp * type2_interp  * pgb2->w_trapz_k[index_k_bessel];
             }
             pgb2->Dl2[index_type_first][index_type_second][index_l][index_alpha][index_r] = integ;
           }
@@ -3087,6 +3223,176 @@ if (file == NULL)
         }
       }
     }
+
+    // Interpolate to read exact Dl(z1,z2) given
+    double z_test = 1.0;
+    double tau1_test;
+    double tau2_test;
+    int index_alpha;
+    int index_r;
+
+    class_call(background_tau_of_z(
+                            pba,
+                            z_test,
+                            &tau1_test),
+                            ppt->error_message,
+                            pgb2->error_message);
+
+    class_call(background_tau_of_z(
+                            pba,
+                            z_test,
+                            &tau2_test),
+                            ppt->error_message,
+                            pgb2->error_message);
+
+
+
+    printf("tau1_test = %g\n", tau1_test);
+    printf("tau2_test = %g\n", tau2_test);
+
+
+    double alpha = atan((1.-(tau1_test/pba->conformal_age))/(1.-(tau2_test/pba->conformal_age)));
+
+    double r = sqrt((1.-(tau1_test/pba->conformal_age))*(1.-(tau1_test/pba->conformal_age))+(1.-(tau2_test/pba->conformal_age))*(1.-(tau2_test/pba->conformal_age)));
+
+    index_of_alpha(alpha, &index_alpha, pgb2);
+    index_of_r(r, index_alpha, &index_r, pgb2);
+    printf("alpha* = %g\n",alpha );
+    printf("alpha_found_plus = %g\n",pgb2->alpha[index_alpha]);
+    printf("alpha_found_minus = %g\n",pgb2->alpha[index_alpha-1]);
+    printf("r* = %g\n",r );
+    printf("r_found_neutral = %g\n",pgb2->r2[index_alpha][index_r]);
+    printf("r_found_minus = %g\n",pgb2->r2[index_alpha][index_r-1]);
+    printf("r_found_plus = %g\n",pgb2->r2[index_alpha][index_r+1]);
+    double tau1_found = pba->conformal_age*(1.-pgb2->r2[index_alpha][index_r]*sin(pgb2->alpha[index_alpha]));
+    double tau2_found = pba->conformal_age*(1.-pgb2->r2[index_alpha][index_r]*cos(pgb2->alpha[index_alpha]));
+    printf("tau1_found = %g\n", tau1_found);
+    printf("tau2_found = %g\n", tau2_found);
+    printf("tau1_found minus = %g\n", pba->conformal_age*(1.-pgb2->r2[index_alpha][index_r-1]*sin(pgb2->alpha[index_alpha])));
+    printf("tau2_found minus = %g\n", pba->conformal_age*(1.-pgb2->r2[index_alpha][index_r-1]*cos(pgb2->alpha[index_alpha])));
+    for(int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]-1; index_l++){
+      double norm2 = ptr->l[index_l]*(ptr->l[index_l]+1)/(2.*_PI_);
+      double temp_minus = pgb2->Dl2[0][0][index_l][index_alpha-1][index_r-1]*(pgb2->alpha[index_alpha]-alpha)+
+                            pgb2->Dl2[0][0][index_l][index_alpha][index_r-1]*(alpha-pgb2->alpha[index_alpha-1]);
+
+      temp_minus /= (pgb2->alpha[index_alpha]-pgb2->alpha[index_alpha-1]);
+
+      double temp_plus = pgb2->Dl2[0][0][index_l][index_alpha-1][index_r]*(pgb2->alpha[index_alpha]-alpha)+
+                            pgb2->Dl2[0][0][index_l][index_alpha][index_r]*(alpha-pgb2->alpha[index_alpha-1]);
+
+      temp_plus /= (pgb2->alpha[index_alpha]-pgb2->alpha[index_alpha-1]);
+
+
+      double result = temp_minus*(pgb2->r2[index_alpha][index_r]-r)+temp_plus*(r-pgb2->r2[index_alpha][index_r-1]);
+
+      result /= (pgb2->r2[index_alpha][index_r]-pgb2->r2[index_alpha][index_r-1]);
+
+      /*double temp_minus = pgb2->Dl2[0][0][index_l][index_alpha-1][index_r]*(pgb2->alpha[index_alpha]-alpha)+
+                            pgb2->Dl2[0][0][index_l][index_alpha][index_r]*(alpha-pgb2->alpha[index_alpha-1]);
+
+      temp_minus /= (pgb2->alpha[index_alpha]-pgb2->alpha[index_alpha-1]);
+
+      double temp_plus = pgb2->Dl2[0][0][index_l][index_alpha-1][index_r-1]*(pgb2->alpha[index_alpha]-alpha)+
+                            pgb2->Dl2[0][0][index_l][index_alpha][index_r-1]*(alpha-pgb2->alpha[index_alpha-1]);
+
+      temp_plus /= (pgb2->alpha[index_alpha]-pgb2->alpha[index_alpha-1]);
+
+
+      double result = temp_minus*(pgb2->r2[index_alpha][index_r-1]-r)+temp_plus*(r-pgb2->r2[index_alpha][index_r]);
+
+      result /= (pgb2->r2[index_alpha][index_r-1]-pgb2->r2[index_alpha][index_r]);*/
+
+      printf("%d    %g\n",ptr->l[index_l], norm2*result);
+    }
+    //exit(0);
+
+    double inner_wind_check;
+    double outer_wind_check;
+    double result_second_int;
+    double result_first_int;
+
+    for(int index_type_first = 0; index_type_first < pgb2->type_size; index_type_first++){
+      for(int index_type_second = 0; index_type_second < pgb2->type_size; index_type_second++){
+        for (int bin1 = 0; bin1 < ppt->selection_num; bin1++) {
+          for (int bin2 = 0; bin2 < ppt->selection_num; bin2++) {
+            for(int index_l = 0; index_l < 5 /*ptr->l_size[ppt->index_md_scalars]-1*/; index_l++){
+              /*if (index_l > 0) {
+                printf("%d    %g\n",ptr->l[index_l-1], ptr->l[index_l-1]*(ptr->l[index_l-1]+1)*pgb2->Cl[0][0][index_l-1][0][0]/(2*_PI_));
+              }*/
+
+              result_second_int = 0.;
+              outer_wind_check = 0.;
+              for(int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++){
+                double tau2 = pgb2->tau_sampling_selection[bin2][index_tau_second];
+                double result_first_int = 0.0;
+                inner_wind_check = 0.0;
+
+                for(int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++){
+                  double tau1 = pgb2->tau_sampling_selection[bin1][index_tau_first];
+
+                  double alpha = atan((1.-(tau1/pba->conformal_age))/(1.-(tau2/pba->conformal_age)));
+
+                  double r = sqrt((1.-(tau1/pba->conformal_age))*(1.-(tau1/pba->conformal_age))+(1.-(tau2/pba->conformal_age))*(1.-(tau2/pba->conformal_age)));
+
+                  index_of_alpha(alpha, &index_alpha, pgb2);
+                  index_of_r(r, index_alpha, &index_r, pgb2);
+
+                  //printf("r_given = %g, r_found = %g, error = %g\n",r,pgb2->r2[index_alpha][index_r],100.*(r-pgb2->r2[index_alpha][index_r])/r);
+                  //printf("first_alpha = %g, alpha_found = %g, error = %g\n",alpha, pgb2->alpha[index_alpha], 100.*(alpha-pgb2->alpha[index_alpha])/alpha);
+
+                  double temp_minus = pgb2->Dl2[index_type_first][index_type_second][index_l][index_alpha-1][index_r-1]*(pgb2->alpha[index_alpha]-alpha)+
+                                        pgb2->Dl2[index_type_first][index_type_second][index_l][index_alpha][index_r-1]*(alpha-pgb2->alpha[index_alpha-1]);
+
+                  temp_minus /= (pgb2->alpha[index_alpha]-pgb2->alpha[index_alpha-1]);
+
+                  double temp_plus = pgb2->Dl2[index_type_first][index_type_second][index_l][index_alpha-1][index_r]*(pgb2->alpha[index_alpha]-alpha)+
+                                        pgb2->Dl2[index_type_first][index_type_second][index_l][index_alpha][index_r]*(alpha-pgb2->alpha[index_alpha-1]);
+
+                  temp_plus /= (pgb2->alpha[index_alpha]-pgb2->alpha[index_alpha-1]);
+
+
+                  double result = temp_minus*(pgb2->r2[index_alpha][index_r]-r)+temp_plus*(r-pgb2->r2[index_alpha][index_r-1]);
+
+                  result /= (pgb2->r2[index_alpha][index_r]-pgb2->r2[index_alpha][index_r-1]);
+
+                  /*printf("Dl2[%d][%d] = %g, Dl2[%d][%d] = %g, interp = %g\n",
+                          index_alpha,
+                          index_r,
+                          pgb2->Dl2[index_type_first][index_type_second][index_l][index_alpha][index_r],
+                          index_alpha-1,
+                          index_r-1,
+                          pgb2->Dl2[index_type_first][index_type_second][index_l][index_alpha-1][index_r-1],
+                          result);*/
+
+                  result_first_int += result * w_trapz[bin1][index_tau_first]*selection[bin1][index_tau_first];
+
+                  inner_wind_check += result * simps_weights[bin1][index_tau_first]*selection[bin1][index_tau_first];
+
+                }
+                //CHECK THE BINs
+                outer_wind_check += inner_wind_check*simps_weights[bin2][index_tau_second]*selection[bin2][index_tau_second];
+
+                result_second_int += result_first_int * w_trapz[bin2][index_tau_second]*selection[bin2][index_tau_second];
+              }
+              pgb2->Cl[index_type_first][index_type_second][index_l][bin1][bin2] = result_second_int;
+              printf("%d      %g\n", ptr->l[index_l], ptr->l[index_l]*(ptr->l[index_l]+1)*outer_wind_check/(2*_PI_));
+            }
+          }
+        }
+      }
+    }
+    printf("#alpha size = %d\n", pgb2->alpha_size);
+    printf("#r size = %d\n", pgb2->r_size );
+    printf("#tau_size_cls = %d\n", pgb2->tau_size_cls);
+    printf("#tau_size_selection = %d\n", pgb2->tau_size_selection);
+    printf("#z1=z2=%g (%g) Gaussian\n", ppt->selection_mean[bin],ppt->selection_width[bin]);
+    printf("#l    l(l+1)Cl/2pi\n");
+    for (int index_l = 0; index_l < 5 /*ptr->l_size[ppt->index_md_scalars]-1*/; index_l++) {
+      printf("%d    %g\n",ptr->l[index_l], ptr->l[index_l]*(ptr->l[index_l]+1)*pgb2->Cl[0][0][index_l][0][0]/(2*_PI_));
+    }
+
+    printf("Reached here\n");
+    exit(0);
     //exit(0);
 
   int index_test_alpha = 6;
@@ -3135,8 +3441,8 @@ if (file == NULL)
   /*for(int index_type_first = 0; index_type_first < pgb2->type_size; index_type_first++){
     for(int index_type_second = 0; index_type_second < index_type_first+1; index_type_second++){
       for(int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]-1; index_l++){
-        for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++){
-          for(int index_tau_second = index_tau_first+1; index_tau_second < pgb2->tau_size_selection; index_tau_second++){
+        for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_cls; index_tau_first++){
+          for(int index_tau_second = index_tau_first+1; index_tau_second < pgb2->tau_size_cls; index_tau_second++){
             pgb2->Dl[index_type_first][index_type_second][index_l][index_tau_first][index_tau_second] = pgb2->Dl[index_type_first][index_type_second][index_l][index_tau_second][index_tau_first];
           }
         }
@@ -3144,8 +3450,8 @@ if (file == NULL)
     }
   }*/
 
-  for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
-    for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
+  for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_cls; index_tau_first++) {
+    for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_cls; index_tau_second++) {
       norm_test = ptr->l[test_index_l]*(ptr->l[test_index_l]+1.)/(2*_PI_);
       fprintf(file,
               "%g     %g      %g\n",
@@ -3219,7 +3525,6 @@ if (file == NULL)
   double temp, temp_minus, temp_plus;
   double tau1, tau2;
 
-
   /* If the window function is a Dirac-delta function then there is no need to integrate over time,
   intead we just interpolate the would-be integrand pgb2->Dl and write its value at the tau values
   set by the redshift bins into pgb2->Cl. */
@@ -3275,28 +3580,28 @@ if (file == NULL)
   }
 
 
-  /*else{
+  else{
     printf("Entered non-Dirac window function integration.\n");
     double dummy_inner;
     double dummy_outer;
 
     for(int index_type_first = 0; index_type_first < pgb2->type_size; index_type_first++){
       for(int index_type_second = 0; index_type_second < pgb2->type_size; index_type_second++){
-        for (int bin1 = 0; bin1 < 1/*ppt->selection_num*///; bin1++) {
-        /*  for (int bin2 = 1; bin2 < 2/*ppt->selection_num*///; bin2++) {
-          //  for(int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]-1; index_l++){
+        for (int bin1 = 0; bin1 < ppt->selection_num; bin1++) {
+          for (int bin2 = 1; bin2 < ppt->selection_num; bin2++) {
+            for(int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]-1; index_l++){
 
-            //  pgb2->Cl[index_type_first][index_type_second][index_l][bin1][bin2] = 0.;
+              pgb2->Cl[index_type_first][index_type_second][index_l][bin1][bin2] = 0.;
               //dummy_outer = 0.0;
-              //double temp456 = 0.0;
+              double temp456 = 0.0;
       /* Final result Cl[index_type_first][index_type_second][index_l][bin1][bin2] is defined on the pgb2->tau_sampling_cls, so an interpolation is required
-            from Cl[index_type_first][index_type_second][index_l][index_tau_first][index_tau_second] which is defined on pgb2->tau_size_selection[bin][index_tau]*/
-              /*for(index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++){
+            from Cl[index_type_first][index_type_second][index_l][index_tau_first][index_tau_second] which is defined on pgb2->tau_sampling_cls_selection[index_tau]*/
+              for(index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++){
 
                 double temp123 = 0.;
                 dummy_inner = 0.0;
                 double tau2 = pgb2->tau_sampling_selection[bin2][index_tau_second];
-                index_of_tau_sampling_cls(tau2, &index_tau2, pgb2);
+                //index_of_tau_sampling_cls(tau2, &index_tau2, pgb2);
 
 
                 for(index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++){
@@ -3304,7 +3609,7 @@ if (file == NULL)
 
                   double tau1 = pgb2->tau_sampling_selection[bin1][index_tau_first];
 
-                  index_of_tau_sampling_cls(tau1, &index_tau1, pgb2);
+                  /*index_of_tau_sampling_cls(tau1, &index_tau1, pgb2);
 
                   temp_minus = pgb2->Dl[index_type_first][index_type_second][index_l][index_tau1-1][index_tau2-1]*(pgb2->tau_sampling_cls[index_tau1]-tau1)
                                 + pgb2->Dl[index_type_first][index_type_second][index_l][index_tau1][index_tau2-1]*(tau1-pgb2->tau_sampling_cls[index_tau1-1]);
@@ -3321,7 +3626,41 @@ if (file == NULL)
 
                   temp123 += temp * w_trapz[bin1][index_tau_first]*selection[bin1][index_tau_first];
 
-                  dummy_inner += w_trapz[bin1][index_tau_first]*selection[bin1][index_tau_first];
+                  dummy_inner += w_trapz[bin1][index_tau_first]*selection[bin1][index_tau_first];*/
+
+                  /* r & alpha interpolation to find specified tau1 and tau2 defined by pgb2->tau_sampling_selection */
+
+
+                  double alpha2 = atan((1.-(tau1/pba->conformal_age))/(1.-(tau2/pba->conformal_age)));
+
+                  double r2 = sqrt((1.-(tau1/pba->conformal_age))*(1.-(tau1/pba->conformal_age))+(1.-(tau2/pba->conformal_age))*(1.-(tau2/pba->conformal_age)));
+
+                  index_of_alpha(alpha2, &index_alpha, pgb2);
+                  index_of_r(r2, index_alpha, &index_r, pgb2);
+
+
+                  //double tau1_found = pba->conformal_age*(1.-pgb2->r2[index_alpha][index_r]*sin(pgb2->alpha[index_alpha]));
+                  //double tau2_found = pba->conformal_age*(1.-pgb2->r2[index_alpha][index_r]*cos(pgb2->alpha[index_alpha]));
+
+
+                  double temp_minus2 = pgb2->Dl2[bin1][bin2][index_l][index_alpha-1][index_r-1]*(pgb2->alpha[index_alpha]-alpha)+
+                                        pgb2->Dl2[bin1][bin2][index_l][index_alpha][index_r-1]*(alpha-pgb2->alpha[index_alpha-1]);
+
+                  temp_minus2 /= (pgb2->alpha[index_alpha]-pgb2->alpha[index_alpha-1]);
+
+                  double temp_plus2 = pgb2->Dl2[bin1][bin2][index_l][index_alpha-1][index_r]*(pgb2->alpha[index_alpha]-alpha)+
+                                        pgb2->Dl2[bin1][bin2][index_l][index_alpha][index_r]*(alpha-pgb2->alpha[index_alpha-1]);
+
+                  temp_plus2 /= (pgb2->alpha[index_alpha]-pgb2->alpha[index_alpha-1]);
+
+
+                  double result2 = temp_minus*(pgb2->r2[index_alpha][index_r]-r)+temp_plus*(r-pgb2->r2[index_alpha][index_r-1]);
+
+                  result2 /= (pgb2->r2[index_alpha][index_r]-pgb2->r2[index_alpha][index_r-1]);
+
+
+
+                  temp123 += result2 * w_trapz[bin1][index_tau_first]*selection[bin1][index_tau_first];
 
                 }
 
@@ -3336,11 +3675,12 @@ if (file == NULL)
         }
       }
     }
-  }*/
-
+  }
+//New exit!!
+//exit(0);
 
   /* alpha and r time parameterisation integration */
-  else{
+  /*else{
     printf("Entered non-Dirac window function integration.\n");
     printf("Computing Cls via r and alpha integration...\n");
 
@@ -3350,17 +3690,17 @@ if (file == NULL)
     printf("#l    r   int tau0*tau0*r*Dl da dr\n");
     for(int index_type_first = 0; index_type_first < pgb2->type_size; index_type_first++){
       for(int index_type_second = 0; index_type_second < pgb2->type_size; index_type_second++){
-        //for (int bin1 = 0; bin1 < 1/*ppt->selection_num*/; bin1++) {
+        //for (int bin1 = 0; bin1 < 1/*ppt->selection_num*///; bin1++) {
           //for (int bin2 = 1; bin2 < 2/*ppt->selection_num*/; bin2++) {
-            for(int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]-1; index_l++){
+            //for(int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]-1; index_l++){
 
               //pgb2->Cl[index_type_first][index_type_second][index_l][bin1][bin2] = 0.;
 
-              temp456 = 0.0;
+              //temp456 = 0.0;
 
       /* Final result Cl[index_type_first][index_type_second][index_l][bin1][bin2] is defined on the pgb2->tau_sampling_cls, so an interpolation is required
-            from Cl[index_type_first][index_type_second][index_l][index_tau_first][index_tau_second] which is defined on pgb2->tau_size_selection[bin][index_tau]*/
-              for (int index_r_up = 1; index_r_up < pgb2->r_size; index_r_up++) {
+            from Cl[index_type_first][index_type_second][index_l][index_tau_first][index_tau_second] which is defined on pgb2->tau_sampling_cls[index_tau]*/
+            /*  for (int index_r_up = 1; index_r_up < pgb2->r_size; index_r_up++) {
                 double result = 0.0;
 
 
@@ -3373,16 +3713,34 @@ if (file == NULL)
                     double tau1 = pba->conformal_age*(1.-pgb2->r2[index_alpha][index_r]*sin(pgb2->alpha[index_alpha]));
                     double tau2 = pba->conformal_age*(1.-pgb2->r2[index_alpha][index_r]*cos(pgb2->alpha[index_alpha]));
 
-                    //index_of_tau_sampling_selection(tau1, bin1, &index_tau_first, pgb2);
-                    //index_of_tau_sampling_selection(tau2, bin2, &index_tau_second, pgb2);
+                    index_of_tau_sampling_selection(tau1, bin1, &index_tau_first, pgb2);
+                    index_of_tau_sampling_selection(tau2, bin2, &index_tau_second, pgb2);
 
                     test_integ +=pba->conformal_age*pba->conformal_age*pgb2->r2[index_alpha][index_r]
                                     *pgb2->Dl2[index_type_first][index_type_second][index_l][index_alpha][index_r]
                                       *w_trapz_alpha[index_alpha];
 
+
+
+                    /* Interpolation */
+
+                    /*temp_minus = pgb2->Dl[index_type_first][index_type_second][index_l][index_tau1-1][index_tau2-1]*(pgb2->tau_sampling_cls[index_tau1]-tau1)
+                                  + pgb2->Dl[index_type_first][index_type_second][index_l][index_tau1][index_tau2-1]*(tau1-pgb2->tau_sampling_cls[index_tau1-1]);
+                    temp_minus /= (pgb2->tau_sampling_cls[index_tau1] - pgb2->tau_sampling_cls[index_tau1-1]);
+
+                    temp_plus = pgb2->Dl[index_type_first][index_type_second][index_l][index_tau1-1][index_tau2]*(pgb2->tau_sampling_cls[index_tau1]-tau1)
+                                  + pgb2->Dl[index_type_first][index_type_second][index_l][index_tau1][index_tau2]*(tau1-pgb2->tau_sampling_cls[index_tau1-1]);
+                    temp_plus /= (pgb2->tau_sampling_cls[index_tau1] - pgb2->tau_sampling_cls[index_tau1-1]);
+
+                    temp = temp_minus * (pgb2->tau_sampling_cls[index_tau2]-tau2)
+                                  + temp_plus * (tau2-pgb2->tau_sampling_cls[index_tau2-1]);
+
+                    temp /= (pgb2->tau_sampling_cls[index_tau2] - pgb2->tau_sampling_cls[index_tau2-1])
+
                     //printf("pgb2->Dl2 = %g\n", pgb2->Dl2[pgb2->index_type_density][pgb2->index_type_density][index_l][index_alpha][index_r]);
-                    /*temp123 += pba->conformal_age*pba->conformal_age*pgb2->r[index_r]* pgb2->Dl2[index_type_first][index_type_second][index_l][index_alpha][index_r]
-                                * w_trapz_r[index_r] * selection[bin1][index_tau_first]*selection[bin2][index_tau_second];*/
+                    temp123 += pba->conformal_age*pba->conformal_age*pgb2->r[index_r]* pgb2->Dl2[index_type_first][index_type_second][index_l][index_alpha][index_r]
+                                * w_trapz_r[index_r] * selection[bin1][index_tau_first]*selection[bin2][index_tau_second];
+
 
 
                   }
@@ -3401,9 +3759,8 @@ if (file == NULL)
       }
     }
   }
-  printf("Reached here\n");
-  exit(0);
 
+*/
 printf("integrating between k =%g and %g\n",pgb2->k_bessel[index_k_bessel],pgb2->k_bessel[pgb2->k_size_bessel-1]);
 printf("#l       l(l+1)C_l/2pi\n");
 
@@ -3436,7 +3793,7 @@ printf("#l       l(l+1)C_l/2pi\n");
 
     printf("%d    %g\n",
            ptr->l[index_l],
-           norm*pgb2->Cl[pgb2->index_type_rsd][pgb2->index_type_rsd][index_l][0][1]);
+           norm*pgb2->Cl[pgb2->index_type_rsd][pgb2->index_type_rsd][index_l][0][0]);
     }
 
   exit(0);

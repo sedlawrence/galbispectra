@@ -55,6 +55,10 @@
 
    int tau_size_selection;
 
+   int tau_size_cls;
+
+   int test_integer;
+
    int tau_size_bessel;
 
    double * k_bessel;
@@ -66,6 +70,8 @@
    int alpha_size;
 
    double * r; /* Parameter to parameterise time grid */
+
+   double ** r2;
 
    double * alpha; /* Parameter to parameterise time grid */
 
