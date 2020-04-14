@@ -46,6 +46,7 @@
    double * w_trapz_k; /* Corresponding to the array of trapezoidal weights w_trapz_k[index_k] for the k integration */
 
    double * w_trapz_r;
+   double ** w_trapz_r2;
 
    double * w_trapz_alpha;
 
