@@ -1,4 +1,4 @@
-#k_size_bessel = 25000
+#k_size_bessel = 1000
 #tau_size_selection = 601
 #Gaussian z1=1, z2= 0 (0.1)
 #rsd-rsd

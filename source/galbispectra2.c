@@ -961,6 +961,7 @@ int index_of_k(double k,
   double k_ppt;
 
   k_start = ppt->k[ppt->index_md_scalars][*index_k];
+
   if(k<k_start){printf("THING THAT SHOULD NOT HAPPEN HAPPENED\n");exit(2);}
   for (int index = *index_k+1; index < ppt->k_size[ppt->index_md_scalars]; index++) {
    k_ppt = ppt->k[ppt->index_md_scalars][index];
@@ -1229,6 +1230,9 @@ int galbispectra2_init (
 
   /* alpha_size must be an odd positive-integer in order to correctly fill the pgb2->r and pgb2->alpha grids using symmetries */
   pgb2->alpha_size = 65; //previously on 13
+  double res_factor = 0.;
+  pgb2->alpha_size = ceil(pow(2,res_factor)*(pgb2->alpha_size-1)+1);
+  printf("alpha_size = %d\n",pgb2->alpha_size);
 
   if (pgb2->alpha_size % 2 == 0) {
     printf("ERROR! alpha_size must be an ODD positive-integer\n" );
@@ -1237,7 +1241,7 @@ int galbispectra2_init (
 
   /* We wish to double the number of slots such that points in the two grids tau_sampling_cls and tau_sampling_bessel align. */
   pgb2->tau_size_bessel = bessel_boost * (pgb2->tau_size_cls-1) + 1;
-  pgb2->k_size_bessel = 25000;  /*tau_size_bessel*/   /*k_size * boost*/
+  pgb2->k_size_bessel = 1000;  /*tau_size_bessel*/   /*k_size * boost*/ // formerly on 2500
   printf("Starting galaxy bispectra module...\n");
   if (ppt->selection==gaussian) {
     printf("We have a Gaussian Window Function on our hands.\n");
@@ -1259,7 +1263,7 @@ int galbispectra2_init (
  ********* Second-order matter kernel computation *********
 ************************************************************/
 /* Uncomment the following lines to print the second-order CDM kernel */
-  /* Fix k2 = 10e-5, find what this value is in both the ppt and ppt2 grids respectively */
+  /* Fix k2 = 10e-5, find what this value is in both the ppt and ppt2 grids fpectively */
   /*class_call(index_of_k1(0.00001,
                  &index_k2,
                  ppt2),
@@ -1523,7 +1527,16 @@ int galbispectra2_init (
 
   }*/
 
-  double base = 1.3;
+  printf("alpha_size = %d\n",pgb2->alpha_size);
+  if (res_factor<0) {
+    printf("ERROR! logarithmic resolution factor < 1!\n");
+    exit(2);
+  }
+
+
+  double base = pow(1.34,1/pow(2,res_factor));
+  printf("base = %g\n", base);
+  //exit(0);
   double alpha_middle = alpha_min + (alpha_max-alpha_min)/2.;
 
   for (int index_alpha = middle_index_alpha-1; index_alpha > -1; index_alpha--) {
@@ -1542,15 +1555,23 @@ int galbispectra2_init (
     //printf("upper alpha[%d] = %g\n", index_alpha, pgb2->alpha[index_alpha]);
 
   }
+
+  /*for (int index_alpha = 0; index_alpha < pgb2->alpha_size; index_alpha++) {
+    printf("alpha[%d]=%g\n", index_alpha, pgb2->alpha[index_alpha]);
+  }
+  exit(0);*/
+  /*printf("#alpha size = %d\n", pgb2->alpha_size);
+  printf("#log spacing base = %g\n",base );
   double alpha_sum = 0.;
   printf("#cumulative sum     alpha\n");
   //printf("#base = %g, alpha_size =%d\n", base, pgb2->alpha_size);
-  /*for (int index_alpha = 0; index_alpha < pgb2->alpha_size; index_alpha++) {
-    alpha_sum += pgb2->alpha[index_alpha];
-    printf("%g      %g\n", pgb2->alpha[index_alpha], alpha_sum);
+  for (int index_alpha = 0; index_alpha < pgb2->alpha_size; index_alpha++) {
+
+    printf("%g    \n", pgb2->alpha[index_alpha], alpha_sum);
   }
   exit(0);
   */
+
 
 
 
@@ -1575,16 +1596,39 @@ int galbispectra2_init (
               pgb2->k_size_bessel * sizeof(double),
               pgb2->error_message);
   printf("Allocated k_bessel array\n");
-  // NOTE: this part may need to be more general (i.e. not fixed to scalars)
+
+
+  /* Choose k-sampling: linear is zero, log is 1. (Currently set by hand). */
+  int k_sampling = 0;
 
   double k_min = ppt->k[ppt->index_md_scalars][0];
 
   double k_max =  ppt->k[ppt->index_md_scalars][ppt->k_size[ppt->index_md_scalars]-1];
 
-  for (int i = 0; i < pgb2->k_size_bessel; i++) {
-
-    pgb2->k_bessel[i] = k_min + i*(k_max-k_min)/pgb2->k_size_bessel;
+  /* Linear case */
+  if (k_sampling == 0) {
+    for (int i = 0; i < pgb2->k_size_bessel; i++) {
+      pgb2->k_bessel[i] = k_min + i*(k_max-k_min)/pgb2->k_size_bessel;
+    }
   }
+
+  /* Log case */
+  if (k_sampling == 1 ) {
+    double k_logbase = 1.01;
+    for (int i = 0; i < pgb2->k_size_bessel; i++) {
+      pgb2->k_bessel[i] =  k_min+pow(k_logbase,i)*(k_max-k_min)/(pow(k_logbase,pgb2->k_size_bessel-1));
+      //printf("part 2 = %g\n", pow(k_logbase,i)*(k_max-k_min)/(pow(k_logbase, pgb2->k_size_bessel-1)));
+      //printf("pow(%g,%d) = %g\n", k_logbase, i, pow(k_logbase,i));
+      //printf("k_logbase = %g\n", k_logbase );
+      //printf("k_min = %g\n", k_min);
+      //printf("k_max = %g\n", k_max);
+      //printf("k[%d] = %g\n",i, pgb2->k_bessel[i] );
+    }
+  }
+  //exit(0);
+
+
+
 
   /* Allocate and fill the trapezoidal weights for the k-integration */
 
@@ -4257,8 +4301,15 @@ if (file == NULL)
       }
     }
     fclose(file2);
-
+    if (k_sampling == 0) {
+      printf("#k is linearly sampled with %d points\n", pgb2->k_size_bessel );
+    }
+    if (k_sampling == 1) {
+      printf("#k is log-sampled with %d points\n", pgb2->k_size_bessel );
+      //printf("#k_logbase = %g\n",k_logbase);
+    }
     printf("#alpha size = %d\n", pgb2->alpha_size);
+    printf("#k_max = %g\n",pgb2->k_bessel[pgb2->k_size_bessel-1]);
     printf("#log spacing base = %g\n",base );
     printf("#r size = %d\n", pgb2->r_size );
     printf("#tau_size_cls = %d\n", pgb2->tau_size_cls);

@@ -28,8 +28,8 @@ l_linstep = 50
 k_min_tau0 = 0.05
 #k_max_tau0_over_l_max = 2.8
 #k_max_tau0_over_l_max = 2800
-#k_max_tau0_over_l_max = 3.
-k_max_tau0_over_l_max = 200
+k_max_tau0_over_l_max = 200.
+#k_max_tau0_over_l_max = 200
 
 k_step_sub = 0.025
 #k_step_sub = 0.01
@@ -45,7 +45,8 @@ k_per_decade_for_pk = 500
 
 
 ## the actual k max (ignores all others)
-k_max_for_pk = 10.0
+#k_max_for_pk = 0.00143145
+k_max_for_pk =0.783619
 
 ## Quick debug
 # k_min_tau0 = 0.05
