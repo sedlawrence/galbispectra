@@ -10,8 +10,8 @@
 # resolution and an extremely quick run
 l_max_scalars = 100
 #l_logstep = 1.2
-#l_logstep = 2.5
-l_logstep = 1.5
+l_logstep = 2.5
+#l_logstep = 1.5
 l_linstep = 50
 
 

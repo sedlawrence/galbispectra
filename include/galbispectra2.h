@@ -32,6 +32,7 @@
 
    double ***** Dl;
    double ***** Dl2;
+   double ******* Dl3;
 
    double * tau_sampling_cls;
 
@@ -40,6 +41,7 @@
    double * test_array;
 
    double ***** Cl;
+   double ***** Cl3;
 
    ErrorMsg error_message;
 
