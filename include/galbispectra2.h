@@ -31,6 +31,7 @@
 
 
    double ***** Dl;
+   double ******k_integrand;
    double ***** Dl2;
    double ******* Dl3;
 
@@ -72,7 +73,11 @@
 
    int alpha_size;
 
-   double * r; /* Parameter to parameterise time grid */
+   int alpha_log_size;
+
+   int alpha_window_size;
+
+   double *** r; /* Parameter to parameterise time grid */
 
    double ** r2;
 
