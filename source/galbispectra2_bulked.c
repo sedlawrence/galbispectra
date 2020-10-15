@@ -4,6 +4,16 @@
 #include "galbispectra2.h"
 #include "perturbations2.h"
 
+/*==================================================================
+====================================================================
+=============================   TOOLS ==============================
+====================================================================
+===================================================================*/
+
+
+
+
+
 /*********************** SPHERICAL BESSEL FUNCTIONS *****************/
 
 double bessel_at_x_first_deriv_old(struct galbispectra2 * pgb2,
@@ -644,6 +654,17 @@ int galbispectra2_init (
      struct transfers * ptr
      )
 {
+
+  /*==================================================================
+  ====================================================================
+  =============================   SAMPLING  ==========================
+  ====================================================================
+  ===================================================================*/
+  printf("Starting sampling..\n", );
+
+
+
+
     /* Define local (stack) variables */
   int index_l;
   int index_k;
@@ -683,8 +704,8 @@ int galbispectra2_init (
 
 
   /* Please ensure the pgb2->tau_size_selection grid is of a higher resolution than pgb2->r_size * pgb2->alpha_size = 13*/
-  pgb2->tau_size_cls = 15000; //prev on 500
-  pgb2->tau_size_selection = 10000; //prev on 601
+  pgb2->tau_size_cls = 10000; //prev on 500
+  pgb2->tau_size_selection = 5000; //prev on 601
   pgb2->r_size = 150; //previously on 1501 1515
 
   /* alpha_size must be an odd positive-integer lyin order to correctly fill the pgb2->r and pgb2->alpha grids using symmetries */
@@ -2422,7 +2443,7 @@ int galbispectra2_init (
   class_alloc(pvecback_wind1, pba->bg_size * sizeof(double), pba->error_message);
 
 
-  printf("Completed polar time-parameterisation\n");
+  printf("Completed sampling.\n");
 
   /*for (int index_alpha = 0; index_alpha < pgb2->alpha_size; index_alpha++) {
     printf("alpha2[0][0][%d] = %g\n", index_alpha, alpha2[0][0][index_alpha] );
@@ -2431,6 +2452,30 @@ int galbispectra2_init (
     printf("r_bins[0][0][0][%d] = %g\n", index_r, r_bins[0][0][0][index_r] );
   }*/
   //exit(0);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  /*==================================================================
+  ====================================================================
+  =============================   SOURCES  ===========================
+  ====================================================================
+  ===================================================================*/
+  printf("Starting sources..\n", );
 
   for (int bin1 = 0; bin1 < ppt->selection_num; bin1++) {
     for (int bin2 = 0; bin2 < ppt->selection_num; bin2++) {
@@ -3500,28 +3545,17 @@ int galbispectra2_init (
         }
       }
     }
-  printf("First order source array filled.\n");
+  printf("Sources complete.\n");
 
 
-  /* Turn off types which are not needed for the integral function */
-  /***************************************************************************
-  ==========================   k-Integration =================================
-  ****************************************************************************/
+  /*==================================================================
+  ====================================================================
+  =======================   INTEGRATIONS ============================
+  ====================================================================
+  ===================================================================*/
 
-/*  class_alloc(pgb2->Dl, pgb2->type_size * sizeof(double ****), pgb2->error_message);
-  for (int index_type_first = 0; index_type_first < pgb2->type_size; index_type_first++){
-    class_alloc(pgb2->Dl[index_type_first], pgb2->type_size * sizeof(double ***), pgb2->error_message);
-    for(int index_type_second = 0; index_type_second < pgb2->type_size; index_type_second++){
-      class_alloc(pgb2->Dl[index_type_first][index_type_second], ptr->l_size[ppt->index_md_scalars] * sizeof(double **), pgb2->error_message);
-      for(int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++){
-        class_alloc(pgb2->Dl[index_type_first][index_type_second][index_l], pgb2->tau_size_cls * sizeof(double *), pgb2->error_message);
-        for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_cls; index_tau_first++) {
-          class_alloc(pgb2->Dl[index_type_first][index_type_second][index_l][index_tau_first], pgb2->tau_size_cls * sizeof(double), pgb2->error_message);
-        }
-      }
-    }
-  }*/
-  printf("Starting k-integration\n");
+
+  printf("Starting integrations..\n");
 
   /* Allocate array for class_xfer[index_type][bin][index_l][index_k] */
   double **** class_xfer;

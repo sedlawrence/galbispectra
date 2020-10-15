@@ -1244,8 +1244,8 @@ int galbispectra2_init (
 
 
   /* Please ensure the pgb2->tau_size_selection grid is of a higher resolution than pgb2->r_size * pgb2->alpha_size = 13*/
-  pgb2->tau_size_cls = 15000; //prev on 750
-  pgb2->tau_size_selection = 10000; //prev on 601
+  pgb2->tau_size_cls = 15000; //prev on 15k
+  pgb2->tau_size_selection = 1000; //prev on 601 //prev on 10k
   pgb2->r_size = 150; //previously on 150
 
   /* alpha_size must be an odd positive-integer in order to correctly fill the pgb2->r and pgb2->alpha grids using symmetries */
