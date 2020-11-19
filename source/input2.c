@@ -1748,7 +1748,7 @@ int input2_init (
   class_read_int("l_max_g_song", ppr2->l_max_g);
   class_read_int("l_max_pol_g_song", ppr2->l_max_pol_g);
   class_read_int("l_max_ur_song", ppr2->l_max_ur);
-
+  class_read_double("l_max_scalars",ppt->l_scalar_max);
   /* Compute the maximum l_max for the Boltzmann hierarchy */
   ppr2->l_max_boltzmann = 0;
   ppr2->l_max_boltzmann = MAX (ppr2->l_max_boltzmann, ppr2->l_max_g);

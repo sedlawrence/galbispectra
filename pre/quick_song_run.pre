@@ -8,10 +8,12 @@
 
 # Setting l_max_scalars=100 results in an extremely low angular
 # resolution and an extremely quick run
-l_max_scalars = 100
+# originally l_max_scalars = 100 w/ k_max_tau0_over_l_max = 20
+l_max_scalars = 400
+#l_max_scalars is currently hardcoded (input.c), SONG doesn't seem to listen to the above line.
+l_logstep = 1.1
+#l_logstep = 2.5
 #l_logstep = 1.2
-l_logstep = 2.5
-#l_logstep = 1.5
 l_linstep = 50
 
 
@@ -29,7 +31,7 @@ l_linstep = 50
 #k_max_tau0_over_l_max = 2.8
 #k_max_tau0_over_l_max = 2800
 #k_max_tau0_over_l_max = 75.
-k_max_tau0_over_l_max = 20
+k_max_tau0_over_l_max = 10
 #k_max_tau0_over_l_max = 20
 
 k_step_sub = 0.025
@@ -88,7 +90,8 @@ sources2_k_sampling = smart
 ## Settings for about 10% precision
 k_min_tau0_song = 0.1
 #k_max_tau0_over_l_max_song = 250
-k_max_tau0_over_l_max_song = 100
+#k_max_tau0_over_l_max_song = 100
+k_max_tau0_over_l_max_song = 23
 k_step_sub_song = 0.3
 k_step_super_song = 0.025
 #k_logstep_super_song = 1.5

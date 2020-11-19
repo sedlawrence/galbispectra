@@ -24,20 +24,22 @@
 
    double *** first_order_sources;
 
+   double *** second_order_sources_eq;
+
    double *** first_order_sources_integrand;
 
    double **** first_order_sources_integ;
 
 
 
-   double ***** Dl;
+   double ******* Dl;
    double ******k_integrand;
    double ***** Dl2;
    double ******* Dl3;
 
    double * tau_sampling_cls;
-
    double * tau_sampling_bessel;
+   double ** tau_sampling_bessel2;
    double ** tau_rp;
    double * test_array;
 
@@ -63,7 +65,7 @@
 
    int test_integer;
 
-   int tau_size_bessel;
+   int  tau_size_bessel;
 
    double * k_bessel;
 
@@ -95,6 +97,8 @@
 
    int index_type_rsd; /* The index type corresponding to the density term in the galaxy number overdensity.*/
 
+   int index_type_delta;
+
    int index_type_g1;
 
    int index_type_g2;
@@ -106,6 +110,10 @@
    int index_type_g4;
 
    int index_type_g5;
+
+   int index_type_quad_v_p; /* Index to denote the term that appears quadratically at second order -2*v'/a/a/H/H */
+
+   int index_type_quad_v_ppp; /* Index to denote the term that appears quadratically at second order v''' */
 
    int index_source_phi;
 
@@ -122,6 +130,7 @@
    int index_source_theta;  /* Velocity divergence = -k*k*v */
 
    int index_source_v; /* velocity */
+   int index_type_vp; /* velocity */
 
    int index_type_d1; /* First Doppler term */
 

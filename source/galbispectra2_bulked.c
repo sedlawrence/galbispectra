@@ -660,7 +660,7 @@ int galbispectra2_init (
   =============================   SAMPLING  ==========================
   ====================================================================
   ===================================================================*/
-  printf("Starting sampling..\n", );
+  printf("Starting sampling..\n" );
 
 
 
@@ -696,7 +696,7 @@ int galbispectra2_init (
   /* Define the SIZES/resolution of grids */
 
   /*the bessel grid is boosted by an integer factor to account for rapid oscillations.*/
-  int bessel_boost = 30;
+  int bessel_boost = 1;
   double e = 2.71828;
   tau0 = pba->conformal_age;
 
@@ -705,12 +705,12 @@ int galbispectra2_init (
 
   /* Please ensure the pgb2->tau_size_selection grid is of a higher resolution than pgb2->r_size * pgb2->alpha_size = 13*/
   pgb2->tau_size_cls = 10000; //prev on 500
-  pgb2->tau_size_selection = 5000; //prev on 601
+  pgb2->tau_size_selection = 10000; //prev on 601
   pgb2->r_size = 150; //previously on 1501 1515
 
   /* alpha_size must be an odd positive-integer lyin order to correctly fill the pgb2->r and pgb2->alpha grids using symmetries */
    //previously on 65
-  double res_factor =4; //prev 4.25
+  double res_factor =0; //prev 4.25
 
   pgb2->alpha_log_size = 1; //prev on 65
   //pgb2->alpha_log_size = ceil(pow(2,res_factor)*(pgb2->alpha_log_size-1)+1);
@@ -754,6 +754,7 @@ int galbispectra2_init (
 
   /* the tau-bessel grid is a hi-res time grid used for the lening convergence term. We wish to double the number of slots such that points in the two grids tau_sampling_cls
    and tau_sampling_bessel align. */
+
   pgb2->tau_size_bessel = bessel_boost * (pgb2->tau_size_cls-1) + 1;
   pgb2->k_size_bessel = 2500; // prev 2500 4999 /*tau_size_bessel*/   /*k_size * boost*/ // formerly on 2500
   printf("Starting galaxy bispectra module...\n");
@@ -895,9 +896,7 @@ int galbispectra2_init (
               pgb2->tau_size_cls * sizeof(double),
               pgb2->error_message);
 
-  class_alloc(pgb2->tau_sampling_bessel,
-              pgb2->tau_size_bessel * sizeof(double),
-              pgb2->error_message);
+
 
   class_alloc(pgb2->r,
               ppt->selection_num * sizeof(double**),
@@ -1015,6 +1014,8 @@ int galbispectra2_init (
 
 
   printf("tau_sampling_cls has %d points that span (%g, %g)\n", pgb2->tau_size_cls, pgb2->tau_sampling_cls[0], pgb2->tau_sampling_cls[pgb2->tau_size_cls-1]);
+  //printf("tau_sampling_bessel has %d points that span (%g, %g)\n", pgb2->tau_size_bessel, pgb2->tau_sampling_bessel[index_tau_bessel], pgb2->tau_sampling_cls[pgb2->tau_size_bessel-1]);
+
   printf("conformal_age = %g\n",pba->conformal_age);
 
   // Time-grid values for tau1 = tau0(1-r*sin(alpha)), tau2 = tau0(1-r*cos(alpha)). The motivation for this parameterisation is to
@@ -1071,7 +1072,43 @@ int galbispectra2_init (
 
 
   printf("tau_max_cls = %g\n", pgb2->tau_sampling_cls[pgb2->tau_size_selection-1] );
+  /* Allocate and define the tau_sampling_bessel array which is used to integrate the innermost integral of the lensing term.
+    There is bessel_boost times more resolution in this grid compared with tau_sampling cl. pgb2->tau_sampling_cls[index_tau] is
+    equivalent to pgb2->tau_sampling_bessel2[index_tau][bessel_boost*index_tau]*/
 
+  double ** w_trapz_lens_bessel2;
+  class_alloc(pgb2->tau_sampling_bessel2,
+              pgb2->tau_size_cls * sizeof(double*),
+              ppt->error_message);
+  class_alloc(w_trapz_lens_bessel2,
+              pgb2->tau_size_cls * sizeof(double*),
+              ppt->error_message);
+
+  class_alloc(pgb2->tau_sampling_bessel,
+              pgb2->tau_size_bessel * sizeof(double),
+              ppt->error_message);
+  for (int index_tau = 0; index_tau < pgb2->tau_size_cls; index_tau++) {
+    //printf("tau_cls = %g\n", pgb2->tau_sampling_cls[index_tau] );
+    class_alloc(pgb2->tau_sampling_bessel2[index_tau],
+                bessel_boost*(index_tau+1) * sizeof(double),
+                ppt->error_message);
+    class_alloc(w_trapz_lens_bessel2[index_tau],
+                bessel_boost*(index_tau+1) * sizeof(double),
+                ppt->error_message);
+
+    class_call(array_trapezoidal_weights(pgb2->tau_sampling_bessel2[index_tau],
+                                         bessel_boost*(index_tau+1),
+                                         w_trapz_lens_bessel2[index_tau],
+                                         pgb2->error_message),
+                                         pgb2->error_message,
+                                         pgb2->error_message);
+
+
+    for (int index_tau_bessel = 0; index_tau_bessel < index_tau+1; index_tau_bessel++) {
+      double no_of_wedges = bessel_boost*(index_tau+1.)-1.;
+      pgb2->tau_sampling_bessel2[index_tau][index_tau_bessel] = pgb2->tau_sampling_cls[0] + index_tau_bessel*(pgb2->tau_sampling_cls[index_tau]-pgb2->tau_sampling_cls[0])/(no_of_wedges);
+    }
+  }
 
 
   for (int index_tau_bessel = 0; index_tau_bessel < pgb2->tau_size_bessel; index_tau_bessel++) {
@@ -1459,7 +1496,7 @@ int galbispectra2_init (
     This will speed up the code since it will not need to be checked in the integral function. */
 
   // turn on for delta_cdm
-/*  if (k5 == 5.0){
+  /*if (k5 == 5.0){
     pgb2->index_source_delta_cdm = index_source;
     index_source++;
     pgb2->index_type_density = index_type;
@@ -1473,7 +1510,7 @@ int galbispectra2_init (
   //}
   // turn on for rsd
 
-  if (k5 == 5.0){
+/*  if (k5 == 5.0){
     //pgb2->index_source_v = index_source;
     //index_source++;
     pgb2->index_source_theta = index_source;
@@ -1485,19 +1522,20 @@ int galbispectra2_init (
     //index_type++;
     //pgb2->index_type_d2 = index_type;
     //index_type++;
-  }
+  }*/
 
-  /*if (k5 == 5.0){
+  if (k5 == 5.0){
     pgb2->index_source_psi = index_source;
     index_source++;
     pgb2->index_source_phi = index_source;
     index_source++;
-    pgb2->index_source_phi_prime = index_source;
-    index_source++;
+    //pgb2->index_source_phi_prime = index_source;
+    //index_source++;
     pgb2->index_source_phi_plus_psi = index_source;
     index_source++;
-    pgb2->index_source_phi_plus_psi_prime = index_source;
-    index_source++;*/
+    //pgb2->index_source_phi_plus_psi_prime = index_source;
+    //index_source++;
+  }
 
 
     /*pgb2->index_type_g1 = index_type;
@@ -1514,10 +1552,11 @@ int galbispectra2_init (
 
 
 
-  /*if (k5 == 5.0){
+  if (k5 == 5.0){
+
     pgb2->index_type_lens = index_type;
     index_type++;
-  }*/
+  }
 
   pgb2->source_size = index_source;
   pgb2->type_size = index_type;
@@ -1542,6 +1581,24 @@ int galbispectra2_init (
           /* Loop over type and tau. For each of them, allocate memory
            for pgb2->first_order_sources[index_type][index_tau][index_k_bessel]  */
         class_alloc(pgb2->first_order_sources[index_type][index_tau],
+                    pgb2->k_size_bessel * sizeof(double),
+                    ppt->error_message);
+    }
+  }
+
+  /* Define an array of values of first order transfer functions:
+              pgb2->second_order_sources_eq[index_type][index_tau][index_k_bessel] */
+  class_alloc(pgb2->second_order_sources_eq, pgb2->source_size * sizeof(double **), ppt->error_message);
+    for (int index_type = 0; index_type < pgb2->source_size; index_type++) {
+      /* Allocate memory for pgb2->second_order_sources_eq[index_type][index_tau] */
+      class_alloc(pgb2->second_order_sources_eq[index_type],
+                  pgb2->tau_size_cls * sizeof(double *),
+                  ppt->error_message);
+      /* Allocate memory for pgb2->second_order_sources_eq[index_type] */
+      for (int index_tau = 0; index_tau < pgb2->tau_size_cls; index_tau++) {
+          /* Loop over type and tau. For each of them, allocate memory
+           for pgb2->second_order_sources_eq[index_type][index_tau][index_k_bessel]  */
+        class_alloc(pgb2->second_order_sources_eq[index_type][index_tau],
                     pgb2->k_size_bessel * sizeof(double),
                     ppt->error_message);
     }
@@ -2475,7 +2532,7 @@ int galbispectra2_init (
   =============================   SOURCES  ===========================
   ====================================================================
   ===================================================================*/
-  printf("Starting sources..\n", );
+  printf("Starting sources..\n" );
 
   for (int bin1 = 0; bin1 < ppt->selection_num; bin1++) {
     for (int bin2 = 0; bin2 < ppt->selection_num; bin2++) {
@@ -2956,6 +3013,8 @@ int galbispectra2_init (
           }
         }
 
+
+
         /* RSD */
         int index_tau_bin1;
         index_of_tau_sampling_cls(selection_mean_tau_bin1, &index_tau_bin1, pgb2);
@@ -2966,7 +3025,7 @@ int galbispectra2_init (
         if (pgb2->index_type_rsd != -1) {
           for (int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
             for (int index_tau = 0; index_tau < pgb2->tau_size_cls; index_tau++){
-              //printf("indexing index_l x index_tau = %dx%d\n", index_l, index_tau);
+              printf("indexing index_l x index_tau = %dx%d\n", index_l, index_tau);
               class_call(background_at_tau(pba,
                                            pgb2->tau_sampling_cls[index_tau],
                                            pba->long_info,
@@ -2995,6 +3054,7 @@ int galbispectra2_init (
             }
           }
         }
+        printf("completed RSD source integ.\n");
 
 
         int last_index_d1;
@@ -3239,6 +3299,7 @@ int galbispectra2_init (
           g = 0;
 
           for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
+            printf("index_tau = %d, index_k_bessel = %d\n", index_tau, index_k_bessel);
             index = 0;
 
             double tau = pgb2->tau_sampling_bessel[index_tau];
@@ -3385,7 +3446,7 @@ int galbispectra2_init (
     /* Lensing integral, at present this is the slowest part of the code. We check that this computation is required by the first if
       statement. */
 
-    if (pgb2->index_type_lens != -1) {
+    /*if (pgb2->index_type_lens != -1) {
       for (int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
         for (int index_tau = 0; index_tau < pgb2->tau_size_cls; index_tau++){
 
@@ -3409,10 +3470,11 @@ int galbispectra2_init (
 
             first_index_tau_in_lens = index_tau * bessel_boost;
 
+            ///for (index_tau_lens = (index_tau * bessel_boost); index_tau_lens < pgb2->tau_size_bessel-1; index_tau_lens++) {
             for (index_tau_lens = (index_tau * bessel_boost); index_tau_lens < pgb2->tau_size_bessel-1; index_tau_lens++) {
               // NOTE that we skip the last index "pgb2->tau_size_bessel-1" to avoid the singularity. This would analytically drop out anyways
               // for l not 1.
-
+              printf("index_k_bessel x index_tau_lens x index_tau %dx%dx%d\n", index_k_bessel, index_tau_lens, index_tau );
               tau_lens = pgb2->tau_sampling_bessel[index_tau_lens];
 
               if(x>pbs->x_max ){
@@ -3425,7 +3487,7 @@ int galbispectra2_init (
               first_index_tau_in_lens = index_tau * bessel_boost;
 
               /* If we are taking the first or last trapezoidal weight then take the first weight, else take the other weight */
-              if (index_tau_lens == first_index_tau_in_lens || index_tau_lens == (pgb2->tau_size_bessel-1) ){
+            /*  if (index_tau_lens == first_index_tau_in_lens || index_tau_lens == (pgb2->tau_size_bessel-1) ){
                 weight = (pgb2->tau_sampling_bessel[first_index_tau_in_lens]-pgb2->tau_sampling_bessel[pgb2->tau_size_bessel-1])/(2.0*((pgb2->tau_size_bessel-1)-first_index_tau_in_lens));
               }
 
@@ -3433,8 +3495,10 @@ int galbispectra2_init (
                 weight = (pgb2->tau_sampling_bessel[first_index_tau_in_lens]-pgb2->tau_sampling_bessel[pgb2->tau_size_bessel-1])/((pgb2->tau_size_bessel-1)-first_index_tau_in_lens);
               }
 
-              lensing_result += ((pba->conformal_age - pgb2->tau_sampling_bessel[index_tau_lens])-(pba->conformal_age - pgb2->tau_sampling_cls[index_tau]))
-                * j * weight * pgb2->first_order_sources_integrand[pgb2->index_source_phi_plus_psi][index_tau_lens][index_k_bessel]/((pba->conformal_age - pgb2->tau_sampling_bessel[index_tau_lens])*(pba->conformal_age - pgb2->tau_sampling_cls[index_tau]));
+              //lensing_result += ((pba->conformal_age - pgb2->tau_sampling_bessel[index_tau_lens])-(pba->conformal_age - pgb2->tau_sampling_cls[index_tau]))
+                //* j * weight * pgb2->first_order_sources_integrand[pgb2->index_source_phi_plus_psi][index_tau_lens][index_k_bessel]/((pba->conformal_age - pgb2->tau_sampling_bessel[index_tau_lens])*(pba->conformal_age - pgb2->tau_sampling_cls[index_tau]));
+                lensing_result += ((pba->conformal_age - pgb2->tau_sampling_bessel2[][index_tau_lens])-(pba->conformal_age - pgb2->tau_sampling_cls[index_tau]))
+                  * j * weight * pgb2->first_order_sources_integrand[pgb2->index_source_phi_plus_psi][index_tau_lens][index_k_bessel]/((pba->conformal_age - pgb2->tau_sampling_bessel[index_tau_lens])*(pba->conformal_age - pgb2->tau_sampling_cls[index_tau]));
 
 
             }
@@ -3444,7 +3508,63 @@ int galbispectra2_init (
           }
         }
       }
+    }*/
+    if (pgb2->index_type_lens != -1) {
+      //herehere
+      double j_lens;
+      int index_of_tau_quad;
+      int index_k;
+      int last_index_k;
+      for (int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
+        for (int index_tau = 0; index_tau < pgb2->tau_size_cls; index_tau++){
+          printf("inside lens loop: index_tau = %d\n", index_tau );
+          for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
+            double lens_sum = 0.;
+
+            for (int index_tau_bessel = (index_tau * bessel_boost); index_tau_bessel < bessel_boost*(index_tau+1); index_tau_bessel++) {
+
+              printf("index_tau = %d, index_k_bessel = %d\n", index_tau, index_k_bessel);
+              index_tau_quad = 0;
+
+              double tau = pgb2->tau_sampling_bessel2[index_tau][index_tau_bessel];
+
+              class_call(index_of_tau_sampling_quadsources(tau, &index_tau_quad, ppt), pgb2->error_message, pgb2->error_message);
+
+              double k = pgb2->k_bessel[index_k_bessel];
+
+              //class_call(index_of_k(k, &index_k, ppt), pgb2->error_message, pgb2->error_message);
+              class_call(index_of_k_old(k,
+                             &index_k,
+                             &last_index_k,
+                             ppt),
+                             pgb2->error_message,
+                             pgb2->error_message);
+
+              f = (pgb2->tau_sampling_bessel[index_tau]-ppt->tau_sampling_quadsources[index_tau_quad])/(ppt->tau_sampling_quadsources[index_tau_quad+1]-ppt->tau_sampling_quadsources[index_tau_quad]);
+
+              intermediate  = f*phi_plus_psi[index_tau_quad+1][index_k]+(1-f)*phi_plus_psi[index_tau_quad][index_k];
+
+              intermediate_plus =  f*phi_plus_psi[index_tau_quad+1][index_k+1]+(1-f)*phi_plus_psi[index_tau_quad][index_k+1];
+
+              g = (pgb2->k_bessel[index_k_bessel]-ppt->k[ppt->index_md_scalars][index_k])/(ppt->k[ppt->index_md_scalars][index_k+1]-ppt->k[ppt->index_md_scalars][index_k]);
+
+              double phi_plus_psi = (g*intermediate_plus +(1-g)*intermediate);
+              double chi_cls = tau0-pgb2->tau_sampling_cls[index_tau];
+              double chi_lens = tau0-pgb2->tau_sampling_bessel2[index_tau][index_tau_bessel];
+
+              class_call(bessel_at_x(pbs,pgb2->k_bessel[index_k_bessel]*(chi_lens), index_l, &j_lens), pbs->error_message, pgb2->error_message);
+
+              double chi_fraction = (chi_cls-chi_lens)/chi_cls/chi_lens;
+              lens_sum += ptr->l[index_l]*(ptr->l[index_l]+1)*chi_fraction*phi_plus_psi
+                        *j_lens*w_trapz_lens_bessel2[index_tau][index_tau_bessel];
+            }
+            pgb2->first_order_sources_integ[pgb2->index_type_lens][index_l][index_tau][index_k_bessel] = lens_sum;
+          }
+        }
+      }
     }
+
+
     double * pvecbackg;
     int last_index_g = 0;
     class_alloc(pvecbackg, pba->bg_size*sizeof(double), pba->error_message);
@@ -3548,6 +3668,60 @@ int galbispectra2_init (
   printf("Sources complete.\n");
 
 
+ /* Second-order source term preparation */
+ //ppt2->sources[ppt2->index_tp2_delta_cdm][index_k1][index_k2][index_tau_ppt2*ppt2->k3_size[index_k1][index_k2]+index_k3];
+
+
+
+
+ /*if (pgb2->index_source_delta_cdm_so != -1 && configuration == equilateral) {
+   printf("Preparing density source term..\n");
+   for (int index_tau = 0; index_tau < pgb2->tau_size_cls; index_tau++){
+     index_k = 0;
+
+     for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
+       index = 0;
+
+       double tau = pgb2->tau_sampling_cls[index_tau];
+
+       class_call(index_of_tau_sampling_quadsources(tau, &index, ppt),ppt->error_message,pgb2->error_message);
+       class_call(index_of_tau_sampling_ppt2(tau,
+                      &index_tau_ppt2,
+                      &last_tau_kernel,
+                      pgb2), pgb2->error_message, pgb2->error_message);
+
+       double k = pgb2->k_bessel[index_k_bessel];
+       // WARNING CHECK WHETHER tau_size_quadsources is the corresponsing time grid to ppt2->sources
+       class_call(index_of_k(k, &index_k, ppt), ppt->error_message, pgb2->error_message);
+
+       f = (pgb2->tau_sampling_cls[index_tau]-ppt->tau_sampling_quadsources[index])/(ppt->tau_sampling_quadsources[index+1]-ppt->tau_sampling_quadsources[index]);
+
+       intermediate  = (f*ppt->quadsources[ppt->index_md_scalars][ppt->index_ic_ad*ppt->qs_size[ppt->index_md_scalars]+ppt->index_qs_delta_cdm][(index+1) * ppt->k_size[ppt->index_md_scalars] + index_k]+
+                        f*ppt2->sources[ppt2->index_tp2_delta_cdm][index_k1][index_k2][index_tau_ppt2*ppt2->k3_size[index_k1][index_k2]+index_k3]
+           (1-f)*ppt->quadsources[ppt->index_md_scalars][ppt->index_ic_ad*ppt->qs_size[ppt->index_md_scalars]+ppt->index_qs_delta_cdm][index * ppt->k_size[ppt->index_md_scalars] + index_k]);
+
+       intermediate_plus =  (f*ppt->quadsources[ppt->index_md_scalars][ppt->index_ic_ad*ppt->qs_size[ppt->index_md_scalars]+ppt->index_qs_delta_cdm][(index+1) * ppt->k_size[ppt->index_md_scalars] + index_k+1]+
+           (1-f)*ppt->quadsources[ppt->index_md_scalars][ppt->index_ic_ad*ppt->qs_size[ppt->index_md_scalars]+ppt->index_qs_delta_cdm][index * ppt->k_size[ppt->index_md_scalars] + index_k+1]);
+
+       g = (pgb2->k_bessel[index_k_bessel]-ppt->k[ppt->index_md_scalars][index_k])/(ppt->k[ppt->index_md_scalars][index_k+1]-ppt->k[ppt->index_md_scalars][index_k]);
+
+       pgb2->second_order_sources_eq[pgb2->index_source_delta_cdm_so][index_tau][index_k_bessel] = g*intermediate_plus +(1-g)*intermediate;
+
+
+     }
+   }*/
+
+
+
+
+
+
+
+
+
+
+
+
   /*==================================================================
   ====================================================================
   =======================   INTEGRATIONS ============================
@@ -3576,9 +3750,72 @@ int galbispectra2_init (
       }
     }
   }
+  printf("Starting SONG style fixed grid integration..\n");
+  double source_interp1;
+  double source_interp2;
+  double tau_first;
+  double tau_second;
+  int index_of_cls1;
+  int index_of_cls2;
+  double Pk_song;
+  for(int index_type_first = 0; index_type_first < pgb2->type_size; index_type_first++){
+    for(int index_type_second = 0; index_type_second < pgb2->type_size; index_type_second++){
+    //Warning
+    //for(int index_type_first = 0; index_type_first < 1; index_type_first++){
+      //for(int index_type_second = 1; index_type_second < 2; index_type_second++){
+      for (int bin2 = 0; bin2 < ppt->selection_num; bin2++) {
+        for (int bin1 = 0; bin1 < ppt->selection_num; bin1++) {
+          for(int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]-1; index_l++){
+            printf("index_l = %d (l=%d)\n", index_l, ptr->l[index_l]);
+            double tau_sum2 = 0.0;
+            for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
+              tau_second = pgb2->tau_sampling_selection[bin2][index_tau_second];
+              index_of_tau_sampling_cls(tau_second, &index_of_cls2, pgb2);
+              double tau_sum1 = 0.0;
+              for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
+                tau_first = pgb2->tau_sampling_selection[bin1][index_tau_first];
+                index_of_tau_sampling_cls(tau_first, &index_of_cls1, pgb2);
+                double k_sum1 = 0.0;
+                for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
 
-  /* ANGULAR POWER SPECTRUM INTEGRATING TIME FIRST */
-  printf("Entering CLASS style -transfer- preparation.. \n");
+                  /* We loop over the tau-selection indices and interpolate on the tau_cls grid */
+
+                    class_call(primordial_spectrum_at_k(ppm, ppt->index_md_scalars, linear, pgb2->k_bessel[index_k_bessel], &Pk_song), ppm->error_message, pgb2->error_message);
+
+
+                    source_interp1 = pgb2->first_order_sources_integ[index_type_first][index_l][index_of_cls1-1][index_k_bessel]*(pgb2->tau_sampling_cls[index_of_cls1]-tau_first)
+                                  + pgb2->first_order_sources_integ[index_type_first][index_l][index_of_cls1][index_k_bessel]*(tau_first-pgb2->tau_sampling_cls[index_of_cls1-1]);
+                    source_interp1 /= (pgb2->tau_sampling_cls[index_of_cls1] - pgb2->tau_sampling_cls[index_of_cls1-1]);
+
+                    source_interp2 = pgb2->first_order_sources_integ[index_type_second][index_l][index_of_cls2-1][index_k_bessel]*(pgb2->tau_sampling_cls[index_of_cls2]-tau_second)
+                                  + pgb2->first_order_sources_integ[index_type_second][index_l][index_of_cls2][index_k_bessel]*(tau_second-pgb2->tau_sampling_cls[index_of_cls2-1]);
+                    source_interp2 /= (pgb2->tau_sampling_cls[index_of_cls2] - pgb2->tau_sampling_cls[index_of_cls2-1]);
+
+
+                    k_sum1 += 4. * _PI_ *  Pk_song * pow(pgb2->k_bessel[index_k_bessel],-1.0)* source_interp1*source_interp2*pgb2->w_trapz_k[index_k_bessel];
+
+                    }
+
+                  tau_sum1 += k_sum1*selection[bin1][index_tau_first]*w_trapz[bin1][index_tau_first];
+                  }
+                tau_sum2 += tau_sum1*selection[bin2][index_tau_second]*w_trapz[bin2][index_tau_second];
+            }
+            pgb2->Cl3[index_type_first][index_type_second][index_l][bin1][bin2] = tau_sum2;
+            printf("Linear fixed SONG style: pgb2->Cl3[%d][%d][%d][%d][%d] = %g\n",
+                    index_type_first,
+                    index_type_second,
+                    index_l,
+                    bin1,
+                    bin2,
+                    ptr->l[index_l]*(ptr->l[index_l]+1)*pgb2->Cl3[index_type_first][index_type_second][index_l][bin1][bin2]/(2*_PI_));
+          }
+        }
+      }
+    }
+  }
+
+  /* CLASS STYLE ANGULAR POWER SPECTRUM INTEGRATING TIME FIRST */
+  /*printf("Entering CLASS style -transfer- preparation.. \n");
   double source_interp;
   int index_of_cls;
   double tau_one_class;
@@ -3589,7 +3826,7 @@ int galbispectra2_init (
         for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
           double tau_sum = 0.0;
           /* We loop over the tau-selection indices and interpolate on the tau_cls grid */
-          for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++) {
+          /*for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++) {
 
             tau_one_class = pgb2->tau_sampling_selection[bin1][index_tau];
 
@@ -3599,6 +3836,8 @@ int galbispectra2_init (
             source_interp = pgb2->first_order_sources_integ[index_type][index_l][index_of_cls-1][index_k_bessel]*(pgb2->tau_sampling_cls[index_of_cls]-tau_one_class)
                           + pgb2->first_order_sources_integ[index_type][index_l][index_of_cls][index_k_bessel]*(tau_one_class-pgb2->tau_sampling_cls[index_of_cls-1]);
             source_interp /= (pgb2->tau_sampling_cls[index_of_cls] - pgb2->tau_sampling_cls[index_of_cls-1]);
+
+
 
             tau_sum += source_interp*selection[bin1][index_tau]*w_trapz[bin1][index_tau];
             }
@@ -3628,7 +3867,7 @@ int galbispectra2_init (
                   * class_xfer[index_type_second][bin2][index_l][index_k_bessel]*pgb2->w_trapz_k[index_k_bessel];
               }
               pgb2->Cl3[index_type_first][index_type_second][index_l][bin1][bin2] = k_sum;
-              printf("pgb2->Cl3[%d][%d][%d][%d][%d] = %g\n",
+              printf("CLASS Style: pgb2->Cl3[%d][%d][%d][%d][%d] = %g\n",
                       index_type_first,
                       index_type_second,
                       index_l,
@@ -3639,7 +3878,7 @@ int galbispectra2_init (
           }
         }
       }
-    }
+    }*/
     printf("# CLASS STYLE ANGPOWSPEC COMPUTATION (pgb2->Dl3, Cl3)\n" );
     if (k_sampling == 0) {
       printf("#k is linearly sampled with %d points\n", pgb2->k_size_bessel );
@@ -3666,7 +3905,7 @@ int galbispectra2_init (
     printf("#z1=%g, z2=%g (%g) Gaussian\n", ppt->selection_mean[0],  ppt->selection_mean[0],ppt->selection_width[0]);
     printf("#renorm_factor[%d][%d] =%g\n",0,0,renorm_factor[0][0] );
     printf("#l    l(l+1)Cl3/2pi   \n");
-    for(int index_type = 0; index_type < pgb2->type_size; index_type++){
+    //for(int index_type = 0; index_type < pgb2->type_size; index_type++){
       for (int bin1 = 0; bin1 < ppt->selection_num; bin1++) {
         for (int bin2 = 0; bin2 < ppt->selection_num; bin2++) {
           for(int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]-1; index_l++){
@@ -3675,7 +3914,7 @@ int galbispectra2_init (
           }
         }
       }
-    }
+  //  }
     printf("BULKED Code\n");
     exit(0);
 
