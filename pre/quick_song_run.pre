@@ -10,10 +10,9 @@
 # resolution and an extremely quick run
 # originally l_max_scalars = 100 w/ k_max_tau0_over_l_max = 20
 l_max_scalars = 400
-#l_max_scalars is currently hardcoded (input.c), SONG doesn't seem to listen to the above line.
-l_logstep = 1.1
+#l_logstep = 1.15
 #l_logstep = 2.5
-#l_logstep = 1.2
+l_logstep = 2.0
 l_linstep = 50
 
 
@@ -91,7 +90,9 @@ sources2_k_sampling = smart
 k_min_tau0_song = 0.1
 #k_max_tau0_over_l_max_song = 250
 #k_max_tau0_over_l_max_song = 100
-k_max_tau0_over_l_max_song = 23
+
+#k_max_tau0_over_l_max_song = 23 (was working well for l_max_scalars = 400)
+k_max_tau0_over_l_max_song = 20
 k_step_sub_song = 0.3
 k_step_super_song = 0.025
 #k_logstep_super_song = 1.5

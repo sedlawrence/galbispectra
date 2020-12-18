@@ -30,7 +30,7 @@
 
    double **** first_order_sources_integ;
 
-
+   int flag;
 
    double ******* Dl;
    double ******k_integrand;
@@ -40,6 +40,7 @@
    double * tau_sampling_cls;
    double * tau_sampling_bessel;
    double ** tau_sampling_bessel2;
+   double *** tau_sampling_lens_bi;
    double ** tau_rp;
    double * test_array;
 
@@ -111,9 +112,13 @@
 
    int index_type_g5;
 
+   int index_type_quad_density_p;
+
+   int index_type_quad_v;
+
    int index_type_quad_v_p; /* Index to denote the term that appears quadratically at second order -2*v'/a/a/H/H */
 
-   int index_type_quad_v_ppp; /* Index to denote the term that appears quadratically at second order v''' */
+   int index_type_quad_v_pp; /* Index to denote the term that appears quadratically at second order v'' */
 
    int index_source_phi;
 
