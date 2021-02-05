@@ -997,8 +997,8 @@ int galbispectra2_init (
 
 
   /* Please ensure the pgb2->tau_size_selection grid is of a higher resolution than pgb2->r_size * pgb2->alpha_size = 13*/
-  pgb2->tau_size_cls = 500; //prev on 500
-  pgb2->tau_size_selection = 500; //prev on 601
+  pgb2->tau_size_cls = 10; //prev on 500
+  pgb2->tau_size_selection = 10; //prev on 601
 
 
 
@@ -3001,7 +3001,7 @@ int galbispectra2_init (
       int last_index_k;
       int index_k;
       //for (int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
-      for (int index_l = 2; index_l < 3; index_l++) {
+      for (int index_l = 5; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
       //for (int index_l = ptr->l_size[ppt->index_md_scalars]-1; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
       //for (int index_l = ptr->l_size[ppt->index_md_scalars]-2; index_l < ptr->l_size[ppt->index_md_scalars]-1; index_l++) {
         index_k = 0;
@@ -3075,7 +3075,7 @@ int galbispectra2_init (
       int last_index_k;
       int index_k;
       //for (int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
-      for (int index_l = 2; index_l < 3; index_l++) {
+      for (int index_l = 5; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
       //for (int index_l = ptr->l_size[ppt->index_md_scalars]-1; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
       //for (int index_l = ptr->l_size[ppt->index_md_scalars]-2; index_l < ptr->l_size[ppt->index_md_scalars]-1; index_l++) {
       //for (int index_l = 0; index_l < 1; index_l++) {
@@ -3360,6 +3360,8 @@ int galbispectra2_init (
       }
     }
   }
+
+
   FILE * Dl_file;
 
   // use appropriate location if you are using MacOS or Linux
@@ -3386,7 +3388,7 @@ int galbispectra2_init (
       for (int bin2 = 0; bin2 < ppt->selection_num; bin2++) {
         for (int bin1 = 0; bin1 < ppt->selection_num; bin1++) {
           //for(int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++){
-          for (int index_l = 2; index_l < 3; index_l++) {
+          for (int index_l = 5; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
           //for(int index_l = ptr->l_size[ppt->index_md_scalars]-1; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++){
           //for(int index_l = ptr->l_size[ppt->index_md_scalars]-1; index_l < ptr->l_size[ppt->index_md_scalars]-1; index_l++){
           //for (int index_l = ptr->l_size[ppt->index_md_scalars]-2; index_l < ptr->l_size[ppt->index_md_scalars]-1; index_l++) {
@@ -3560,6 +3562,16 @@ int galbispectra2_init (
 
       //herehere
 
+      FILE * bll_file;
+      bll_file = fopen("output/bll_file.dat","w");
+      fprintf(bll_file,"###z x blll\n" );
+      fprintf(bll_file,"#selection size = %d\n", pgb2->tau_size_selection);
+      fprintf(bll_file,"#selection min/max %g/%g\n", pgb2->tau_sampling_selection[0][0], pgb2->tau_sampling_selection[0][pgb2->tau_size_selection-1]);
+      fprintf(bll_file,"#cls size = %d\n", pgb2->tau_size_cls);
+      fprintf(bll_file,"#cls min/max %g/%g\n", pgb2->tau_sampling_cls[0], pgb2->tau_sampling_cls[pgb2->tau_size_cls-1]);
+      fprintf(bll_file,"#bessel_boost = %g\n", bessel_boost);
+      fprintf(bll_file,"#k size = %d\n", pgb2->k_size_bessel);
+      fprintf(bll_file,"#k min/max %g/%g\n", pgb2->k_bessel[0], pgb2->k_bessel[pgb2->k_size_bessel-1]);
 
       class_alloc(limber_int_z11, pgb2->tau_size_cls * sizeof(double), pba->error_message);
       class_alloc(limber_int_1z1, pgb2->tau_size_cls * sizeof(double), pba->error_message);
@@ -3572,12 +3584,14 @@ int galbispectra2_init (
       class_alloc(w_trapz_to_selection_mean, bin_mean_index_selection[0] * sizeof(double), pba->error_message);*/
 
       //for (int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
-      for (int index_l = 2; index_l < 3; index_l++) {
+      for (int index_l = 5; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
       //for (int index_l = ptr->l_size[ppt->index_md_scalars]-1; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
       //for (int index_l = ptr->l_size[ppt->index_md_scalars]-2; index_l < ptr->l_size[ppt->index_md_scalars]-1; index_l++) {
         printf("#############index_l = %d (l=%d)##################\n", index_l, ptr->l[index_l]);
+        fprintf(bll_file,"#############index_l = %d (l=%d)##################\n", index_l, ptr->l[index_l]);
+
         for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++) {
-          printf("index_tau = %d\n", index_tau);
+
           class_call(background_at_tau(pba,
                                        pgb2->tau_sampling_selection[0][index_tau],
                                        pba->long_info,
@@ -3630,13 +3644,16 @@ int galbispectra2_init (
 
 
 
-            sumA +=(2./chi_tilde)*DlLDA*Dlg4DA*w_trapz_lens_bessel2[index_tau][index_tau_bessel];
+            sumA +=(2./chi_tilde)*DlLDA*Dlg4DA*w_trapz_selection_hires[0][index_tau][index_tau_bessel];
             //sumA_test += (2./chi_tilde)*w_trapz_lens_bessel2[index_tau][index_tau_bessel];
             sumA_test += (2./chi_tilde)*w_trapz_selection_hires[0][index_tau][index_tau_bessel];
 
           }
-          double exact = 2.*log(tau0-pgb2->tau_sampling_selection[0][index_tau])-2.*log(tau0-pgb2->tau_sampling_selection[0][pgb2->tau_size_selection-1]);
-          printf("sumA_test = %g, chi = %g, tau = %g, should be = %g, ERROR = *%g %%*\n", sumA_test, tau0-pgb2->tau_sampling_selection[0][index_tau], pgb2->tau_sampling_selection[0][index_tau], exact, (sumA_test - exact)*100/exact );
+          //double exact = 2.*log(tau0-pgb2->tau_sampling_selection[0][index_tau])-2.*log(tau0-pgb2->tau_sampling_selection[0][pgb2->tau_size_selection-1]);
+          double exactA = (tau0-pgb2->tau_sampling_selection[0][index_tau])-(tau0-pgb2->tau_sampling_selection[0][pgb2->tau_size_selection-1]);
+
+          //printf("z = %g\n", z);
+          //printf("sumA_test = %g, chi = %g, tau = %g, should be = %g, ERROR = *%g %%*\n", sumA_test, tau0-pgb2->tau_sampling_selection[0][index_tau], pgb2->tau_sampling_selection[0][index_tau], exactA, (sumA_test - exactA)*100/exactA );
           double weightB = ((tau0-pgb2->tau_sampling_selection[0][bin_mean_index_selection[0]])-(tau0-pgb2->tau_sampling_selection[0][pgb2->tau_size_selection-1]))/((pgb2->tau_size_selection-bin_mean_index_cls[0]+1)-1);
           double sum_test = 0.0;
         //  printf("bin_mean_index_selection[0] = %d\n", bin_mean_index_selection[0] );
@@ -3722,7 +3739,7 @@ int galbispectra2_init (
 
 
           //printf("sumB_test = %g *(%g)*\n", sumB_test, 0.5*pow(tau0-pgb2->tau_sampling_selection[0][bin_mean_index_selection[0]],2)-0.5*pow(tau0-pgb2->tau_sampling_selection[0][pgb2->tau_size_selection-1],2));
-          printf("sumB_test = %g *(%g)*\n", sumB_test, 2.*log(tau0-pgb2->tau_sampling_selection[0][bin_mean_index_selection[0]])-2.*log(tau0-pgb2->tau_sampling_selection[0][pgb2->tau_size_selection-1]));
+          //printf("sumB_test = %g *(%g)*\n", sumB_test, 2.*log(tau0-pgb2->tau_sampling_selection[0][bin_mean_index_selection[0]])-2.*log(tau0-pgb2->tau_sampling_selection[0][pgb2->tau_size_selection-1]));
           //printf("tau_size_crop = %d\n", tau_size_crop );
           //printf("sumB_test final = %g (*%g*)\n", sumB_test, 0.5*(pow(tau0-pgb2->tau_sampling_selection[0][bin_mean_index_selection[0]],2)));
         //  for (int index_tau_bessel = 1; index_tau_bessel < bin_mean_index_selection[0]; index_tau_bessel++) {
@@ -3817,8 +3834,10 @@ int galbispectra2_init (
                   &A_LLL,
                   pgb2);*/
           printf("%g      %g\n", z, A_LLL*(ptr->l[index_l]*(ptr->l[index_l]+1))*(sumA+sumB));
+          fprintf(bll_file,"%g      %g\n", z, A_LLL*(ptr->l[index_l]*(ptr->l[index_l]+1))*(sumA+sumB));
         }
       }
+      fclose(bll_file);
       exit(0);
 
       for (int l = 382; l < 383; l++) {
