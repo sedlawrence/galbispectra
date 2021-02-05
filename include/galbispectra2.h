@@ -40,6 +40,7 @@
    double * tau_sampling_cls;
    double * tau_sampling_bessel;
    double ** tau_sampling_bessel2;
+   double *** tau_sampling_selection_hires;
    double *** tau_sampling_lens_bi;
    double ** tau_rp;
    double * test_array;
