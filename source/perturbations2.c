@@ -1725,6 +1725,7 @@ int perturb2_get_k_lists (
 
     if (ppt2->has_cmb == _TRUE_) {
 
+
       /* We set k_max to be proportional to l_max and inversely proportional to tau0, with
       the constant of proportionality given by the user via ppr2->k_max_tau0_over_l_max.
       This parameter should be larger than one to sample the multipoles close to l_max
@@ -1733,6 +1734,23 @@ int perturb2_get_k_lists (
       while for l_max=1000 one requires a value larger than 2. TODO: incorporate these
       variations in the definition of k_max. */
       k_max_cmb = ppr2->k_max_tau0_over_l_max * ppt->l_scalar_max / pba->conformal_age;
+
+      /*double N_step = 8295-1;
+      double epsilon_k = k_min;
+      double ratio_k = pow((k_max_cmb)/epsilon_k,1./N_step);
+      ppt2->k[0] = k_min;
+      double k_period = 0.000452534;
+      double k_linstep = 0.2;
+      double k_logstep_spline = 20.;
+      for (int i = 1; i < 8295; i++) {
+         k  = ppt2->k[i-1]
+          + k_period * k_linstep * ppt2->k[i-1]
+          / (ppt2->k[i-1] + k_linstep/k_logstep_spline);
+          index_k++;
+
+          ppt2->k[i] = k;
+
+        }*/
 
       /* Add points to the k-sampling until we reach k_max */
       while (k < k_max_cmb) {
@@ -1782,6 +1800,7 @@ int perturb2_get_k_lists (
 
     if (ppt2->has_lss == _TRUE_) {
 
+      //ALERT HARDCODED
       k_max_lss = ppt2->k_max_for_pk;
 
       while (k < k_max_lss) {
@@ -1801,10 +1820,35 @@ int perturb2_get_k_lists (
 
       }
 
+
+      ppt2->k_size = index_k;
+       /* Number of points in the k-sampling
+
+
+
+      /*double N_step = 8295-1;
+      double epsilon_k = k_min;
+      double ratio_k = pow((k_max_lss)/epsilon_k,1./N_step);
+      ppt2->k[0] = k_min;
+      double k_period = 0.000452534;
+      double k_linstep = 0.2;
+      double k_logstep_spline = 20.;
+      for (int i = 1; i < 8295; i++) {
+        ppt2->k[i] = ppt2->k[i-1]
+          + k_period * k_linstep * ppt2->k[i-1]
+          / (ppt2->k[i-1] + k_linstep/k_logstep_spline);
+        //printf("pgb2->k_bessel[%d]\n", i, pgb2->k_bessel[i]);
+        //printf("%d    %g\n", i, ppt2->k[i]);
+
+      }
+
+        ppt2->k_size = 8295;*/
+
     } // if LSS sampling
 
 
-    ppt2->k_size = index_k; /* Number of points in the k-sampling */
+    //*/
+
     ppt2->k[ppt2->k_size-1] = MAX (k_max_cmb, k_max_lss); /* Last sampling point = exactly k_max */
 
     /* Free the excess memory we have allocated in ppt2->k */
@@ -1904,6 +1948,8 @@ int perturb2_get_k_lists (
   } // end of if k_out
 
 
+
+
   /* The user might also ask to output the perturbations via the indices
   index_k1 and index_k2 rather than with the exact values k1 and k2. We
   implement this feature here. */
@@ -1951,29 +1997,38 @@ int perturb2_get_k_lists (
   }
 
 
+
   /* Debug - Print out the k-list */
   // printf ("# ~~~ k-sampling for k1 and k2 (size=%d) ~~~\n", ppt2->k_size);
-  // for (int index_k=0; index_k < ppt2->k_size; ++index_k) {
-  //   printf ("%17d %17.7g", index_k, ppt2->k[index_k]);
-  //   for (int index_k_out=0; index_k_out < ppt2->k_out_size; ++index_k_out) {
-  //     if (index_k==ppt2->index_k1_out[index_k_out]) printf ("\t(triplet #%d, k1) ", index_k_out);
-  //     if (index_k==ppt2->index_k2_out[index_k_out]) printf ("\t(triplet #%d, k2) ", index_k_out);
-  //   }
-  //   printf ("\n");
-  // }
+   //for (int index_k=0; index_k < ppt2->k_size; ++index_k) {
+    // printf ("%17d %17.7g", index_k, ppt2->k[index_k]);
+     //for (int index_k_out=0; index_k_out < ppt2->k_out_size; ++index_k_out) {
+      // if (index_k==ppt2->index_k1_out[index_k_out]) printf ("\t(triplet #%d, k1) ", index_k_out);
+       //if (index_k==ppt2->index_k2_out[index_k_out]) printf ("\t(triplet #%d, k2) ", index_k_out);
+     //}
+    // printf ("\n");
+   //}
+
 
   /* Check that the minimum and maximum values of ppt2->k are different. This
   test might fire if the user set a custom time sampling with two equal k-values */
+
+
   class_test ((ppt2->k[0]>=ppt2->k[ppt2->k_size-1]) && (ppt2->k_out_mode==_FALSE_),
     ppt2->error_message,
     "first and last value of ppt2->k coincide; maybe you set k_min_custom>=k_max_custom?");
 
   /* Check that the k array is strictly ascending */
-  for (int index_k=1; index_k < ppt2->k_size; ++index_k)
-    class_test (ppt2->k[index_k]<=ppt2->k[index_k-1],
+  for (int index_k=1; index_k < ppt2->k_size; ++index_k){
+    /*class_test (ppt2->k[index_k]<=ppt2->k[index_k-1],
       ppt2->error_message,
-      "the k-sampling should be strictly ascending");
+      "the k-sampling should be strictly ascending");*/
+      if (ppt2->k[index_k] <= ppt2->k[index_k-1]) {
 
+        printf("ERROR ppt2->k grid is NOT strictly ascending! ppt2->k[%d] = %g <= ppt2->k[%d] = %g\n", index_k, ppt2->k[index_k], index_k-1, ppt2->k[index_k-1] );
+        exit(2);
+      }
+    }
 
 
   // ====================================================================================
@@ -2229,12 +2284,12 @@ int perturb2_get_k_lists (
       } // end of smart sampling
 
 
+
       // -------------------------------------------------------------------------------
       // -                             Add k3 output points                            -
       // -------------------------------------------------------------------------------
 
       if (ppt2->k_out_size > 0) {
-
         /* If SONG is running in k_out_mode, we ignore the k3 grid computed above and
         start over. If an output time or redshift is requested, we do keep the k3 grid,
         lest the output files have only one entry. */
@@ -2302,6 +2357,7 @@ int perturb2_get_k_lists (
 
               ppt2->index_k3_out[index_k_out] = index_k3;
 
+
             } // end of if
 
 
@@ -2330,7 +2386,8 @@ int perturb2_get_k_lists (
               /* Add the k3 value to the ppt2->k3_out array */
               ppt2->k3_out[index_k_out] = k3_grid[ppt2->index_k3_out[index_k_out]];
 
-            } // end of if(index or value)
+            }
+             // end of if(index or value)
 
             /* Debug - Print the k3 grid for all (k1,k2) configurations requested as output */
             // fprintf (stderr, "k1[%d]=%g, k2[%d]=%g, k3_size=%d, k3_min=%g, k3_max=%g\n",
@@ -2346,9 +2403,7 @@ int perturb2_get_k_lists (
             // fprintf (stderr, "\n\n");
 
           } // end of if (k1==k1_out && k2==k2_out)
-
         } // end of for k_out
-
       } // end of if k_out
 
 
@@ -2375,9 +2430,11 @@ int perturb2_get_k_lists (
       //   fprintf (stderr, "\n\n");
       // }
 
-    } // end of for (index_k2)
+    }  // end of for (index_k2)
 
-  } // end of for (index_k1)
+  }// end of for (index_k1)
+
+
 
 
   /* Set the minimum and maximum k-values that will be fed to the differential system.
@@ -6558,7 +6615,7 @@ int perturb2_solve (
       generic_evolver = evolver_ndf15;
     }
 
-  
+
     /*double a = 7.2;
     double b = 4.1;
     double * result;
@@ -6655,7 +6712,7 @@ int perturb2_solve (
     printf("index_k3 = %d\n", index_k3 );
     //printf("index_mark = %d\n", index_mark );
     printf("k = %g, result = %g, ratio = %g\n", k, ppt2->k3[0][1][index_k33], k/ppt2->k3[0][1][index_k33]);
-    exit(0);
+
 
     /* Solve the differential system over the current time interval */
     class_call (generic_evolver(

@@ -41,6 +41,7 @@
    double * tau_sampling_bessel;
    double ** tau_sampling_bessel2;
    double *** tau_sampling_selection_hires;
+   double ** tau_sampling_cls_hires;
    double *** tau_sampling_lens_bi;
    double ** tau_rp;
    double * test_array;
@@ -132,6 +133,9 @@
    int index_source_phi_prime;
 
    int index_source_delta_cdm;
+
+   int index_source_delta_b;
+   int index_source_delta_m;
 
    int index_source_theta;  /* Velocity divergence = -k*k*v */
 
