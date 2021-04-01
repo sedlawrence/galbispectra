@@ -11,8 +11,8 @@
 # originally l_max_scalars = 100 w/ k_max_tau0_over_l_max = 20
 l_max_scalars = 100
 #l_logstep = 1.15
-l_logstep = 2.5
-#l_logstep = 1.15
+#l_logstep = 2.5
+l_logstep = 1.2
 l_linstep = 50
 
 

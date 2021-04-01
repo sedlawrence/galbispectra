@@ -202,6 +202,7 @@ threeJ(int l1, // input l1
         int index_of_l1;
 
         index_of_l1 = floor(l1 - min);
+
         if (index_of_l1 < 0) {
           *result = 0.0;
         }
@@ -862,7 +863,52 @@ int index_of_l(int l,
   return _SUCCESS_;
 }
 
-int interpolate_Dl_for_l(int l,
+//pgb2->Dl[*index_type_first][*index_type_second][index_l][*bin1][*bin2][*index_tau_first][*index_tau_second]
+/* For the scalar second order quantities that are quadratic in first order perturbations (e.g. dens x rsd), their reduced bispectrum can be written
+  as the permuted sum of the product of two angular power spectra. Here we define a function that for a given four term types (two of which come from
+  the second order quantity), three multipoles and three time/redshift locations we yield its reduced bispectrum. Not that only certain combinations of
+  terms can be written in this way!*/
+int Dl_permute(int * index_type_A,
+               int * index_type_B,
+               int * index_type_C,
+               int * index_type_D,
+               int * index_l_first,
+               int * index_l_second,
+               int * index_l_third,
+               int * bin1,
+               int * bin2,
+               int * bin3,
+               int * index_tau_first,
+               int * index_tau_second,
+               int * index_tau_third,
+               double * result,     /* Output the permutated sum */
+               struct galbispectra2 * pgb2){
+
+              double part1 = pgb2->Dl[*index_type_A][*index_type_C][index_l_second][*bin1][*bin2][*index_tau_first][*index_tau_second]
+                             *pgb2->Dl[*index_type_B][*index_type_D][index_l_third][*bin1][*bin3][*index_tau_first][*index_tau_third]
+                             +pgb2->Dl[*index_type_A][*index_type_C][index_l_third][*bin1][*bin3][*index_tau_first][*index_tau_third]
+                             *pgb2->Dl[*index_type_B][*index_type_D][index_l_second][*bin1][*bin2][*index_tau_first][*index_tau_second];
+
+
+              double part2 = pgb2->Dl[*index_type_A][*index_type_C][index_l_first][*bin2][*bin1][*index_tau_second][*index_tau_first]
+                             *pgb2->Dl[*index_type_B][*index_type_D][index_l_third][*bin2][*bin3][*index_tau_second][*index_tau_third]
+                             +pgb2->Dl[*index_type_A][*index_type_C][index_l_third][*bin2][*bin3][*index_tau_second][*index_tau_third]
+                             *pgb2->Dl[*index_type_B][*index_type_D][index_l_first][*bin2][*bin1][*index_tau_second][*index_tau_first];
+
+              double part3 = pgb2->Dl[*index_type_A][*index_type_C][index_l_first][*bin3][*bin1][*index_tau_third][*index_tau_first]
+                              *pgb2->Dl[*index_type_B][*index_type_D][index_l_second][*bin3][*bin2][*index_tau_third][*index_tau_second]
+                              +pgb2->Dl[*index_type_A][*index_type_C][index_l_second][*bin3][*bin2][*index_tau_third][*index_tau_second]
+                              *pgb2->Dl[*index_type_B][*index_type_D][index_l_first][*bin3][*bin1][*index_tau_third][*index_tau_first];
+
+              *result = part1+part2+part3;
+
+              return _SUCCESS_;
+
+                }
+
+/* For a given Dl quantity this function will find the exact specified input-multipole via a linear interpolation between the two nearest
+  stored multipole values */
+int Dl_interpolate_for_l(int l,
                int * index_type_first,
                int * index_type_second,
                int * bin1,
@@ -1419,106 +1465,16 @@ int galbispectra2_init (
   double min, max;
   //double A_test;
   double  A_test;//[2*ptr->l[ptr->l_size[ppt->index_md_scalars]-1]]+1;
-  double * threeJJ;
+  /*double * threeJJ;
 
   double * threeJlist1;
   double * threeJlist2;
   double * threeJlist3;
-  //class_alloc1D(A_test, ptr->l_size[ppt->index_md_scalars], pgb2->error_message);
-  /*class_alloc1D(threeJJ, ptr->l_size[ppt->index_md_scalars], pgb2->error_message);
+  class_alloc1D(threeJJ, ptr->l_size[ppt->index_md_scalars], pgb2->error_message);
   class_alloc1D(threeJlist1, ptr->l_size[ppt->index_md_scalars], pgb2->error_message);
   class_alloc1D(threeJlist2, ptr->l_size[ppt->index_md_scalars], pgb2->error_message);
-  class_alloc1D(threeJlist3, ptr->l_size[ppt->index_md_scalars], pgb2->error_message);
+  class_alloc1D(threeJlist3, ptr->l_size[ppt->index_md_scalars], pgb2->error_message);*/
 
-  class_call(drc3jj (5,
-          5,
-          1,
-          -1,
-          &min,
-          &max,
-          threeJJ,
-          1000,
-          pgb2->error_message),
-          pgb2->error_message,
-          pgb2->error_message);
-
-   double test_result1;
-
-   threeJ(5,
-          5,
-          5,
-          1,
-          -1,
-          threeJlist1,
-          &test_result1,
-          pgb2->error_message);
-
-    double test_result2;
-
-    threeJ(5,
-           5,
-           5,
-           -1,
-           1,
-           threeJlist2,
-           &test_result2,
-           pgb2->error_message);
-
-     double test_result3;
-
-     threeJ(1,
-            9,
-            6,
-            0,
-            0,
-            threeJlist3,
-            &test_result3,
-            pgb2->error_message);
-
-   printf("test_result1 = %g\n",test_result1);
-   printf("test_result2 = %g\n",test_result2);
-   printf("test_result2 = %g\n",test_result3);
-
-  Al1l2l3(5,
-          5,
-          5,
-          threeJlist1,
-          &A_test,
-          pgb2->error_message);
-  double sixJ_result;
-
-  sixJ(2,
-       1,
-       1,
-       1,
-       1,
-       1,
-       threeJlist1,
-       &sixJ_result,
-       pgb2->error_message);
-  printf("sixJ_result = %g\n", sixJ_result);
-  printf("A_test = %g\n", A_test);
-
-
-  printf("threeJ[0] = %g\n", threeJJ[0]);
-  printf("threeJ[1] = %g\n", threeJJ[1]);
-  printf("threeJ[2] = %g\n", threeJJ[2]);
-  printf("threeJ[3] = %g\n", threeJJ[3]);
-  printf("threeJ[4] = %g\n", threeJJ[4]);
-  printf("threeJ[5] = %g\n", threeJJ[5]);
-  printf("threeJ[6] = %g\n", threeJJ[6]);
-  printf("threeJ[7] = %g\n", threeJJ[7]);
-  printf("threeJ[8] = %g\n", threeJJ[8]);
-  printf("threeJ[9] = %g\n", threeJJ[9]);
-  printf("threeJ[10] = %g\n", threeJJ[10]);
-  int index_of_l1;
-  int l1_required;
-  l1_required = 5;
-  index_of_l1 = floor(l1_required - min);
-  printf("index_of_l1 = %d\n", index_of_l1 );
-  printf("threeJ[%d] = %g\n", index_of_l1, threeJJ[index_of_l1]);
-  printf("min = %g\n", min);
-  printf("max = %g\n", max);*/
 
 
 
@@ -1585,6 +1541,7 @@ int galbispectra2_init (
                              size_X,
                              _TRUE_, /* True for linear-fixed grids, false for strictly-increasing grids */
                              interp_exact_array_Y);
+
   for (int i = 0; i < 500; i++) {
     //interp_exact_array_Y[i] = 20.5+i;
     //printf("interp_exact_array_Y[%d] = %g (*%g*)\n", i , interp_exact_array_Y[i], (20.5+i)*(20.5+i));
@@ -1658,13 +1615,135 @@ int galbispectra2_init (
   /* eps defines the tau_sampling_bessel2 grid, this grid is defined from a tau value in the tau_sampling_cls grid up to and including tau0-eps */
   double eps = 1e-6;
   printf("ppt2->k_size = %d\n", ppt2->k_size);
-  /*for (int i = 1; i < 8295; i++) {
-    printf("%d    %g\n", i, ppt->k[ppt->index_md_scalars][i]);
-  }*/
+
+
+  int index_l_min = 0;
+  //int index_l_max = 16;
+
+  //int index_l_max = ptr->l_size[ppt->index_md_scalars]-1;
+  int index_l_max = 18;
+
+  /*double * threeJlist_test;
+  double * threeJlist_A1;
+  double * threeJlist_A2;
+  double * threeJlist_A3;
+  double * threeJlist_C1;
+  double * threeJlist_C2;
+  double * threeJlist_C3;
+  double * threeJlist_test2;
+
+  //class_alloc1D(threeJlist_test, ptr->l_size[ppt->index_md_scalars], pgb2->error_message);
+  class_alloc(threeJlist_A1, ptr->l_size[ppt->index_md_scalars] * sizeof(double), pgb2->error_message);
+  class_alloc(threeJlist_A2, ptr->l_size[ppt->index_md_scalars] * sizeof(double), pgb2->error_message);
+  class_alloc(threeJlist_A3, ptr->l_size[ppt->index_md_scalars] * sizeof(double), pgb2->error_message);
+  class_alloc(threeJlist_C1, ptr->l_size[ppt->index_md_scalars] * sizeof(double), pgb2->error_message);
+  class_alloc(threeJlist_C2, ptr->l_size[ppt->index_md_scalars] * sizeof(double), pgb2->error_message);
+  class_alloc(threeJlist_C3, ptr->l_size[ppt->index_md_scalars] * sizeof(double), pgb2->error_message);
+  class_alloc(threeJlist_test, ptr->l_size[ppt->index_md_scalars] * sizeof(double), pgb2->error_message);
+  class_alloc(threeJlist_test2, ptr->l_size[ppt->index_md_scalars] * sizeof(double), pgb2->error_message);
+
+  double A114_factor_test, A110_factor_test, A102_factor_test;
+  double min_test,max_test;
+  for (int index_l = index_l_min; index_l < index_l_max+1; index_l++) {
+    if (ptr->l[index_l] % 2 != 0) {
+      continue;
+    }
+    //printf("======================= ptr->l[%d] = %d =======================\n", index_l, ptr->l[index_l]);
+    double A1_test, A2_test, A3_test;
+    double C1_test, C2_test, C3_test;
+    //herehere
+    //printf("================================================\n");
+    threeJ(ptr->l[index_l],
+           ptr->l[index_l],
+           ptr->l[index_l],
+           1,
+           -1,
+           threeJlist_test,
+           &A1_test,
+           pgb2->error_message);
+
+    class_call(drc3jj (ptr->l[index_l],
+            ptr->l[index_l],
+            1,
+            -1,
+            &min_test,
+            &max_test,
+            threeJlist_test2,
+            1000,
+            pgb2->error_message),
+            pgb2->error_message,
+            pgb2->error_message);
+
+     threeJ(ptr->l[index_l],
+            ptr->l[index_l],
+            ptr->l[index_l],
+            -1,
+            1,
+            threeJlist_test,
+            &A2_test,
+            pgb2->error_message);
+
+
+     threeJ(ptr->l[index_l],
+            ptr->l[index_l],
+            ptr->l[index_l],
+            0,
+            0,
+            threeJlist_test,
+            &A3_test,
+            pgb2->error_message);
+
+      threeJ(ptr->l[index_l],
+             ptr->l[index_l],
+             ptr->l[index_l],
+             2,
+             -2,
+             threeJlist_test,
+             &C1_test,
+             pgb2->error_message);
+
+
+       threeJ(ptr->l[index_l],
+              ptr->l[index_l],
+              ptr->l[index_l],
+              -2,
+              2,
+              threeJlist_test,
+              &C2_test,
+              pgb2->error_message);
+
+
+       threeJ(ptr->l[index_l],
+              ptr->l[index_l],
+              ptr->l[index_l],
+              0,
+              0,
+              threeJlist_test,
+              &C3_test,
+              pgb2->error_message);
+
+
+    double A_test_test;
+
+    double A_LLL_test = 0.5*(A1_test+A2_test)/A3_test;
+    double C_LLL_test = 0.5*(C1_test+C2_test)/C3_test;
+    //printf("z = %g\n", z);
+    //printf("A_LLL = %g\n", A_LLL_test);
+    //printf("C_LLL = %g\n", C_LLL_test);
+    printf("%d      %g      %g\n", ptr->l[index_l],  A_LLL_test, C_LLL_test);
+    //printf("%d      %g    %g    %g    %g    %g    %g\n", ptr->l[index_l], A1_test, A2_test, A3_test, C1_test, C2_test, C3_test);
 
 
 
+    A102_factor_test = -2.*A_LLL_test*pow(ptr->l[index_l],2)*pow(ptr->l[index_l]+1,2);
 
+    A110_factor_test = -C_LLL_test*(ptr->l[index_l]+2.)*(ptr->l[index_l]+1.)*(ptr->l[index_l]+0.)*(ptr->l[index_l]-1.);
+
+    A114_factor_test = -1.*pow(ptr->l[index_l], 2)*pow(ptr->l[index_l]+1,2);
+    //printf("factors:  %g    %g    %g    %g\n", A102_factor_test+A110_factor_test+A114_factor_test, A102_factor_test, A110_factor_test, A114_factor_test);
+    printf("total factor = %g\n", A102_factor_test+A110_factor_test+A114_factor_test);
+  }
+  */
 
 
 
@@ -1673,15 +1752,11 @@ int galbispectra2_init (
 
 
 
-  int index_l_min = ptr->l_size[ppt->index_md_scalars]-1;
-
-  //int index_l_max = 0;
-  int index_l_max = ptr->l_size[ppt->index_md_scalars]-1;
 
 
   /* Please ensure the pgb2->tau_size_selection grid is of a higher resolution than pgb2->r_size * pgb2->alpha_size = 13*/
   pgb2->tau_size_cls = 500; //prev on 500
-  pgb2->tau_size_selection = 1500; //prev on 601
+  pgb2->tau_size_selection = 500; //prev on 601
 
 
 
@@ -3141,6 +3216,9 @@ int galbispectra2_init (
         printf("##ppt->k_size = %d\n", ppt->k_size[ppt->index_md_scalars]);
         if(pgb2->index_type_density != -1){
           for (int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
+            if (ptr->l[index_l] % 2 != 0) {
+              continue;
+            }
             for (int index_tau = 0; index_tau < pgb2->tau_size_cls; index_tau++){
               for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
                 double x = pgb2->k_bessel[index_k_bessel]*(pba->conformal_age - pgb2->tau_sampling_cls[index_tau]);
@@ -3819,6 +3897,9 @@ int galbispectra2_init (
       int index_k;
       //for (int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
       for(int index_l = index_l_min; index_l < index_l_max+1; index_l++){
+        if (ptr->l[index_l] % 2 != 0) {
+          continue;
+        }
       //for (int index_l = ptr->l_size[ppt->index_md_scalars]-1; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
       //for (int index_l = ptr->l_size[ppt->index_md_scalars]-2; index_l < ptr->l_size[ppt->index_md_scalars]-1; index_l++) {
       //for (int index_l = 0; index_l < 1; index_l++) {
@@ -3882,8 +3963,8 @@ int galbispectra2_init (
 
               // WARNING magnification edited
               //original G4-G4 working:
-              g4_sum += (2.-5*ptr->s_bias)
-                        *phi_plus_psi
+              g4_sum += //(2.-5*ptr->s_bias)
+                        phi_plus_psi
                         *j
                         *w_trapz_lens_bessel2[index_tau][index_tau_bessel]
                         /chi_cls;
@@ -4084,7 +4165,7 @@ int galbispectra2_init (
   printf("Starting integrations..\n");
 
   /* Allocate array for class_xfer[index_type][bin][index_l][index_k] */
-  double **** class_xfer;
+/*  double **** class_xfer;
   class_alloc(class_xfer, pgb2->type_size * sizeof(double ****), pgb2->error_message);
 
   for (int index_type_first = 0; index_type_first < pgb2->type_size; index_type_first++){
@@ -4101,10 +4182,10 @@ int galbispectra2_init (
 
       }
     }
-  }
+  }*/
 
   /* CLASS STYLE ANGULAR POWER SPECTRUM INTEGRATING TIME FIRST */
-  printf("Entering CLASS style angular-transfer- preparation.. \n");
+  /*printf("Entering CLASS style angular-transfer- preparation.. \n");
   FILE * out1 = fopen("output/SONG_Delta_Dens_l_CLASS_style.dat", "w");
   FILE * out2 = fopen("output/SONG_Delta_G4_l_CLASS_style.dat", "w");
   FILE * out3 = fopen("output/SONG_pk_times_factor.dat", "w");
@@ -4122,7 +4203,7 @@ int galbispectra2_init (
           //printf("index_k_bessel = %d\n", index_k_bessel);
           double tau_sum = 0.0;
           /* We loop over the tau-selection indices and interpolate on the tau_cls grid */
-          for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++) {
+        /*  for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++) {
             //printf("index_tau = %d\n", index_tau);
             tau_one_class = pgb2->tau_sampling_selection[bin1][index_tau];
 
@@ -4154,7 +4235,7 @@ int galbispectra2_init (
     }
     fclose(out1);
     fclose(out2);
-
+    */
 
     /*printf("Entering CLASS style k-integration... \n");
     double Pkk;
@@ -4278,6 +4359,9 @@ int galbispectra2_init (
           //for (int index_l = ptr->l_size[ppt->index_md_scalars]-1; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
           fprintf(Dl_file, "#index_l = %d (l=%d)\n", index_l, ptr->l[index_l]);
           for(int index_l = index_l_min; index_l < index_l_max+1; index_l++){
+            if (ptr->l[index_l] % 2 != 0) {
+              continue;
+            }
           //for(int index_l = ptr->l_size[ppt->index_md_scalars]-1; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++){
           //for(int index_l = ptr->l_size[ppt->index_md_scalars]-1; index_l < ptr->l_size[ppt->index_md_scalars]-1; index_l++){
           //for (int index_l = ptr->l_size[ppt->index_md_scalars]-2; index_l < ptr->l_size[ppt->index_md_scalars]-1; index_l++) {
@@ -4387,7 +4471,9 @@ int galbispectra2_init (
 
             printf("#### Dl[%d][%d][%d][%d][%d][%d][%d]\n",  index_type_first, index_type_second, index_l, bin1, bin2, bin_mean_index_selection[bin1], bin_mean_index_selection[bin2]);
             for(int index_l = index_l_min; index_l < index_l_max+1; index_l++){
-
+              if (ptr->l[index_l] % 2 != 0) {
+                continue;
+              }
               printf("%d      %g       %g\n", ptr->l[index_l],
                                               ptr->l[index_l]*(ptr->l[index_l]+1)*pgb2->Dl[index_type_first][index_type_second][index_l][bin1][bin2][bin_mean_index_selection[bin1]][bin_mean_index_selection[bin2]]/(2*_PI_),
                                               ptr->l[index_l]*(ptr->l[index_l]+1)*pgb2->Cl3[index_type_first][index_type_second][index_l][bin1][bin2]/(2*_PI_));
@@ -4504,6 +4590,9 @@ int galbispectra2_init (
 
       //for (int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
       for(int index_l = index_l_min; index_l < index_l_max+1; index_l++){
+        if (ptr->l[index_l] % 2 != 0) {
+          continue;
+        }
       //for (int index_l = ptr->l_size[ppt->index_md_scalars]-1; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
       //for (int index_l = ptr->l_size[ppt->index_md_scalars]-2; index_l < ptr->l_size[ppt->index_md_scalars]-1; index_l++) {
         printf("#############index_l = %d (l=%d)##################\n", index_l, ptr->l[index_l]);
@@ -4672,7 +4761,7 @@ int galbispectra2_init (
                   -1,
                   1,
                   threeJlist,
-                  &A1,
+                  &A2,
                 pgb2->error_message);
          /*class_call(drc3jj (ptr->l[index_l],
                              ptr->l[index_l],
@@ -4787,7 +4876,8 @@ int galbispectra2_init (
           A114 = -1.*pow(ptr->l[index_l], 2)*pow(ptr->l[index_l]+1,2)*(sumAA114+sumBA114);
 
 
-          printf("%g      %g      %g      %g      %g\n", z, A102+A110+A114, A102, A110, A114);
+          printf("%g      %g      %g      %g      %g      %g\n", z, A102+A110+A114, A102, A110, A114, sumAA110+sumBA110);
+          //printf("total factor = %g\n", A102_factor+A110_factor+A114_factor);
           //fprintf(bll_file,"%g      %g      %g      %g      %g\n", z, A102+A110+A114, A102, A110, A114);
 
         }
@@ -4876,7 +4966,7 @@ int galbispectra2_init (
           sum_1z1 = 0.0;
           sum_11z = 0.0;
 
-          /*interpolate_Dl_for_l(l2,
+          /*Dl_interpolate_for_l(l2,
                                &type_A,
                                &type_C,
                                &bin1,
@@ -5283,7 +5373,7 @@ int galbispectra2_init (
                     double sum_first = 0.0;
                     //for (int index_tau_bessel_first = 0; index_tau_bessel_first < bessel_boost*(index_tau_first+1)-1; index_tau_bessel++) {
 
-                      interpolate_Dl_for_l(l2,
+                      Dl_interpolate_for_l(l2,
                                            &type_A,
                                            &type_C,
                                            &bin1,
@@ -5300,7 +5390,7 @@ int galbispectra2_init (
                     //  printf("DAC12 = %g \n", DAC12);
                       //printf("last_index_l_DBD13 = %d\n", last_index_l_DBD13);
 
-                       interpolate_Dl_for_l(l3,
+                       Dl_interpolate_for_l(l3,
                                             &type_B,
                                             &type_D,
                                             &bin1,
@@ -5316,7 +5406,7 @@ int galbispectra2_init (
                         //printf("DBD13 = %g \n", DBD13);
 
 
-                        interpolate_Dl_for_l(l2,
+                        Dl_interpolate_for_l(l2,
                                              &type_B,
                                              &type_C,
                                              &bin1,
@@ -5330,7 +5420,7 @@ int galbispectra2_init (
                                              ppt);
 
                        //printf("last_index_l_DBC13 = %d\n", last_index_l_DBC13);
-                       interpolate_Dl_for_l(l3,
+                       Dl_interpolate_for_l(l3,
                                             &type_A,
                                             &type_D,
                                             &bin1,
@@ -5346,7 +5436,7 @@ int galbispectra2_init (
                       //  sum_first += (DAC12*DBD13+DBC12*DAD13)*w_trapz_lens_bessel2[index_tau][index_tau_bessel];
                       //}
 
-                      interpolate_Dl_for_l(l1,
+                      Dl_interpolate_for_l(l1,
                                            &type_A,
                                            &type_C,
                                            &bin2,
@@ -5359,7 +5449,7 @@ int galbispectra2_init (
                                            ptr,
                                            ppt);
 
-                       interpolate_Dl_for_l(l3,
+                       Dl_interpolate_for_l(l3,
                                             &type_B,
                                             &type_D,
                                             &bin2,
@@ -5373,7 +5463,7 @@ int galbispectra2_init (
                                             ppt);
 
 
-                       interpolate_Dl_for_l(l1,
+                       Dl_interpolate_for_l(l1,
                                             &type_B,
                                             &type_C,
                                             &bin2,
@@ -5386,7 +5476,7 @@ int galbispectra2_init (
                                             ptr,
                                             ppt);
 
-                       interpolate_Dl_for_l(l3,
+                       Dl_interpolate_for_l(l3,
                                             &type_A,
                                             &type_D,
                                             &bin2,
@@ -5400,7 +5490,7 @@ int galbispectra2_init (
                                             ppt);
 
 
-                      interpolate_Dl_for_l(l2,
+                      Dl_interpolate_for_l(l2,
                                            &type_A,
                                            &type_C,
                                            &bin3,
@@ -5413,7 +5503,7 @@ int galbispectra2_init (
                                            ptr,
                                            ppt);
 
-                       interpolate_Dl_for_l(l1,
+                       Dl_interpolate_for_l(l1,
                                             &type_B,
                                             &type_D,
                                             &bin3,
@@ -5427,7 +5517,7 @@ int galbispectra2_init (
                                             ppt);
 
 
-                        interpolate_Dl_for_l(l2,
+                        Dl_interpolate_for_l(l2,
                                              &type_B,
                                              &type_C,
                                              &bin3,
@@ -5440,7 +5530,7 @@ int galbispectra2_init (
                                              ptr,
                                              ppt);
 
-                       interpolate_Dl_for_l(l1,
+                       Dl_interpolate_for_l(l1,
                                             &type_A,
                                             &type_D,
                                             &bin3,
