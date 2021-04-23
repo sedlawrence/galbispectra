@@ -17,6 +17,7 @@
  #include "input.h"
  #include "perturbations.h"
  #include "perturbations2_macros.h"
+ #include "wigxjpf.h"
 
 
  struct galbispectra2
@@ -146,7 +147,50 @@
 
    int index_type_d2; /* Second Doppler term */
 
+   /* Bispectrum types */
+   /* Newtonian */
+   int index_bisp_dens_mono; //3.19
+   int index_bisp_dens_di; //3.20
+   int index_bisp_dens_quad; //3.21
+   int index_bisp_v_vpp; //3.25
+   int index_bisp_vp_squared; //3.26
+   int index_bisp_v_densp; // 3.27
+   int index_bisp_vp_dens; // 3.28
+   int index_bisp_so_rsd; // 3.46
+
+   /* Terms that include lensing */
+   int index_bisp_lens_dens; //3.32
+   int index_bisp_vp_lens; //3.33
+   int index_bisp_lens_squared; //3.34
+   int index_bisp_Ddelta_Dpsi; //3.35
+   int index_bisp_Dvp_Dpsi; // 3.36
+   int index_bisp_Dlens_Dpsi; // 3.37
+   int index_bisp_int_Dlens_DPsi1; //3.38
+   int index_bisp_int_nabla2_DPsi1_DPsi1; // 3.39
+   int index_bisp_so_lens; // 3.57
+
+   int bisp_type_size;
+
    double ** tau_sampling_selection;
+
+   double ******* redbi;
+
+   double **** fo_dens_integ_hires_in_l;
+   double ******* densdens_nDl1l2;
+   int l_exact;
+   int l_minus_two;
+   int l_minus_one;
+   int l_plus_one;
+   int l_plus_two;
+
+   int n_is_minus_one;
+   int n_is_plus_one;
+   int n_is_minus_two;
+   int n_is_plus_two;
+   int n_is_zero;
+   int * n;
+
+   int ** l_dual;
 
    double ****** integral_over_single_window;
 

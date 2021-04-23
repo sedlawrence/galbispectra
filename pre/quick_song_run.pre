@@ -11,8 +11,8 @@
 # originally l_max_scalars = 100 w/ k_max_tau0_over_l_max = 20
 l_max_scalars = 100
 #l_logstep = 1.15
-#l_logstep = 2.5
-l_logstep = 1.2
+l_logstep = 2.5
+#l_logstep = 1.2
 l_linstep = 50
 
 
@@ -111,16 +111,16 @@ k_max_tau0_over_l_max_song = 90
 #k_max_tau0_over_l_max_song = 180
 
 #22.03.21 (lower precision ppt->k_size[scalars] = 87)
-#k_step_sub_song = 0.3
-#k_step_super_song = 0.025
-#k_logstep_super_song = 1.8
-#k_step_transition_song = 0.2
+k_step_sub_song = 0.3
+k_step_super_song = 0.025
+k_logstep_super_song = 1.8
+k_step_transition_song = 0.2
 
 #higher precision
-k_step_sub_song = 0.05
-k_step_super_song = 0.005
-k_logstep_super_song = 1.007
-k_step_transition_song = 0.05
+#k_step_sub_song = 0.05
+#k_step_super_song = 0.005
+#k_logstep_super_song = 1.007
+#k_step_transition_song = 0.05
 
 ## Quick debug
 # k_min_tau0_song = 0.1

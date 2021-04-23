@@ -3,7 +3,10 @@
 #include <math.h>
 #include "galbispectra2.h"
 #include "perturbations2.h"
+//#include "wigxjpf.h"
 #define getName(var)  #var
+
+
 
 /*==================================================================
 ====================================================================
@@ -219,204 +222,141 @@ sixJ(int j1,
        int j4,
        int j5,
        int j6,
-       double * threeJlist,
-       double * result,
+       double * threeJlist, /* Input empty array */
+       double * result, /* Output */
        struct galbispectra2 * pgb2){
 
         double I, II, III, IV;
         double count;
         count = 0.0;
         for (int m1 = -j1; m1 < j1+1; m1++) {
-          //printf("m1 = %d\n", m1);
           for (int m2 = -j2; m2 < j2+1; m2++) {
-            //printf("m2 = %d\n", m2);
             for (int m3 = -j3; m3 < j3+1; m3++) {
-              //printf("m3 = %d\n", m3);
-              if (m1+m2+m3 != 0) {
-                continue;
-              }
-              threeJ(j1,
-                     j2,
-                     j3,
-                     -m2,
-                     -m3,
-                     threeJlist,
-                     &I,
-                     pgb2->error_message);
+
+              /* in each of the if statements, check if the triangle condition holds */
+              if (m1+m2+m3 != 0) { continue;}
+
+              threeJ(j1, j2, j3, -m2, -m3, threeJlist, &I, pgb2->error_message);
               if (m2 == -1 && m3 == 0) {
-                printf("m3 = -1, m3 = 0, I = %g\n", I);
+                //printf("m3 = -1, m3 = 0, I = %g\n", I);
 
               }
 
 
               for (int m4 = -j4; m4 < j4+1; m4++) {
-                //printf("m4 = %d\n", m4);
                 for (int m5 = -j5; m5 < j5+1; m5++) {
-                  //printf("m5 = %d\n", m5);
-                  if ((-m4+m5+m3) != 0) {
-                    continue;
-                  }
+
+                  if ((-m4+m5+m3) != 0) { continue;}
+
+                  threeJ(j4, j5, j3, m5, m3, threeJlist, &IV, pgb2->error_message);
+
                   for (int m6 = -j6; m6 < j6+1; m6++) {
-                    //printf("m6 = %d\n", m6);
-                    if (m1-m5+m6 != 0) {
-                      continue;
-                    }
 
-                    if (m4+m2-m6 != 0) {
-                      continue;
-                    }
-                    printf("%dx%dx%dx%dx%dx%d\n",m1,m2,m3,m4,m5,m6);
+                    if (m1-m5+m6 != 0) { continue;}
 
-
+                    if (m4+m2-m6 != 0) {continue;}
+                    /* just count the number of iterations for reference */
                     count += 1.;
 
                     double factor = pow(-1., (j1-m1)+(j2-m2)+(j3-m3)+(j4-m4)+(j5-m5)+(j6-m6));
 
+                    threeJ(j1, j5, j6, -m5, m6, threeJlist, &II, pgb2->error_message);
 
-                     threeJ(j1,
-                            j5,
-                            j6,
-                            -m5,
-                            m6,
-                            threeJlist,
-                            &II,
-                            pgb2->error_message);
-
-                    threeJ(j4,
-                           j2,
-                           j6,
-                           m2,
-                           -m6,
-                           threeJlist,
-                           &III,
-                           pgb2->error_message);
-
-
+                    threeJ(j4, j2, j6, m2, -m6, threeJlist, &III, pgb2->error_message);
 
                     *result += factor*I*II*III*IV;
-
-                    if (I>0) {
-                      printf("product = %g\n", factor*I*II*III*IV);
-
-                    }
                   }
                 }
               }
             }
           }
         }
-        printf("count = %g\n", count);
-}
+      }
+
+gl1l2l3(int l1,
+        int l2,
+        int l3,
+        double * threeJlist,
+        double * result,
+        struct galbispectra2 * pgb2){
+
+        double AI;
+
+        threeJ(l1, l2, l3, 0, 0, threeJlist, &AI, pgb2->error_message);
+
+        *result = sqrt((2*l1+1)*(2*l2+1)*(2*l3+1)/4/_PI_)*AI;
+        }
 
 
 
 Al1l2l3(int l1,
         int l2,
         int l3,
-        double * threeJlist,
+        double * threeJlist, /* Empty input array to store 3j numbers */
         double * result,
         struct galbispectra2 * pgb2){
 
+        double AI, AII, AIII;
 
-  double AI, AII, AIII;
+        threeJ(l1, l2, l3, 1, -1, threeJlist, &AI, pgb2->error_message);
 
+        threeJ(l1, l2, l3, -1, 1, threeJlist, &AII, pgb2->error_message);
 
-   threeJ(l1,
-          l2,
-          l3,
-          1,
-          -1,
-          threeJlist,
-          &AI,
-          pgb2->error_message);
+        threeJ(l1, l2, l3, 0, 0, threeJlist, &AIII, pgb2->error_message);
 
+        double A = 0.5*(AI+AII)/AIII;
 
-    printf("AI = %g\n", AI );
-
-
-   threeJ(l1,
-          l2,
-          l3,
-          -1,
-          1,
-          threeJlist,
-          &AII,
-          pgb2->error_message);
-
-    printf("AII = %g\n", AII );
-
-
-   threeJ(l1,
-          l2,
-          l3,
-          0,
-          0,
-          threeJlist,
-          &AIII,
-          pgb2->error_message);
-
-
-  printf("AIII = %g\n", AIII );
-
-  double A = 0.5*(AI+AII)/AIII;
-
-  *result = A;
-
+        *result = A;
 }
 
 Cl1l2l3(int l1,
         int l2,
         int l3,
-        double * threeJlist,
+        double * threeJlist, /* Empty input array to store 3j numbers */
         double * result,
         struct galbispectra2 * pgb2){
 
+        double AI, AII, AIII;
 
-  double AI, AII, AIII;
+        threeJ(l1, l2, l3, 2, -2, threeJlist, &AI, pgb2->error_message);
 
+        threeJ(l1, l2, l3, -2, 2, threeJlist, &AII, pgb2->error_message);
 
-   threeJ(l1,
-          l2,
-          l3,
-          2,
-          -2,
-          threeJlist,
-          &AI,
-          pgb2->error_message);
+        threeJ(l1, l2, l3, 0, 0, threeJlist, &AIII, pgb2->error_message);
 
+        double A = 0.5*(AI+AII)/AIII;
 
-    printf("CI = %g\n", AI );
-
-
-   threeJ(l1,
-          l2,
-          l3,
-          -2,
-          2,
-          threeJlist,
-          &AII,
-          pgb2->error_message);
-
-    printf("CII = %g\n", AII );
-
-
-   threeJ(l1,
-          l2,
-          l3,
-          0,
-          0,
-          threeJlist,
-          &AIII,
-          pgb2->error_message);
-
-
-  printf("CIII = %g\n", AIII );
-
-  double A = 0.5*(AI+AII)/AIII;
-
-  *result = A;
-
+        *result = A;
 }
+
+/* This geometric quantity appeats in the bispectrum dipole and quadrupole, its formula is given in Eq. A.16 of
+  [1510.04202]. For a given set of 6 input multipoles, this function will return a single number (double)/ */
+Ql1l2l3l4l5l6(int l1,
+              int l2,
+              int l3,
+              int l4,
+              int l5,
+              int l6,
+              double * temp_array, /* Empty input array to store 3j numbers */
+              double * result, /* Output */
+              struct galbispectra2 * pgb2){
+
+              double sixJ_result = 0.;
+
+              sixJ(l1, l2, l3, l5, l6, l4, temp_array, &sixJ_result, pgb2->error_message);
+
+              double sqrt_factor = sqrt((4*_PI_)*(4*_PI_)*(4*_PI_)*(2*l1+1)*(2*l2+1)*(2*l3+1));
+
+              double minus_one_factor = pow(-1, l4+l5+l6);
+
+              double AI, AII, AIII;
+
+              threeJ(l4, l6, l1, 0, 0, temp_array, &AI, pgb2->error_message);
+              threeJ(l5, l4, l2, 0, 0, temp_array, &AII, pgb2->error_message);
+              threeJ(l6, l5, l3, 0, 0, temp_array, &AIII, pgb2->error_message);
+
+              *result = sqrt_factor*AI*AII*AIII*sixJ_result*minus_one_factor;
+    }
 
 
 
@@ -867,38 +807,38 @@ int index_of_l(int l,
 /* For the scalar second order quantities that are quadratic in first order perturbations (e.g. dens x rsd), their reduced bispectrum can be written
   as the permuted sum of the product of two angular power spectra. Here we define a function that for a given four term types (two of which come from
   the second order quantity), three multipoles and three time/redshift locations we yield its reduced bispectrum. Not that only certain combinations of
-  terms can be written in this way!*/
-int Dl_permute(int * index_type_A,
-               int * index_type_B,
-               int * index_type_C,
-               int * index_type_D,
-               int * index_l_first,
-               int * index_l_second,
-               int * index_l_third,
-               int * bin1,
-               int * bin2,
-               int * bin3,
-               int * index_tau_first,
-               int * index_tau_second,
-               int * index_tau_third,
+  terms can be written in this way! See [1510.04202] for the formulae. This function must be called AFTER the pgb2->Dl arrays are filled.*/
+int Dl_permute(int  index_type_A,
+               int  index_type_B,
+               int  index_type_C,
+               int  index_type_D,
+               int  index_l_first,
+               int  index_l_second,
+               int  index_l_third,
+               int  bin1,
+               int  bin2,
+               int  bin3,
+               int  index_tau_first,
+               int  index_tau_second,
+               int  index_tau_third,
                double * result,     /* Output the permutated sum */
                struct galbispectra2 * pgb2){
 
-              double part1 = pgb2->Dl[*index_type_A][*index_type_C][index_l_second][*bin1][*bin2][*index_tau_first][*index_tau_second]
-                             *pgb2->Dl[*index_type_B][*index_type_D][index_l_third][*bin1][*bin3][*index_tau_first][*index_tau_third]
-                             +pgb2->Dl[*index_type_A][*index_type_C][index_l_third][*bin1][*bin3][*index_tau_first][*index_tau_third]
-                             *pgb2->Dl[*index_type_B][*index_type_D][index_l_second][*bin1][*bin2][*index_tau_first][*index_tau_second];
+              double part1 = pgb2->Dl[index_type_A][index_type_C][index_l_second][bin1][bin2][index_tau_first][index_tau_second]
+                             *pgb2->Dl[index_type_B][index_type_D][index_l_third][bin1][bin3][index_tau_first][index_tau_third]
+                             +pgb2->Dl[index_type_A][index_type_C][index_l_third][bin1][bin3][index_tau_first][index_tau_third]
+                             *pgb2->Dl[index_type_B][index_type_D][index_l_second][bin1][bin2][index_tau_first][index_tau_second];
 
 
-              double part2 = pgb2->Dl[*index_type_A][*index_type_C][index_l_first][*bin2][*bin1][*index_tau_second][*index_tau_first]
-                             *pgb2->Dl[*index_type_B][*index_type_D][index_l_third][*bin2][*bin3][*index_tau_second][*index_tau_third]
-                             +pgb2->Dl[*index_type_A][*index_type_C][index_l_third][*bin2][*bin3][*index_tau_second][*index_tau_third]
-                             *pgb2->Dl[*index_type_B][*index_type_D][index_l_first][*bin2][*bin1][*index_tau_second][*index_tau_first];
+              double part2 = pgb2->Dl[index_type_A][index_type_C][index_l_first][bin2][bin1][index_tau_second][index_tau_first]
+                             *pgb2->Dl[index_type_B][index_type_D][index_l_third][bin2][bin3][index_tau_second][index_tau_third]
+                             +pgb2->Dl[index_type_A][index_type_C][index_l_third][bin2][bin3][index_tau_second][index_tau_third]
+                             *pgb2->Dl[index_type_B][index_type_D][index_l_first][bin2][bin1][index_tau_second][index_tau_first];
 
-              double part3 = pgb2->Dl[*index_type_A][*index_type_C][index_l_first][*bin3][*bin1][*index_tau_third][*index_tau_first]
-                              *pgb2->Dl[*index_type_B][*index_type_D][index_l_second][*bin3][*bin2][*index_tau_third][*index_tau_second]
-                              +pgb2->Dl[*index_type_A][*index_type_C][index_l_second][*bin3][*bin2][*index_tau_third][*index_tau_second]
-                              *pgb2->Dl[*index_type_B][*index_type_D][index_l_first][*bin3][*bin1][*index_tau_third][*index_tau_first];
+              double part3 = pgb2->Dl[index_type_A][index_type_C][index_l_first][bin3][bin1][index_tau_third][index_tau_first]
+                              *pgb2->Dl[index_type_B][index_type_D][index_l_second][bin3][bin2][index_tau_third][index_tau_second]
+                              +pgb2->Dl[index_type_A][index_type_C][index_l_second][bin3][bin2][index_tau_third][index_tau_second]
+                              *pgb2->Dl[index_type_B][index_type_D][index_l_first][bin3][bin1][index_tau_third][index_tau_first];
 
               *result = part1+part2+part3;
 
@@ -1605,6 +1545,35 @@ int galbispectra2_init (
   double p,q;
 
   /* Define the SIZES/resolution of grids */
+  /* We redefine the multipole grids of CLASS so that we can select custom multipole that have not been considered by the
+      code until now */
+  int index_l_100;
+  int index_l_200;
+  index_of_l(100,
+             &index_l_100,
+             &index_l_100,
+             ppt,
+             ptr);
+   ptr->l[index_l_100]=100;
+
+   index_of_l(200,
+              &index_l_200,
+              &index_l_200,
+              ppt,
+              ptr);
+  ptr->l[index_l_200]= 200;
+
+  for (int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
+    printf("ptr->l[%d] = %d\n", index_l, ptr->l[index_l]);
+    pbs->l[index_l] = ptr->l[index_l];
+    printf("pbs->l[%d] = %d\n", index_l, pbs->l[index_l]);
+  }
+  //double val6j = wig6jj(2* 10 , 2* 15 , 2* 10 , 2*  7,  2*  7 , 2*  9 );
+
+  //printf ("6J{10  15  10;  7   7   9}:      %#25.15f\n", val6j);
+
+
+
 
   /*the bessel grid is boosted by an integer factor to account for rapid oscillations.*/
   int bessel_boost = 1;
@@ -1617,134 +1586,22 @@ int galbispectra2_init (
   printf("ppt2->k_size = %d\n", ppt2->k_size);
 
 
-  int index_l_min = 0;
-  //int index_l_max = 16;
+  //int index_l_min = 0;
+  int index_l_min = 5;
 
   //int index_l_max = ptr->l_size[ppt->index_md_scalars]-1;
-  int index_l_max = 18;
+  int index_l_max = 5;
 
-  /*double * threeJlist_test;
-  double * threeJlist_A1;
-  double * threeJlist_A2;
-  double * threeJlist_A3;
-  double * threeJlist_C1;
-  double * threeJlist_C2;
-  double * threeJlist_C3;
-  double * threeJlist_test2;
+  double * array1;
+  double * array_Q;
 
-  //class_alloc1D(threeJlist_test, ptr->l_size[ppt->index_md_scalars], pgb2->error_message);
-  class_alloc(threeJlist_A1, ptr->l_size[ppt->index_md_scalars] * sizeof(double), pgb2->error_message);
-  class_alloc(threeJlist_A2, ptr->l_size[ppt->index_md_scalars] * sizeof(double), pgb2->error_message);
-  class_alloc(threeJlist_A3, ptr->l_size[ppt->index_md_scalars] * sizeof(double), pgb2->error_message);
-  class_alloc(threeJlist_C1, ptr->l_size[ppt->index_md_scalars] * sizeof(double), pgb2->error_message);
-  class_alloc(threeJlist_C2, ptr->l_size[ppt->index_md_scalars] * sizeof(double), pgb2->error_message);
-  class_alloc(threeJlist_C3, ptr->l_size[ppt->index_md_scalars] * sizeof(double), pgb2->error_message);
-  class_alloc(threeJlist_test, ptr->l_size[ppt->index_md_scalars] * sizeof(double), pgb2->error_message);
-  class_alloc(threeJlist_test2, ptr->l_size[ppt->index_md_scalars] * sizeof(double), pgb2->error_message);
+  class_alloc1D(array1, ptr->l_size[ppt->index_md_scalars], pgb2->error_message);
+  class_alloc1D(array_Q, ptr->l_size[ppt->index_md_scalars], pgb2->error_message);
 
-  double A114_factor_test, A110_factor_test, A102_factor_test;
-  double min_test,max_test;
-  for (int index_l = index_l_min; index_l < index_l_max+1; index_l++) {
-    if (ptr->l[index_l] % 2 != 0) {
-      continue;
-    }
-    //printf("======================= ptr->l[%d] = %d =======================\n", index_l, ptr->l[index_l]);
-    double A1_test, A2_test, A3_test;
-    double C1_test, C2_test, C3_test;
-    //herehere
-    //printf("================================================\n");
-    threeJ(ptr->l[index_l],
-           ptr->l[index_l],
-           ptr->l[index_l],
-           1,
-           -1,
-           threeJlist_test,
-           &A1_test,
-           pgb2->error_message);
-
-    class_call(drc3jj (ptr->l[index_l],
-            ptr->l[index_l],
-            1,
-            -1,
-            &min_test,
-            &max_test,
-            threeJlist_test2,
-            1000,
-            pgb2->error_message),
-            pgb2->error_message,
-            pgb2->error_message);
-
-     threeJ(ptr->l[index_l],
-            ptr->l[index_l],
-            ptr->l[index_l],
-            -1,
-            1,
-            threeJlist_test,
-            &A2_test,
-            pgb2->error_message);
-
-
-     threeJ(ptr->l[index_l],
-            ptr->l[index_l],
-            ptr->l[index_l],
-            0,
-            0,
-            threeJlist_test,
-            &A3_test,
-            pgb2->error_message);
-
-      threeJ(ptr->l[index_l],
-             ptr->l[index_l],
-             ptr->l[index_l],
-             2,
-             -2,
-             threeJlist_test,
-             &C1_test,
-             pgb2->error_message);
-
-
-       threeJ(ptr->l[index_l],
-              ptr->l[index_l],
-              ptr->l[index_l],
-              -2,
-              2,
-              threeJlist_test,
-              &C2_test,
-              pgb2->error_message);
-
-
-       threeJ(ptr->l[index_l],
-              ptr->l[index_l],
-              ptr->l[index_l],
-              0,
-              0,
-              threeJlist_test,
-              &C3_test,
-              pgb2->error_message);
-
-
-    double A_test_test;
-
-    double A_LLL_test = 0.5*(A1_test+A2_test)/A3_test;
-    double C_LLL_test = 0.5*(C1_test+C2_test)/C3_test;
-    //printf("z = %g\n", z);
-    //printf("A_LLL = %g\n", A_LLL_test);
-    //printf("C_LLL = %g\n", C_LLL_test);
-    printf("%d      %g      %g\n", ptr->l[index_l],  A_LLL_test, C_LLL_test);
-    //printf("%d      %g    %g    %g    %g    %g    %g\n", ptr->l[index_l], A1_test, A2_test, A3_test, C1_test, C2_test, C3_test);
-
-
-
-    A102_factor_test = -2.*A_LLL_test*pow(ptr->l[index_l],2)*pow(ptr->l[index_l]+1,2);
-
-    A110_factor_test = -C_LLL_test*(ptr->l[index_l]+2.)*(ptr->l[index_l]+1.)*(ptr->l[index_l]+0.)*(ptr->l[index_l]-1.);
-
-    A114_factor_test = -1.*pow(ptr->l[index_l], 2)*pow(ptr->l[index_l]+1,2);
-    //printf("factors:  %g    %g    %g    %g\n", A102_factor_test+A110_factor_test+A114_factor_test, A102_factor_test, A110_factor_test, A114_factor_test);
-    printf("total factor = %g\n", A102_factor_test+A110_factor_test+A114_factor_test);
-  }
-  */
-
+  double g_test;
+  double sixJ_test1;
+  double sixJ_test2;
+  double Q_result;
 
 
 
@@ -1752,11 +1609,9 @@ int galbispectra2_init (
 
 
 
-
-
   /* Please ensure the pgb2->tau_size_selection grid is of a higher resolution than pgb2->r_size * pgb2->alpha_size = 13*/
-  pgb2->tau_size_cls = 500; //prev on 500
-  pgb2->tau_size_selection = 500; //prev on 601
+  pgb2->tau_size_cls = 25; //prev on 500
+  pgb2->tau_size_selection = 25; //prev on 601
 
 
 
@@ -2086,7 +1941,7 @@ int galbispectra2_init (
      fscanf(fp, "%g", &a[i]);
      printf("a[%d] = %g\n", i, a[i]);
    }
-   exit(0);*/
+   */
 
    double k_min = ppt->k[ppt->index_md_scalars][0];
    /* Alert hardcoded */
@@ -2264,6 +2119,7 @@ int galbispectra2_init (
   int i2;
   int index;
   int index_source;
+  int index_bisp;
   double tau;
   int last_index;
   int last_index_k;
@@ -2271,6 +2127,7 @@ int galbispectra2_init (
   //NOTE: Fix this
   index_type = 0;
   index_source = 0;
+  index_bisp = 0;
   double k5 = 5.0;
 
 /* NOTE: The following if statements should be dependent on the user input */
@@ -2312,6 +2169,28 @@ int galbispectra2_init (
   pgb2->index_source_psi = -1;
   pgb2->index_source_phi_prime = -1;
 
+ /* "Newtonian" bispectrum temrs with their eqs. numbers with respect to 1510.04202 */
+  pgb2->index_bisp_dens_mono = -1; //3.19
+  pgb2->index_bisp_dens_di = -1; //3.20
+  pgb2->index_bisp_dens_quad = -1; //3.21
+  pgb2->index_bisp_v_vpp = -1; //3.25
+  pgb2->index_bisp_vp_squared = -1; //3.26
+  pgb2->index_bisp_v_densp = -1; // 3.27
+  pgb2->index_bisp_vp_dens = -1; // 3.28
+  pgb2->index_bisp_so_rsd = -1; // 3.46 (use 3.20 in [1812.09297] instead)
+
+  /* Terms that include lensing */
+  pgb2->index_bisp_lens_dens = -1; //3.32
+  pgb2->index_bisp_vp_lens = -1; //3.33
+  pgb2->index_bisp_lens_squared = -1; //3.34
+  pgb2->index_bisp_Ddelta_Dpsi = -1; //3.35
+  pgb2->index_bisp_Dvp_Dpsi = -1; // 3.36
+  pgb2->index_bisp_Dlens_Dpsi = -1; // 3.37
+  pgb2->index_bisp_int_Dlens_DPsi1 = -1; //3.38
+  pgb2->index_bisp_int_nabla2_DPsi1_DPsi1 = -1; // 3.39
+  pgb2->index_bisp_so_lens = -1; // 3.57
+
+
 
   /* Next we want to turn on any source types (needed for interpolation) and make up the contribution types
     needed by the integral function. For example pgb2->index_source_theta is needed for interpolation but not for
@@ -2328,9 +2207,17 @@ int galbispectra2_init (
     index_source++;
     pgb2->index_type_density = index_type;
     index_type++;
-    //pgb2->index_type_delta = index_type; /* Eq. 3.28 in [1812.09297] */
-    //index_type++;
 
+    pgb2->index_type_delta = index_type; /* Eq. 3.28 in [1812.09297] */
+    index_type++;
+
+
+    pgb2->index_bisp_dens_mono = index_bisp;
+    index_bisp++;
+    pgb2->index_bisp_dens_di = index_bisp;
+    index_bisp++;
+    pgb2->index_bisp_dens_quad = index_bisp;
+    index_bisp++;
     //pgb2->index_type_quad_density_p = index_type;
     //index_type++;
     //pgb2->index_source_phi = index_source;
@@ -2342,7 +2229,7 @@ int galbispectra2_init (
   }
   // turn on for rsd
 
- /*if (k5 == 5.0){
+ if (k5 == 5.0){
     //pgb2->index_source_v = index_source;
     //index_source++;
     //pgb2->index_type_vp = index_source;
@@ -2362,9 +2249,9 @@ int galbispectra2_init (
     //index_type++;
     //pgb2->index_type_d2 = index_type;
     //index_type++;
-  }*/
+  }
 
-  if (k5 == 5.0){
+  /*if (k5 == 5.0){
     pgb2->index_source_psi = index_source;
     index_source++;
     pgb2->index_source_phi = index_source;
@@ -2408,6 +2295,7 @@ int galbispectra2_init (
 
   pgb2->source_size = index_source;
   pgb2->type_size = index_type;
+  pgb2->bisp_type_size = index_bisp;
 
 
 
@@ -2823,7 +2711,7 @@ int galbispectra2_init (
           theta_m_intermediate_plus =  (f*ppt->quadsources[ppt->index_md_scalars][ppt->index_ic_ad*ppt->qs_size[ppt->index_md_scalars]+ppt->index_qs_theta_cdm][(index+1) * ppt->k_size[ppt->index_md_scalars] + index_k+1]+
               (1-f)*ppt->quadsources[ppt->index_md_scalars][ppt->index_ic_ad*ppt->qs_size[ppt->index_md_scalars]+ppt->index_qs_theta_cdm][index * ppt->k_size[ppt->index_md_scalars] + index_k+1]);
           // Gauge transformation to Gauge independent quantities, present in CLASS > v2.4.2 but absent from SONG and the quadsources array
-          //herehere
+
 
           theta_m = g*theta_m_intermediate_plus +(1-g)*theta_m_intermediate;
           pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau][index_k_bessel] += 3.
@@ -2839,7 +2727,7 @@ int galbispectra2_init (
 
 
 
-          //herehere
+
 
 
 
@@ -3089,7 +2977,7 @@ int galbispectra2_init (
 
 
       /*      double k = pgb2->k_bessel[index_k_bessel];
-            //herehere
+
 
             class_call(index_of_k_old(k,
                            &index_k,
@@ -3216,29 +3104,17 @@ int galbispectra2_init (
         printf("##ppt->k_size = %d\n", ppt->k_size[ppt->index_md_scalars]);
         if(pgb2->index_type_density != -1){
           for (int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
-            if (ptr->l[index_l] % 2 != 0) {
+            /*if (ptr->l[index_l] % 2 != 0) {
               continue;
-            }
+            }*/
             for (int index_tau = 0; index_tau < pgb2->tau_size_cls; index_tau++){
               for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
                 double x = pgb2->k_bessel[index_k_bessel]*(pba->conformal_age - pgb2->tau_sampling_cls[index_tau]);
 
                 class_call(bessel_at_x(pbs, x , index_l, &j), pbs->error_message, pgb2->error_message);
 
-                /*if (index_k_bessel == 0 && index_tau == bin_mean_index_cls[0]) {
-                  printf("k = %g, index_source_delta_m = %g\n", pgb2->k_bessel[index_k_bessel], pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau][index_k_bessel]);
-                  printf("k = %g, index_source_delta_b = %g\n", pgb2->k_bessel[index_k_bessel], pgb2->first_order_sources[pgb2->index_source_delta_b][index_tau][index_k_bessel]);
-                  printf("k = %g, index_source_delta_cdm = %g\n", pgb2->k_bessel[index_k_bessel], pgb2->first_order_sources[pgb2->index_source_delta_cdm][index_tau][index_k_bessel]);
-                  exit(0);
-                }*/
-
                 pgb2->first_order_sources_integ[pgb2->index_type_density][index_l][index_tau][index_k_bessel] = g_bias*pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau][index_k_bessel] * j;
-                if (index_l==0 && index_tau == bin_mean_index_cls[0]) {
-                  printf("%g    %g    %g    %g\n", pgb2->k_bessel[index_k_bessel],
-                                                   j,
-                                                   pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau][index_k_bessel],
-                                                   pgb2->first_order_sources_integ[pgb2->index_type_density][index_l][index_tau][index_k_bessel]);
-                }
+
               }
             }
           }
@@ -3301,7 +3177,8 @@ int galbispectra2_init (
               for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
                 double x = pgb2->k_bessel[index_k_bessel]*(pba->conformal_age - pgb2->tau_sampling_cls[index_tau]);
                 double bias = 1.0;
-                double prefactor_quad_v = 1.0
+                double prefactor_quad_v = -1.0
+                                         /pgb2->k_bessel[index_k_bessel]
                                          /pgb2->k_bessel[index_k_bessel];
 
                 class_call(bessel_at_x_first_deriv(pgb2, pbs, x, index_l, &j_first_deriv), pbs->error_message, pgb2->error_message);
@@ -3393,12 +3270,13 @@ int galbispectra2_init (
 
                 double x = pgb2->k_bessel[index_k_bessel]*(pba->conformal_age - pgb2->tau_sampling_cls[index_tau]);
 
-                class_call(bessel_at_x_second_deriv(pgb2, pbs, x, index_l, &j_first_deriv), pbs->error_message, pgb2->error_message);
+                class_call(bessel_at_x_second_deriv(pgb2, pbs, x, index_l, &j_second_deriv), pbs->error_message, pgb2->error_message);
 
 
-                prefactor1 = 1.0
+                prefactor1 = -1.0
                              /pvecback_quad_v_p[pba->index_bg_H]
-                             /pvecback_quad_v_p[pba->index_bg_a];
+                             /pvecback_quad_v_p[pba->index_bg_a]
+                             /k;
 
 
 
@@ -3445,7 +3323,7 @@ int galbispectra2_init (
                 class_call(bessel_at_x_third_deriv(pgb2, pbs, x, index_l, &j_third_deriv), pbs->error_message, pgb2->error_message);
 
 
-               double prefactor_quad_v_pp = k
+               double prefactor_quad_v_pp = -1.0
                                             /pvecback_quad_v_pp[pba->index_bg_H]
                                             /pvecback_quad_v_pp[pba->index_bg_a]
                                             /pvecback_quad_v_pp[pba->index_bg_H]
@@ -3779,8 +3657,8 @@ int galbispectra2_init (
                 double term2 = pgb2->first_order_sources[pgb2->index_source_delta_cdm][index_tau][index_k_bessel]*j_second_deriv;
 
                 pgb2->first_order_sources_integ[pgb2->index_type_delta][index_l][index_tau][index_k_bessel] =
-                      pgb2->first_order_sources_integ[pgb2->index_type_rsd][index_l][index_tau][index_k_bessel]
-                      + pgb2->first_order_sources_integ[pgb2->index_type_density][index_l][index_tau][index_k_bessel];
+                      //pgb2->first_order_sources_integ[pgb2->index_type_rsd][index_l][index_tau][index_k_bessel]
+                       pgb2->first_order_sources_integ[pgb2->index_type_density][index_l][index_tau][index_k_bessel];
 
                 /*double Omega_m0 = pba->Omega0_cdm + pba->Omega0_b;
                 /* infer redshift */
@@ -3789,7 +3667,7 @@ int galbispectra2_init (
                 double Ez = sqrt(Omega_m0*pow(1+z,3) + Omega_l0);
                 double Omega_m = Omega_m0*pow(1+z,3)/(Ez*Ez);
                 double f = pow(Omega_m,4/7.);
-                //herehere
+
                 double paper_delta = pgb2->first_order_sources_integ[pgb2->index_type_density][index_l][index_tau][index_k_bessel]-f*term2;
 
                 printf("%g      %g\n", pgb2->first_order_sources_integ[pgb2->index_type_delta][index_l][index_tau][index_k_bessel], paper_delta);*/
@@ -3897,9 +3775,9 @@ int galbispectra2_init (
       int index_k;
       //for (int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
       for(int index_l = index_l_min; index_l < index_l_max+1; index_l++){
-        if (ptr->l[index_l] % 2 != 0) {
+        /*if (ptr->l[index_l] % 2 != 0) {
           continue;
-        }
+        }*/
       //for (int index_l = ptr->l_size[ppt->index_md_scalars]-1; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
       //for (int index_l = ptr->l_size[ppt->index_md_scalars]-2; index_l < ptr->l_size[ppt->index_md_scalars]-1; index_l++) {
       //for (int index_l = 0; index_l < 1; index_l++) {
@@ -4325,7 +4203,7 @@ int galbispectra2_init (
     fprintf(Dl_file, "#ppt->selection_mean[%d] = %g\n", bin, ppt->selection_mean[bin]);
     fprintf(Dl_file, "#ppt->selection_width[%d] = %g\n", bin, ppt->selection_width[bin]);
   }
-  //herehere
+
   fprintf(Dl_file, "#ptr->s_bias = %g\n", ptr->s_bias);
   fprintf(Dl_file, "#selection size = %d\n", pgb2->tau_size_selection);
   fprintf(Dl_file, "#selection min/max %g/%g\n", pgb2->tau_sampling_selection[0][0], pgb2->tau_sampling_selection[0][pgb2->tau_size_selection-1]);
@@ -4347,9 +4225,9 @@ int galbispectra2_init (
   int index_of_cls1;
   int index_of_cls2;
   double Pk_song;
-  for(int index_type_first = 1; index_type_first <  2/*pgb2->type_size*/; index_type_first++){
+  for(int index_type_first = 0; index_type_first < pgb2->type_size; index_type_first++){
     // Alert only looping over the first index in type_second
-    for(int index_type_second = 0; index_type_second < 1/*index_type_first+1 *//*pgb2->type_size*/; index_type_second++){
+    for(int index_type_second = 0; index_type_second < pgb2->type_size; index_type_second++){
       fprintf(Dl_file,"### index_type_first, index_type_second = %d, %d \n", index_type_first, index_type_second);
     //Warning
     //for(int index_type_first = 0; index_type_first < 1; index_type_first++){
@@ -4359,9 +4237,9 @@ int galbispectra2_init (
           //for (int index_l = ptr->l_size[ppt->index_md_scalars]-1; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
           fprintf(Dl_file, "#index_l = %d (l=%d)\n", index_l, ptr->l[index_l]);
           for(int index_l = index_l_min; index_l < index_l_max+1; index_l++){
-            if (ptr->l[index_l] % 2 != 0) {
+            /*if (ptr->l[index_l] % 2 != 0) {
               continue;
-            }
+            }*/
           //for(int index_l = ptr->l_size[ppt->index_md_scalars]-1; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++){
           //for(int index_l = ptr->l_size[ppt->index_md_scalars]-1; index_l < ptr->l_size[ppt->index_md_scalars]-1; index_l++){
           //for (int index_l = ptr->l_size[ppt->index_md_scalars]-2; index_l < ptr->l_size[ppt->index_md_scalars]-1; index_l++) {
@@ -4389,7 +4267,9 @@ int galbispectra2_init (
 
                     class_call(primordial_spectrum_at_k(ppm, ppt->index_md_scalars, linear, pgb2->k_bessel[index_k_bessel], &Pk_song), ppm->error_message, pgb2->error_message);
 
-
+                    printf("pgb2->first_order_sources_integ[index_type_first][index_l][index_of_cls1-1][index_k_bessel] = %g\n", pgb2->first_order_sources_integ[index_type_first][index_l][index_of_cls1-1][index_k_bessel] );
+                    printf("pgb2->tau_sampling_cls[index_of_cls1] = %g\n", pgb2->tau_sampling_cls[index_of_cls1] );
+                    printf("tau_first = %g\n", tau_first );
                     source_interp1 = pgb2->first_order_sources_integ[index_type_first][index_l][index_of_cls1-1][index_k_bessel]*(pgb2->tau_sampling_cls[index_of_cls1]-tau_first)
                                   + pgb2->first_order_sources_integ[index_type_first][index_l][index_of_cls1][index_k_bessel]*(tau_first-pgb2->tau_sampling_cls[index_of_cls1-1]);
                     source_interp1 /= (pgb2->tau_sampling_cls[index_of_cls1] - pgb2->tau_sampling_cls[index_of_cls1-1]);
@@ -4451,7 +4331,7 @@ int galbispectra2_init (
       printf("#selection min/max %g/%g\n", pgb2->tau_sampling_selection[bin][0], pgb2->tau_sampling_selection[bin][pgb2->tau_size_selection-1]);
 
     }
-    //herehere
+
     printf("#ptr->s_bias = %g\n", ptr->s_bias);
     printf("#selection size = %d\n", pgb2->tau_size_selection);
 
@@ -4464,16 +4344,16 @@ int galbispectra2_init (
     printf("#eps = %g\n", eps );
     for (int bin1 = 0; bin1 < ppt->selection_num; bin1++) {
       for (int bin2 = 0; bin2 < ppt->selection_num; bin2++) {
-        for(int index_type_first = 1; index_type_first < 2/*pgb2->type_size*/; index_type_first++){
+        for(int index_type_first = 0; index_type_first < pgb2->type_size; index_type_first++){
           // Alert only looping over the first index in type_second
-          for(int index_type_second = 0; index_type_second < 1 /*index_type_first+1 *//*pgb2->type_size*/; index_type_second++){
+          for(int index_type_second = 0; index_type_second < pgb2->type_size; index_type_second++){
 
 
             printf("#### Dl[%d][%d][%d][%d][%d][%d][%d]\n",  index_type_first, index_type_second, index_l, bin1, bin2, bin_mean_index_selection[bin1], bin_mean_index_selection[bin2]);
             for(int index_l = index_l_min; index_l < index_l_max+1; index_l++){
-              if (ptr->l[index_l] % 2 != 0) {
+              /*if (ptr->l[index_l] % 2 != 0) {
                 continue;
-              }
+              }*/
               printf("%d      %g       %g\n", ptr->l[index_l],
                                               ptr->l[index_l]*(ptr->l[index_l]+1)*pgb2->Dl[index_type_first][index_type_second][index_l][bin1][bin2][bin_mean_index_selection[bin1]][bin_mean_index_selection[bin2]]/(2*_PI_),
                                               ptr->l[index_l]*(ptr->l[index_l]+1)*pgb2->Cl3[index_type_first][index_type_second][index_l][bin1][bin2]/(2*_PI_));
@@ -4482,8 +4362,1074 @@ int galbispectra2_init (
         }
       }
     }
+    printf("pgb2->Dl[0][1][0][0][0][0][0] = %g\n", pgb2->Dl[pgb2->index_type_density][pgb2->index_type_delta][0][0][0][0][0]);
+
+    /*==================================================================
+    ====================================================================
+    =======================   BISPECTRA  ==============================
+    ====================================================================
+    ===================================================================*/
+
+    /* We now need to allocate an array to store each datapoint in the reduced bispectrum. This will be the
+    pgb2->redbi[index_bisp_type][index_l1][index_l2][index_l3][bin1*pgb2->tau_size_selection+index_tau_first]
+    [bin2*pgb2->tau_size_selection+index_tau_second][bin3*pgb2->tau_size_selection+index_tau_third] */
 
 
+    /* We often fix one or more of the mulitpoles in the bispectra calculations */
+
+    int index_l_first_min = index_l_100;
+    int index_l_first_max = index_l_100;
+    int index_l_second_min = index_l_200;
+    int index_l_second_max = index_l_200;
+    /* remember that index_l_min and index_l_max are the global (galbispectra2) minimum and max multipoles */
+    int index_l_third_min = index_l_min;
+    int index_l_third_max = index_l_max;
+    class_alloc7D(pgb2->redbi,
+                  pgb2->bisp_type_size,
+                  ptr->l_size[ppt->index_md_scalars],
+                  ptr->l_size[ppt->index_md_scalars],
+                  ptr->l_size[ppt->index_md_scalars],
+                  ppt->selection_num*pgb2->tau_size_selection,
+                  ppt->selection_num*pgb2->tau_size_selection,
+                  ppt->selection_num*pgb2->tau_size_selection,
+                  pgb2->error_message);
+
+    if (pgb2->index_bisp_dens_mono != -1) {
+      printf("Computing bispectrum: density monopole\n");
+      double bisp_dens_mono;
+      for (int bin3 = 0; bin3 < ppt->selection_num; bin3++) {
+        for (int bin2 = 0; bin2 < ppt->selection_num; bin2++) {
+          for (int bin1 = 0; bin1 < ppt->selection_num; bin1++) {
+            for(int index_l_third = index_l_third_min; index_l_third < index_l_third_max+1; index_l_third++){
+              for(int index_l_second = index_l_second_min; index_l_second < index_l_second_max+1; index_l_second++){
+                for(int index_l_first = index_l_first_min; index_l_first < index_l_first_max+1; index_l_first++){
+                  for (int index_tau_third = 0; index_tau_third < pgb2->tau_size_selection; index_tau_third++) {
+                    for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
+                      for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
+
+                        Dl_permute(pgb2->index_type_density,
+                                   pgb2->index_type_density,
+                                   pgb2->index_type_delta,
+                                   pgb2->index_type_delta,
+                                   index_l_first,
+                                   index_l_second,
+                                   index_l_third,
+                                   bin1,
+                                   bin2,
+                                   bin3,
+                                   index_tau_first,
+                                   index_tau_second,
+                                   index_tau_third,
+                                   &bisp_dens_mono,     /* Output the permuted sum */
+                                   pgb2);
+
+
+                          pgb2->redbi[pgb2->index_bisp_dens_mono][index_l_first][index_l_second][index_l_third][bin1*pgb2->tau_size_selection+index_tau_first]
+                                   [bin2*pgb2->tau_size_selection+index_tau_second][bin3*pgb2->tau_size_selection+index_tau_third] = 17.*bisp_dens_mono/21.;
+
+
+
+                          printf("bisp mono = %g\n", pgb2->redbi[pgb2->index_bisp_dens_mono][index_l_first][index_l_second][index_l_third][bin1*pgb2->tau_size_selection+index_tau_first]
+                                   [bin2*pgb2->tau_size_selection+index_tau_second][bin3*pgb2->tau_size_selection+index_tau_third]);
+
+                        // pgb2->redbi[index_bisp_type][bin1][bin2][bin3][A*index_tau_first+B*index_tau_second+C*index_tau_third][index_l_first][index_l_second][index_l_third]
+                      } // end of tau_first
+                    } //end_of_tau_second
+                  } //end of tau_third
+                } // end of index_l_first
+              } // end of index_l_second
+            } // end of index_l_third
+          } // end of bin1
+        } //end of bin2
+      } //end of bin3
+    } // end of if flag
+
+    if (pgb2->index_bisp_dens_di != -1 || pgb2->index_bisp_dens_quad != -1) {
+
+      pgb2->l_exact = 5;
+      /* Dipole indices */
+      pgb2->l_minus_one = 1;
+      pgb2->l_plus_one = 2;
+      /* Quadrupole indices */
+      pgb2->l_minus_two = 3;
+      pgb2->l_plus_two = 4;
+
+      class_alloc4D(pgb2->fo_dens_integ_hires_in_l, 10, ptr->l_size[ppt->index_md_scalars],  pgb2->tau_size_cls, pgb2->k_size_bessel, pgb2->error_message);
+
+
+
+      /* create a list of indices that correspond to the n in {}^nD_{l_1l_2}, it is a power of k in the
+      explicit equation */
+      class_alloc1D(pgb2->n, 5, pgb2->error_message);
+      pgb2->n_is_minus_one = 1;
+      pgb2->n_is_plus_one = 2;
+      pgb2->n_is_zero = 3;
+
+      pgb2->n[pgb2->n_is_minus_two] = -2;
+      pgb2->n[pgb2->n_is_plus_two] = 2;
+
+
+      /* Create a Delta^\delta_l for many l values (more than the typical pgb2->first_order_sources_integ), we need this to compute {}^nC_{ll'}(z_1,z_2) */
+      // pgb2->first_order_sources_integ_plus[pgb2->index_source_delta_cdm][m][index_l][index_tau][index_k_bessel]
+      /* create indices that correspond to l-2,l-1, l+1 and l+2 in the asymmetric angular power spectra densdens-Delta_{l_1l_2}.  */
+      /* create an l-array that stores multipoles +- 2 from the ptr->l array */
+
+      class_alloc2D(pgb2->l_dual, 10, ptr->l_size[ppt->index_md_scalars], pgb2->error_message);
+      for (int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
+        pgb2->l_dual[pgb2->l_exact][index_l] = ptr->l[index_l]+0;
+        pgb2->l_dual[pgb2->l_minus_two][index_l] = ptr->l[index_l]-2;
+        pgb2->l_dual[pgb2->l_minus_one][index_l] = ptr->l[index_l]-1;
+        pgb2->l_dual[pgb2->l_plus_one][index_l] = ptr->l[index_l]+1;
+        pgb2->l_dual[pgb2->l_plus_two][index_l] = ptr->l[index_l]+2;
+      }
+
+      double jl_minus_two;
+      double jl_minus_one;
+      double jl_exact;
+
+      double jl_plus_one;
+      double jl_plus_two;
+
+      int l_max = ptr->l[ptr->l_size[ppt->index_md_scalars]-1];
+      int l;
+      int ON_SWITCH = 0;
+      double jl_dual;
+      double bessel_argument;
+      /* looping over the l_dual and index_l index we get l_dual = l-2,l-1,l+1,l+2 for each l in ptr->l[index_l] */
+      for (int index_l_dual = 1; index_l_dual <= 4; index_l_dual++) {
+        for(int index_l = index_l_min; index_l < index_l_max+1; index_l++){
+          for (int index_tau = 0; index_tau < pgb2->tau_size_cls; index_tau++){
+            for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
+
+              bessel_argument =  pgb2->k_bessel[index_k_bessel]*(pba->conformal_age - pgb2->tau_sampling_cls[index_tau]);
+
+              class_call(bessel_j(pbs, pgb2->l_dual[index_l_dual][index_l], bessel_argument, &jl_dual), pbs->error_message, pgb2->error_message);
+
+              pgb2->fo_dens_integ_hires_in_l[index_l_dual][index_l][index_tau][index_k_bessel] = g_bias*pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau][index_k_bessel] * jl_dual;
+
+
+            }
+          }
+
+        }
+      }
+      printf("pgb2->fo_dens_integ_hires_in_l[pgb2->l_minus_one][5][3][2499] = %g\n", pgb2->fo_dens_integ_hires_in_l[pgb2->l_minus_one][5][3][2499]);
+
+
+
+
+
+      // NOTE maybe don't loop over every multipole but just the ones in ptr->l then take +-1 away from that.
+      /*for (int index_l_dual = 1; index_l_dual <= 4; index_l_dual++) {
+        for(int index_l = index_l_min; index_l < index_l_max+1; index_l++){
+          l = ptr->l[index_l];
+          printf("l = %d\n", l);
+
+          for (int index_tau = 0; index_tau < pgb2->tau_size_cls; index_tau++){
+            for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
+              //printf("index_k_bessel = %d\n", index_k_bessel);
+              /* The +-2 multipoles are needed for the quadrupole but we compute them here to avoid repetition */
+              /*double x = pgb2->k_bessel[index_k_bessel]*(pba->conformal_age - pgb2->tau_sampling_cls[index_tau]);
+
+
+
+              class_call(bessel_j(pbs, pgb2->l_dual[index_l_dual][index_l], x, &jl_dual), pbs->error_message, pgb2->error_message);
+              pgb2->fo_dens_integ_hires_in_l[index_l_dual][index_l][index_tau][index_k_bessel] = g_bias*pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau][index_k_bessel] * jl_dual;
+              if (index_tau == bin_mean_index_cls[0] && index_l == 5 && index_k_bessel == 2499 && index_l_dual == pgb2->l_minus_one){
+                ON_SWITCH =1;
+                printf("!!BLEEP!!\n");
+
+                printf("*** pgb2->fo_dens_integ_hires_in_l[%d][%d][%d][%d] = %g \n", index_l_dual, index_l, index_tau, index_k_bessel, pgb2->fo_dens_integ_hires_in_l[index_l_dual][index_l][index_tau][index_k_bessel]);
+              }
+              if (ON_SWITCH == 1) {
+                //printf("index_tau = %d, index_l_dual = %d, index_l = %d, index_k_bessel = %d\n", index_tau, index_l_dual, index_l, index_k_bessel );
+                printf("ON_SWITCH: pgb2->fo_dens_integ_hires_in_l[pgb2->l_minus_one][5][3][2499] = %g\n", pgb2->fo_dens_integ_hires_in_l[pgb2->l_minus_one][5][3][2499]);
+              }
+              printf("%dx%dx%dx%d ON_SWITCH =%d\n", index_l_dual, index_l, index_tau, index_k_bessel, ON_SWITCH);
+            }
+
+            /*class_call(bessel_j(pbs, l-2, x, &jl_minus_two), pbs->error_message, pgb2->error_message);
+
+            class_call(bessel_j(pbs, l-1, x, &jl_minus_one), pbs->error_message, pgb2->error_message);
+            class_call(bessel_at_x(pbs, x, index_l, &jl_exact), pbs->error_message, pgb2->error_message);
+
+            class_call(bessel_j(pbs, l+1, x, &jl_plus_one), pbs->error_message, pgb2->error_message);
+
+            class_call(bessel_j(pbs, l+2, x, &jl_plus_two), pbs->error_message, pgb2->error_message);
+
+
+
+
+            pgb2->fo_dens_integ_hires_in_l[pgb2->l_minus_two][index_l][index_tau][index_k_bessel] = g_bias*pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau][index_k_bessel] * jl_minus_two;
+            pgb2->fo_dens_integ_hires_in_l[pgb2->l_minus_one][index_l][index_tau][index_k_bessel] = g_bias*pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau][index_k_bessel] * jl_minus_one;
+            //pgb2->fo_dens_integ_hires_in_l[pgb2->l_exact][index_l][index_tau][index_k_bessel] = g_bias*pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau][index_k_bessel] * jl_exact;
+            pgb2->fo_dens_integ_hires_in_l[pgb2->l_plus_one][index_l][index_tau][index_k_bessel] = g_bias*pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau][index_k_bessel] * jl_plus_one;
+            pgb2->fo_dens_integ_hires_in_l[pgb2->l_plus_two][index_l][index_tau][index_k_bessel] = g_bias*pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau][index_k_bessel] * jl_plus_two;
+
+            /*if (index_tau == bin_mean_index_cls[0]) {
+
+              printf("k = %g\n", pgb2->k_bessel[index_k_bessel]);
+              printf("pgb2->l_minus_one =%d\n", pgb2->l_minus_one);
+              printf("jl_minus_two = %g\n", jl_minus_two);
+              printf("jl_minus_one = %g\n", jl_minus_one);
+              printf("jl_plus_one = %g\n", jl_plus_one);
+              printf("jl_plus_one = %g\n", jl_plus_two);
+              printf("x = %g\n", x);
+              printf("pgb2->fo_dens_integ_hires_in_l[pgb2->l_minus_two][%d][%d][%d] = %g \n", index_l, index_tau, index_k_bessel, pgb2->fo_dens_integ_hires_in_l[pgb2->l_minus_two][index_l][index_tau][index_k_bessel]);
+              printf("pgb2->fo_dens_integ_hires_in_l[pgb2->l_minus_one][%d][%d][%d] = %g \n", index_l, index_tau, index_k_bessel, pgb2->fo_dens_integ_hires_in_l[pgb2->l_minus_one][index_l][index_tau][index_k_bessel]);
+              printf("pgb2->fo_dens_integ_hires_in_l[pgb2->l_plus_one][%d][%d][%d] = %g \n", index_l, index_tau, index_k_bessel, pgb2->fo_dens_integ_hires_in_l[pgb2->l_plus_one][index_l][index_tau][index_k_bessel]);
+              printf("pgb2->fo_dens_integ_hires_in_l[pgb2->l_plus_two][%d][%d][%d] = %g \n", index_l, index_tau, index_k_bessel, pgb2->fo_dens_integ_hires_in_l[pgb2->l_plus_two][index_l][index_tau][index_k_bessel]);
+              if (index_l == 5 && index_k_bessel == 2499) {
+                printf("inside inside: pgb2->fo_dens_integ_hires_in_l[pgb2->l_minus_one][5][3][2499] = %g\n", pgb2->fo_dens_integ_hires_in_l[pgb2->l_minus_one][5][3][2499]);
+              }*/
+
+            /*  if (index_tau >= bin_mean_index_cls[0] && index_l >= 5 && index_k_bessel == 2499){
+                //printf("index_tau = %d, index_l = %d, index_k_bessel =%d\n", index_tau, index_l, index_k_bessel);
+                //printf("pgb2->l_minus_one = %d\n", pgb2->l_minus_one);
+                //printf("inside inside: pgb2->fo_dens_integ_hires_in_l[pgb2->l_minus_one][5][3][2499] = %g\n", pgb2->fo_dens_integ_hires_in_l[pgb2->l_minus_one][5][3][2499]);
+              }
+            }
+          }
+        }*/
+
+
+    }
+
+
+    double * g_temp_array;
+    double * Q_temp_array;
+    class_alloc1D(g_temp_array, ptr->l_size[ppt->index_md_scalars], pgb2->error_message);
+    class_alloc1D(Q_temp_array, ptr->l_size[ppt->index_md_scalars], pgb2->error_message);
+
+
+
+    if (pgb2->index_bisp_dens_di != -1) { /* Eq. 3.20 in 1510.04202 */
+      printf("Computing bispectrum: density dipole\n");
+      /* Create an arrary to store the {}^nC_{ll'}(z_1,z_2) in pgb2->densdens_nDl1l2[n][l1][l2][index_tau_first][index_tau_second]. */
+
+      double fo_dens_integ_hires_in_l_interp_minus;
+      double fo_dens_integ_hires_in_l_interp_plus;
+      double source_interp;
+
+
+      class_alloc7D(pgb2->densdens_nDl1l2, ppt->selection_num, ppt->selection_num, 5, 5, ptr->l_size[ppt->index_md_scalars], pgb2->tau_size_cls, pgb2->tau_size_cls, pgb2->error_message);
+      double sum_l_minus_one;
+      double sum_l_plus_one;
+      double Pk_bisp_di;
+      for (int bin2 = 0; bin2 < ppt->selection_num; bin2++) {
+        for (int bin1 = 0; bin1 < ppt->selection_num; bin1++) {
+          for (int index_n = 1; index_n <= 2; index_n++) {
+            printf("Density dipole: index_n = %d\n", index_n);
+
+            for(int index_l = index_l_min; index_l < index_l_max+1; index_l++){
+              int l = ptr->l[index_l];
+              for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
+                tau_second = pgb2->tau_sampling_selection[bin2][index_tau_second];
+                index_of_tau_sampling_cls(tau_second, &index_of_cls2, pgb2);
+
+                for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
+                  sum_l_minus_one = 0.;
+                  sum_l_plus_one = 0.;
+                  tau_first = pgb2->tau_sampling_selection[bin1][index_tau_first];
+                  double sum_test = 0.;
+                  index_of_tau_sampling_cls(tau_first, &index_of_cls1, pgb2);
+
+                  for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
+                    double k = pgb2->k_bessel[index_k_bessel];
+
+                    class_call(primordial_spectrum_at_k(ppm, ppt->index_md_scalars, linear, pgb2->k_bessel[index_k_bessel], &Pk_bisp_di), ppm->error_message, pgb2->error_message);
+
+                    fo_dens_integ_hires_in_l_interp_minus = pgb2->fo_dens_integ_hires_in_l[pgb2->l_minus_one][index_l][index_of_cls1-1][index_k_bessel]*(pgb2->tau_sampling_cls[index_of_cls1]-tau_first)
+                                  + pgb2->fo_dens_integ_hires_in_l[pgb2->l_minus_one][index_l][index_of_cls1][index_k_bessel]*(tau_first-pgb2->tau_sampling_cls[index_of_cls1-1]);
+                    fo_dens_integ_hires_in_l_interp_minus /= (pgb2->tau_sampling_cls[index_of_cls1] - pgb2->tau_sampling_cls[index_of_cls1-1]);
+
+                    fo_dens_integ_hires_in_l_interp_plus = pgb2->fo_dens_integ_hires_in_l[pgb2->l_plus_one][index_l][index_of_cls1-1][index_k_bessel]*(pgb2->tau_sampling_cls[index_of_cls1]-tau_first)
+                                  + pgb2->fo_dens_integ_hires_in_l[pgb2->l_plus_one][index_l][index_of_cls1][index_k_bessel]*(tau_first-pgb2->tau_sampling_cls[index_of_cls1-1]);
+                    fo_dens_integ_hires_in_l_interp_plus /= (pgb2->tau_sampling_cls[index_of_cls1] - pgb2->tau_sampling_cls[index_of_cls1-1]);
+
+
+                    source_interp = pgb2->first_order_sources_integ[pgb2->index_source_delta_m][index_l][index_of_cls2-1][index_k_bessel]*(pgb2->tau_sampling_cls[index_of_cls2]-tau_second)
+                                  + pgb2->first_order_sources_integ[pgb2->index_source_delta_m][index_l][index_of_cls2][index_k_bessel]*(tau_second-pgb2->tau_sampling_cls[index_of_cls2-1]);
+                    source_interp /= (pgb2->tau_sampling_cls[index_of_cls2] - pgb2->tau_sampling_cls[index_of_cls2-1]);
+
+
+                    sum_l_minus_one += pow(-1.,(l-1)-l)
+                                       *4.
+                                       *_PI_
+                                       *pow(k, pgb2->n[index_n])
+                                       *Pk_bisp_di
+                                       *fo_dens_integ_hires_in_l_interp_minus
+                                       *source_interp
+                                       *pgb2->w_trapz_k[index_k_bessel]
+                                       /k;
+
+                    sum_l_plus_one += pow(-1., (l+1)-l)
+                                       *4.
+                                       *_PI_
+                                       *pow(k, pgb2->n[index_n])
+                                       *Pk_bisp_di
+                                       *fo_dens_integ_hires_in_l_interp_plus
+                                       *source_interp
+                                       *pgb2->w_trapz_k[index_k_bessel]
+                                       /k;
+                   /*if (index_tau_first == bin_mean_index_selection[0] || index_tau_second == bin_mean_index_selection[0]) {
+                     printf("k = %g\n", pgb2->k_bessel[index_k_bessel]);
+                      printf("fo_dens_integ_hires_in_l_interp_minus = %g\n", fo_dens_integ_hires_in_l_interp_minus);
+                      printf("fo_dens_integ_hires_in_l_interp_plus = %g\n", fo_dens_integ_hires_in_l_interp_plus);
+                      printf("source_interp = %g\n", source_interp);
+                      printf("pgb2->fo_dens_integ_hires_in_l[pgb2->l_minus_one][%d][%d-1][%d] = %g\n", index_l, index_of_cls1, index_k_bessel, pgb2->fo_dens_integ_hires_in_l[pgb2->l_minus_one][index_l][index_of_cls1-1][index_k_bessel]);
+                      printf("pgb2->fo_dens_integ_hires_in_l[pgb2->l_minus_one][%d][%d][%d] = %g\n",   index_l, index_of_cls1, index_k_bessel, pgb2->fo_dens_integ_hires_in_l[pgb2->l_minus_one][index_l][index_of_cls1][index_k_bessel]);
+                      printf("pgb2->fo_dens_integ_hires_in_l[pgb2->l_plus_one][%d][%d-1][%d] = %g\n",  index_l, index_of_cls1, index_k_bessel, pgb2->fo_dens_integ_hires_in_l[pgb2->l_plus_one][index_l][index_of_cls1-1][index_k_bessel] );
+                      printf("pgb2->fo_dens_integ_hires_in_l[pgb2->l_plus_one][%d][%d][%d] = %g\n",  index_l, index_of_cls1,  index_k_bessel, pgb2->fo_dens_integ_hires_in_l[pgb2->l_plus_one][index_l][index_of_cls1][index_k_bessel] );
+                      //printf("pow(-1,(l-1)-l) = %g\n", pow(-1,(l-1)-l));
+                      //printf("Pk_bisp_di = %g\n", Pk_bisp_di);
+                    }*/
+
+                    sum_test += pgb2->w_trapz_k[index_k_bessel];
+                  }
+                  pgb2->densdens_nDl1l2[bin1][bin2][index_n][pgb2->l_minus_one][index_l][index_tau_first][index_tau_second] = sum_l_minus_one;
+                  pgb2->densdens_nDl1l2[bin2][bin2][index_n][pgb2->l_plus_one][index_l][index_tau_first][index_tau_second] = sum_l_plus_one;
+                  /*printf("********pgb2->densdens_nDl1l2[%d][%d][%d][pgb2->l_plus_one = %d][%d][%d][%d] =%g \n",
+                  bin1,
+                  bin2,
+                  index_n,
+                  pgb2->l_plus_one,
+                  index_l,
+                  index_tau_first,
+                  index_tau_second,
+                  pgb2->densdens_nDl1l2[bin1][bin2][index_n][pgb2->l_minus_one][index_l][index_tau_first][index_tau_second]);
+                  if (index_n == pgb2->n_is_plus_one && index_l == 2) {
+                    printf("********pgb2->densdens_nDl1l2[%d][%d][%d][pgb2->l_plus_one = %d][%d][%d][%d] =%g \n",
+                    bin1,
+                    bin2,
+                    index_n,
+                    pgb2->l_plus_one,
+                    index_l,
+                    index_tau_first,
+                    index_tau_second,
+                    pgb2->densdens_nDl1l2[bin1][bin2][index_n][pgb2->l_minus_one][index_l][index_tau_first][index_tau_second]);
+                    printf("1. pgb2->densdens_nDl1l2[0][0][2][2][2][0][0] = %g\n", pgb2->densdens_nDl1l2[0][0][2][2][2][0][0] );
+                  }*/
+
+                //  printf("sum_l_minus_one = %g\n", sum_l_minus_one);
+                //  printf("sum_l_plus_one = %g\n", sum_l_plus_one);
+                //  printf("sum_test = %g (*%g*)\n", sum_test, pgb2->k_bessel[pgb2->k_size_bessel-1]-pgb2->k_bessel[0]);
+
+                }
+              }
+            }
+          }
+        }
+      }
+
+
+      double g_result_di;
+      double * g_temp_array_di;
+      class_alloc1D(g_temp_array_di, ptr->l_size[ppt->index_md_scalars], pgb2->error_message);
+
+      double g_result2;
+      double * g_temp_array2;
+      class_alloc1D(g_temp_array2, ptr->l_size[ppt->index_md_scalars], pgb2->error_message);
+      double * Q_temp_array2;
+      double Q_result2;
+      class_alloc1D(Q_temp_array2, ptr->l_size[ppt->index_md_scalars], pgb2->error_message);
+
+      printf("2. pgb2->densdens_nDl1l2[0][0][2][2][2][0][0] = %g\n", pgb2->densdens_nDl1l2[0][0][2][2][2][0][0]);
+      for (int bin3 = 0; bin3 < ppt->selection_num; bin3++) {
+        for (int bin2 = 0; bin2 < ppt->selection_num; bin2++) {
+          for (int bin1 = 0; bin1 < ppt->selection_num; bin1++) {
+            for(int index_l_third = index_l_third_min; index_l_third < index_l_third_max+1; index_l_third++){
+              for(int index_l_second = index_l_second_min; index_l_second < index_l_second_max+1; index_l_second++){
+                for(int index_l_first = index_l_first_min; index_l_first < index_l_first_max+1; index_l_first++){
+                  for (int index_tau_third = 0; index_tau_third < pgb2->tau_size_selection; index_tau_third++) {
+                    for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
+                      for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
+
+                        g_result2 = 0.;
+                        gl1l2l3(ptr->l[index_l_first],
+                                ptr->l[index_l_second],
+                                ptr->l[index_l_third],
+                                g_temp_array2,
+                                &g_result2,
+                                pgb2->error_message);
+
+                        double l5l6_permuted_sum_di = 0.0;
+                        for (int index_l5 = 1; index_l5 <= 2; index_l5++) {
+                          //printf("density dipole: index_l5 = %d\n", index_l5);
+                          for (int index_l6 = 1; index_l6 <= 2; index_l6++) {
+                          //  printf("density dipole: index_l6 = %d\n", index_l6);
+                            //printf("2.5. pgb2->densdens_nDl1l2[0][0][2][2][2][0][0] = %g\n", pgb2->densdens_nDl1l2[0][0][2][2][2][0][0]);
+                            double pair1 = pgb2->densdens_nDl1l2[bin3][bin1][pgb2->n_is_plus_one][index_l6][index_l_first][index_tau_third][index_tau_first]
+                                           *pgb2->densdens_nDl1l2[bin3][bin2][pgb2->n_is_minus_one][index_l5][index_l_second][index_tau_third][index_tau_second];
+
+                            double pair2 = pgb2->densdens_nDl1l2[bin3][bin1][pgb2->n_is_minus_one][index_l6][index_l_first][index_tau_third][index_tau_first]
+                                           *pgb2->densdens_nDl1l2[bin3][bin2][pgb2->n_is_plus_one][index_l5][index_l_second][index_tau_third][index_tau_second];
+
+                            double pair3 = pgb2->densdens_nDl1l2[bin2][bin1][pgb2->n_is_plus_one][index_l6][index_l_first][index_tau_second][index_tau_first]
+                                           *pgb2->densdens_nDl1l2[bin2][bin3][pgb2->n_is_minus_one][index_l5][index_l_third][index_tau_second][index_tau_third];
+
+                            double pair4 = pgb2->densdens_nDl1l2[bin2][bin1][pgb2->n_is_minus_one][index_l6][index_l_first][index_tau_second][index_tau_first]
+                                           *pgb2->densdens_nDl1l2[bin2][bin3][pgb2->n_is_plus_one][index_l5][index_l_third][index_tau_second][index_tau_third];
+
+
+                            double pair5 = pgb2->densdens_nDl1l2[bin1][bin2][pgb2->n_is_plus_one][index_l6][index_l_second][index_tau_second][index_tau_first]
+                                           *pgb2->densdens_nDl1l2[bin1][bin3][pgb2->n_is_minus_one][index_l5][index_l_third][index_tau_second][index_tau_third];
+
+                            double pair6 = pgb2->densdens_nDl1l2[bin1][bin2][pgb2->n_is_minus_one][index_l6][index_l_second][index_tau_first][index_tau_second]
+                                           *pgb2->densdens_nDl1l2[bin1][bin3][pgb2->n_is_plus_one][index_l5][index_l_third][index_tau_first][index_tau_third];
+
+
+                            /* Swapping the two multipoles within each generalised angular power spectra yields a factor of 2 if the cross-terms are dens-dens */
+                            //herehere
+                            Ql1l2l3l4l5l6(ptr->l[index_l_first],
+                                          ptr->l[index_l_second],
+                                          ptr->l[index_l_third],
+                                          1,
+                                          pgb2->l_dual[index_l5][index_l_second],
+                                          pgb2->l_dual[index_l6][index_l_first],
+                                          Q_temp_array2,
+                                          &Q_result2,
+                                          pgb2);
+
+                            l5l6_permuted_sum_di += (2.*pgb2->l_dual[index_l5][index_l_second]+1.)
+                                                *(2.*pgb2->l_dual[index_l5][index_l_first]+1.)
+                                                *Q_result2
+                                                *2 //This is when term A and B are both density NOTE: This is not true when we set Delta^(1)~dens+RSD
+                                                *(pair1+pair2+pair3+pair4+pair5+pair6);
+
+
+                          }
+                        }
+                        pgb2->redbi[pgb2->index_bisp_dens_di][index_l_first][index_l_second][index_l_third][bin1*pgb2->tau_size_selection+index_tau_first]
+                                 [bin2*pgb2->tau_size_selection+index_tau_second][bin3*pgb2->tau_size_selection+index_tau_third] = l5l6_permuted_sum_di/16./_PI_/_PI_;
+
+                        printf("pgb2->redbi[pgb2->index_bisp_dens_di][%d][%d][%d][%d*pgb2->tau_size_selection+%d][%d*pgb2->tau_size_selection+][%d*pgb2->tau_size_selection+%d] = %g\n",
+                                 index_l_first,
+                                 index_l_second,
+                                 index_l_third,
+                                 bin1,
+                                 index_tau_first,
+                                 bin2,
+                                 index_tau_second,
+                                 bin3,
+                                 index_tau_third,
+                                 pgb2->redbi[pgb2->index_bisp_dens_di][index_l_first][index_l_second][index_l_third][bin1*pgb2->tau_size_selection+index_tau_first]
+                                         [bin2*pgb2->tau_size_selection+index_tau_second][bin3*pgb2->tau_size_selection+index_tau_third]
+                               );
+
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    printf("#4700\n");
+
+    double bisp_dens_mono;
+
+      /* Use A.20 in 1510.04202 */
+      /*for (int bin3 = 0; bin3 < ppt->selection_num; bin3++) {
+        for (int bin2 = 0; bin2 < ppt->selection_num; bin2++) {
+          for (int bin1 = 0; bin1 < ppt->selection_num; bin1++) {
+            for(int index_l_third = index_l_min; index_l_third < index_l_max+1; index_l_third++){
+              for(int index_l_second = index_l_min; index_l_second < index_l_max+1; index_l_second++){
+                for(int index_l_first = index_l_min; index_l_first < index_l_max+1; index_l_first++){
+                  for (int index_tau_third = 0; index_tau_third < pgb2->tau_size_selection; index_tau_third++) {
+                    for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
+                      for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
+
+                        /* There are 6 multipoles that need to be taken into consideration. l_1,l_2,l_3 are paired with the three redshift bins.
+                          The remaining three are l_4=1 (dipole) l_5=l_2+-1 and l_6=l_1+-1. We have to sum over the conjugate mulitpoles l_4 and l_5,
+                          for each l_1 and l_2.*/
+
+                      /*  g_result_di = 0.;
+                        gl1l2l3(ptr->l[index_l_first],
+                                ptr->l[index_l_second],
+                                ptr->l[index_l_third],
+                                g_temp_array_di,
+                                &g_result_di,
+                                pgb2->error_message);
+
+                        double l5l6_permuted_sum = 0.0;
+                        for (int index_l5 = 1; index_l5 <= 2; index_l5++) {
+                          printf("density dipole: index_l5 = %d\n", index_l5);
+                          for (int index_l6 = 1; index_l6 <= 2; index_l6++) {
+                            printf("density dipole: index_l6 = %d\n", index_l6);
+                            printf("3. pgb2->densdens_nDl1l2[0][0][2][2][2][0][0] = %g\n", pgb2->densdens_nDl1l2[0][0][2][2][2][0][0]);
+                            double pair1 = pgb2->densdens_nDl1l2[bin3][bin1][pgb2->n_is_plus_one][index_l6][index_l_first][index_tau_third][index_tau_first]
+                                           *pgb2->densdens_nDl1l2[bin3][bin2][pgb2->n_is_minus_one][index_l5][index_l_second][index_tau_third][index_tau_second];
+
+                            double pair2 = pgb2->densdens_nDl1l2[bin3][bin1][pgb2->n_is_minus_one][index_l6][index_l_first][index_tau_third][index_tau_first]
+                                           *pgb2->densdens_nDl1l2[bin3][bin2][pgb2->n_is_plus_one][index_l5][index_l_second][index_tau_third][index_tau_second];
+
+                            double pair3 = pgb2->densdens_nDl1l2[bin2][bin1][pgb2->n_is_plus_one][index_l6][index_l_first][index_tau_second][index_tau_first]
+                                           *pgb2->densdens_nDl1l2[bin2][bin3][pgb2->n_is_minus_one][index_l5][index_l_third][index_tau_second][index_tau_third];
+
+                            double pair4 = pgb2->densdens_nDl1l2[bin2][bin1][pgb2->n_is_minus_one][index_l6][index_l_first][index_tau_second][index_tau_first]
+                                           *pgb2->densdens_nDl1l2[bin2][bin3][pgb2->n_is_plus_one][index_l5][index_l_third][index_tau_second][index_tau_third];
+
+
+                            double pair5 = pgb2->densdens_nDl1l2[bin1][bin2][pgb2->n_is_plus_one][index_l6][index_l_second][index_tau_second][index_tau_first]
+                                           *pgb2->densdens_nDl1l2[bin1][bin3][pgb2->n_is_minus_one][index_l5][index_l_third][index_tau_second][index_tau_third];
+
+                            double pair6 = pgb2->densdens_nDl1l2[bin1][bin2][pgb2->n_is_minus_one][index_l6][index_l_second][index_tau_first][index_tau_second]
+                                           *pgb2->densdens_nDl1l2[bin1][bin3][pgb2->n_is_plus_one][index_l5][index_l_third][index_tau_first][index_tau_third];
+
+
+                            /* Swapping the two multipoles within each generalised angular power spectra yields a factor of 2 if the cross-terms are dens-dens */
+                            //herehere
+                          /*  Ql1l2l3l4l5l6(ptr->l[index_l_first],
+                                          ptr->l[index_l_second],
+                                          ptr->l[index_l_third],
+                                          1,
+                                          pgb2->l_dual[index_l5][index_l_second],
+                                          pgb2->l_dual[index_l6][index_l_first],
+                                          Q_temp_array,
+                                          &Q_result,
+                                          pgb2);
+
+                            l5l6_permuted_sum += (2.*pgb2->l_dual[index_l5][index_l_second]+1.)
+                                                *(2.*pgb2->l_dual[index_l5][index_l_first]+1.)
+                                                *Q_result
+                                                *2 //This is when term A and B are both density NOTE: This is not true when we set Delta^(1)~dens+RSD
+                                                *(pair1+pair2+pair3+pair4+pair5+pair6);
+
+
+                          }
+                        }
+                        pgb2->redbi[pgb2->index_bisp_dens_di][index_l_first][index_l_second][index_l_third][bin1*pgb2->tau_size_selection+index_tau_first]
+                                 [bin2*pgb2->tau_size_selection+index_tau_second][bin3*pgb2->tau_size_selection+index_tau_third] = l5l6_permuted_sum/16./_PI_/_PI_;
+
+                        printf("pgb2->redbi[pgb2->index_bisp_dens_di][%d][%d][%d][%d*pgb2->tau_size_selection+%d][%d*pgb2->tau_size_selection+][%d*pgb2->tau_size_selection+%d] = %g\n",
+                                 index_l_first,
+                                 index_l_second,
+                                 index_l_third,
+                                 bin1,
+                                 index_tau_first,
+                                 bin2,
+                                 index_tau_second,
+                                 bin3,
+                                 index_tau_third,
+                                 pgb2->redbi[pgb2->index_bisp_dens_di][index_l_first][index_l_second][index_l_third][bin1*pgb2->tau_size_selection+index_tau_first]
+                                         [bin2*pgb2->tau_size_selection+index_tau_second][bin3*pgb2->tau_size_selection+index_tau_third]
+                               );
+
+                      } // end of tau_first
+                    } //end_of_tau_second
+                  } //end of tau_third
+                } // end of index_l_first
+              } // end of index_l_second
+            } // end of index_l_third
+          } // end of bin1
+        } //end of bin2
+      } //end of bin3
+    } // end of if flag*/
+
+    if (pgb2->index_bisp_dens_quad != -1) { /* Eq. A.22 in 1510.04202 */
+      printf("Computing bispectrum: density quadrupole\n");
+      /* First we need to compute generalised angular power spectra with n=0 and two mulitpoles per {}^nD_{l_1l_2} */
+      double fo_dens_integ_hires_in_l_interp_minus2;
+      double fo_dens_integ_hires_in_l_interp_plus2;
+      double source_interp_quad;
+      double sum_l_minus_two_quad;
+      double sum_l_plus_two_quad;
+      double Pk_bisp_quad;
+      for (int bin2 = 0; bin2 < ppt->selection_num; bin2++) {
+        for (int bin1 = 0; bin1 < ppt->selection_num; bin1++) {
+
+
+            for(int index_l = index_l_min; index_l < index_l_max+1; index_l++){
+              int l = ptr->l[index_l];
+              for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
+                tau_second = pgb2->tau_sampling_selection[bin2][index_tau_second];
+                index_of_tau_sampling_cls(tau_second, &index_of_cls2, pgb2);
+
+                for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
+                  sum_l_minus_two_quad = 0.;
+                  sum_l_plus_two_quad = 0.;
+                  tau_first = pgb2->tau_sampling_selection[bin1][index_tau_first];
+
+                  index_of_tau_sampling_cls(tau_first, &index_of_cls1, pgb2);
+
+                  for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
+                    double k = pgb2->k_bessel[index_k_bessel];
+
+                    class_call(primordial_spectrum_at_k(ppm, ppt->index_md_scalars, linear, pgb2->k_bessel[index_k_bessel], &Pk_bisp_quad), ppm->error_message, pgb2->error_message);
+
+                    fo_dens_integ_hires_in_l_interp_minus2 = pgb2->fo_dens_integ_hires_in_l[pgb2->l_minus_two][index_l][index_of_cls1-1][index_k_bessel]*(pgb2->tau_sampling_cls[index_of_cls1]-tau_first)
+                                  + pgb2->fo_dens_integ_hires_in_l[pgb2->l_minus_two][index_l][index_of_cls1][index_k_bessel]*(tau_first-pgb2->tau_sampling_cls[index_of_cls1-1]);
+                    fo_dens_integ_hires_in_l_interp_minus2 /= (pgb2->tau_sampling_cls[index_of_cls1] - pgb2->tau_sampling_cls[index_of_cls1-1]);
+
+                    fo_dens_integ_hires_in_l_interp_plus2 = pgb2->fo_dens_integ_hires_in_l[pgb2->l_plus_two][index_l][index_of_cls1-1][index_k_bessel]*(pgb2->tau_sampling_cls[index_of_cls1]-tau_first)
+                                  + pgb2->fo_dens_integ_hires_in_l[pgb2->l_plus_two][index_l][index_of_cls1][index_k_bessel]*(tau_first-pgb2->tau_sampling_cls[index_of_cls1-1]);
+                    fo_dens_integ_hires_in_l_interp_plus2 /= (pgb2->tau_sampling_cls[index_of_cls1] - pgb2->tau_sampling_cls[index_of_cls1-1]);
+
+
+                    source_interp_quad = pgb2->first_order_sources_integ[pgb2->index_source_delta_m][index_l][index_of_cls2-1][index_k_bessel]*(pgb2->tau_sampling_cls[index_of_cls2]-tau_second)
+                                  + pgb2->first_order_sources_integ[pgb2->index_source_delta_m][index_l][index_of_cls2][index_k_bessel]*(tau_second-pgb2->tau_sampling_cls[index_of_cls2-1]);
+                    source_interp_quad /= (pgb2->tau_sampling_cls[index_of_cls2] - pgb2->tau_sampling_cls[index_of_cls2-1]);
+
+
+                    sum_l_minus_two_quad += pow(-1,(l-2)-l)
+                                         *4.
+                                         *_PI_
+                                         *pow(k, 0)
+                                         *Pk_bisp_quad
+                                         *fo_dens_integ_hires_in_l_interp_minus2
+                                         *source_interp_quad
+                                         *pgb2->w_trapz_k[index_k_bessel]
+                                         /k;
+
+                    sum_l_plus_two_quad += pow(-1, (l+2)-l)
+                                        *4.
+                                        *_PI_
+                                        *pow(k, 0)
+                                        *Pk_bisp_quad
+                                        *fo_dens_integ_hires_in_l_interp_plus2
+                                        *source_interp_quad
+                                        *pgb2->w_trapz_k[index_k_bessel]
+                                        /k;
+
+
+                  }
+                  pgb2->densdens_nDl1l2[bin1][bin2][pgb2->n_is_zero][pgb2->l_minus_two][index_l][index_tau_first][index_tau_second] = sum_l_minus_two_quad;
+                  pgb2->densdens_nDl1l2[bin2][bin2][pgb2->n_is_zero][pgb2->l_plus_two][index_l][index_tau_first][index_tau_second] = sum_l_plus_two_quad;
+
+
+                }
+              }
+
+          }
+        }
+      }
+
+      double * g_temp_array_quad;
+      double * Q_temp_array_quad;
+      double g_result_quad;
+      double Q_result_quad;
+
+      class_alloc1D(g_temp_array_quad, ptr->l_size[ppt->index_md_scalars], pgb2->error_message);
+      class_alloc1D(Q_temp_array_quad, ptr->l_size[ppt->index_md_scalars], pgb2->error_message);
+      for (int bin3 = 0; bin3 < ppt->selection_num; bin3++) {
+        for (int bin2 = 0; bin2 < ppt->selection_num; bin2++) {
+          for (int bin1 = 0; bin1 < ppt->selection_num; bin1++) {
+            for(int index_l_third = index_l_third_min; index_l_third < index_l_third_max+1; index_l_third++){
+              for(int index_l_second = index_l_second_min; index_l_second < index_l_second_max+1; index_l_second++){
+                for(int index_l_first = index_l_first_min; index_l_first < index_l_first_max+1; index_l_first++){
+                  for (int index_tau_third = 0; index_tau_third < pgb2->tau_size_selection; index_tau_third++) {
+                    for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
+                      for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
+
+                        /* There are 6 multipoles that need to be taken into consideration. l_1,l_2,l_3 are paired with the three redshift bins.
+                          The remaining three are l_4=2 (quadrupole) l_5=l_2+-1 and l_6=l_1+-1. We have to sum over the conjugate mulitpoles l_4 and l_5,
+                          for each l_1 and l_2.*/
+
+                        g_result_quad = 0.;
+                        gl1l2l3(ptr->l[index_l_first],
+                                ptr->l[index_l_second],
+                                ptr->l[index_l_third],
+                                g_temp_array_quad,
+                                &g_result_quad,
+                                pgb2->error_message);
+
+                        double l5l6_permuted_sum_quad = 0.0;
+                        for (int index_l5 = 3; index_l5 <= 4; index_l5++) {
+                          for (int index_l6 = 3; index_l6 <= 4; index_l6++) {
+
+
+                            /* NOTE: I don't think this is correct. needs to be checked */
+
+                            double pair1_quad = pgb2->densdens_nDl1l2[bin3][bin1][pgb2->n_is_zero][index_l6][index_l_first][index_tau_third][index_tau_first]
+                                           *pgb2->densdens_nDl1l2[bin3][bin2][pgb2->n_is_zero][index_l5][index_l_second][index_tau_third][index_tau_second];
+
+                            double pair2_quad = pgb2->densdens_nDl1l2[bin3][bin1][pgb2->n_is_zero][index_l6][index_l_first][index_tau_third][index_tau_first]
+                                           *pgb2->densdens_nDl1l2[bin3][bin2][pgb2->n_is_zero][index_l5][index_l_second][index_tau_third][index_tau_second];
+
+                            double pair3_quad = pgb2->densdens_nDl1l2[bin2][bin1][pgb2->n_is_zero][index_l6][index_l_first][index_tau_second][index_tau_first]
+                                           *pgb2->densdens_nDl1l2[bin2][bin3][pgb2->n_is_zero][index_l5][index_l_third][index_tau_second][index_tau_third];
+
+                            double pair4_quad = pgb2->densdens_nDl1l2[bin2][bin1][pgb2->n_is_zero][index_l6][index_l_first][index_tau_second][index_tau_first]
+                                           *pgb2->densdens_nDl1l2[bin2][bin3][pgb2->n_is_zero][index_l5][index_l_third][index_tau_second][index_tau_third];
+
+
+                            double pair5_quad = pgb2->densdens_nDl1l2[bin1][bin2][pgb2->n_is_zero][index_l6][index_l_second][index_tau_second][index_tau_first]
+                                           *pgb2->densdens_nDl1l2[bin1][bin3][pgb2->n_is_zero][index_l5][index_l_third][index_tau_second][index_tau_third];
+
+                            double pair6_quad = pgb2->densdens_nDl1l2[bin1][bin2][pgb2->n_is_zero][index_l6][index_l_second][index_tau_first][index_tau_second]
+                                           *pgb2->densdens_nDl1l2[bin1][bin3][pgb2->n_is_zero][index_l5][index_l_third][index_tau_first][index_tau_third];
+
+
+                            /* Swapping the two multipoles within each generalised angular power spectra yields a factor of 2 if the cross-terms are dens-dens */
+                            //herehere
+                            Ql1l2l3l4l5l6(ptr->l[index_l_first],
+                                          ptr->l[index_l_second],
+                                          ptr->l[index_l_third],
+                                          2,
+                                          pgb2->l_dual[index_l5][index_l_second],
+                                          pgb2->l_dual[index_l6][index_l_first],
+                                          Q_temp_array_quad,
+                                          &Q_result_quad,
+                                          pgb2);
+
+                            l5l6_permuted_sum_quad += (2.*pgb2->l_dual[index_l5][index_l_second]+1.)
+                                                *(2.*pgb2->l_dual[index_l5][index_l_first]+1.)
+                                                *Q_result_quad
+                                                *2 //This is when term A and B are both density NOTE: This is not true when we set Delta^(1)~dens+RSD
+                                                *(pair1_quad+pair2_quad+pair3_quad+pair4_quad+pair5_quad+pair6_quad);
+
+
+                          }
+                        }
+                        printf("l5l6_permuted_sum_quad = %g\n", l5l6_permuted_sum_quad);
+                        pgb2->redbi[pgb2->index_bisp_dens_quad][index_l_first][index_l_second][index_l_third][bin1*pgb2->tau_size_selection+index_tau_first]
+                                 [bin2*pgb2->tau_size_selection+index_tau_second][bin3*pgb2->tau_size_selection+index_tau_third] = pow(g_result_quad,-1)*l5l6_permuted_sum_quad/42./_PI_/_PI_;
+
+                        printf("pgb2->redbi[pgb2->index_bisp_dens_quad][%d][%d][%d][%d*pgb2->tau_size_selection+%d][%d*pgb2->tau_size_selection+][%d*pgb2->tau_size_selection+%d] = %g\n",
+                                 index_l_first,
+                                 index_l_second,
+                                 index_l_third,
+                                 bin1,
+                                 index_tau_first,
+                                 bin2,
+                                 index_tau_second,
+                                 bin3,
+                                 index_tau_third,
+                                 pgb2->redbi[pgb2->index_bisp_dens_quad][index_l_first][index_l_second][index_l_third][bin1*pgb2->tau_size_selection+index_tau_first]
+                                         [bin2*pgb2->tau_size_selection+index_tau_second][bin3*pgb2->tau_size_selection+index_tau_third]
+                               );
+
+                      } // end of tau_first
+                    } //end_of_tau_second
+                  } //end of tau_third
+                } // end of index_l_first
+              } // end of index_l_second
+            } // end of index_l_third
+          } // end of bin1
+        } //end of bin2
+      } //end of bin3
+    } // end of if flag
+
+    printf("bin_mean_index_selection[0] = %d\n", bin_mean_index_selection[0]);
+    /* Compute Figure 1 in 1510.04202 */
+    double composite_dens_redbi;
+    double dipole;
+    double monopole;
+    double quadrupole;
+    for(int index_l = index_l_min; index_l < index_l_max+1; index_l++){
+      monopole = pgb2->redbi[pgb2->index_bisp_dens_mono][index_l_100][index_l_200][index_l][0*pgb2->tau_size_selection+bin_mean_index_selection[0]]
+                  [0*pgb2->tau_size_selection+bin_mean_index_selection[0]][0*pgb2->tau_size_selection+bin_mean_index_selection[0]];
+
+      dipole = pgb2->redbi[pgb2->index_bisp_dens_di][index_l_100][index_l_200][index_l][0*pgb2->tau_size_selection+bin_mean_index_selection[0]]
+                    [0*pgb2->tau_size_selection+bin_mean_index_selection[0]][0*pgb2->tau_size_selection+bin_mean_index_selection[0]];
+
+      quadrupole = pgb2->redbi[pgb2->index_bisp_dens_quad][index_l_100][index_l_200][index_l][0*pgb2->tau_size_selection+bin_mean_index_selection[0]]
+                    [0*pgb2->tau_size_selection+bin_mean_index_selection[0]][0*pgb2->tau_size_selection+bin_mean_index_selection[0]];
+
+      composite_dens_redbi = 1.+(dipole+quadrupole)/monopole;
+
+      printf("%d    %g    %g    %g    %g\n", ptr->l[index_l], composite_dens_redbi, monopole, dipole, quadrupole);
+    }
+    exit(0);
+
+
+    if (pgb2->index_bisp_v_vpp != -1) {
+      double bisp_v_vpp;
+      for (int bin3 = 0; bin3 < ppt->selection_num; bin3++) {
+        for (int bin2 = 0; bin2 < ppt->selection_num; bin2++) {
+          for (int bin1 = 0; bin1 < ppt->selection_num; bin1++) {
+            for(int index_l_third = index_l_min; index_l_third < index_l_max+1; index_l_third++){
+              for(int index_l_second = index_l_min; index_l_second < index_l_max+1; index_l_second++){
+                for(int index_l_first = index_l_min; index_l_first < index_l_max+1; index_l_first++){
+                  for (int index_tau_third = 0; index_tau_third < pgb2->tau_size_selection; index_tau_third++) {
+                    for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
+                      for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
+                        Dl_permute(pgb2->index_type_quad_v,
+                                   pgb2->index_type_quad_v_pp,
+                                   pgb2->index_type_delta,
+                                   pgb2->index_type_delta,
+                                   index_l_first,
+                                   index_l_second,
+                                   index_l_third,
+                                   bin1,
+                                   bin2,
+                                   bin3,
+                                   index_tau_first,
+                                   index_tau_second,
+                                   index_tau_third,
+                                   &bisp_v_vpp,     /* Output the permuted sum */
+                                   pgb2);
+
+
+
+
+                        // pgb2->redbi[index_bisp_v_vpp][bin1][bin2][bin3][A*index_tau_first+B*index_tau_second+C*index_tau_third][index_l_first][index_l_second][index_l_third]
+                      } // end of tau_first
+                    } //end_of_tau_second
+                  } //end of tau_third
+                } // end of index_l_first
+              } // end of index_l_second
+            } // end of index_l_third
+          } // end of bin1
+        } //end of bin2
+      } //end of bin3
+    } // end of if flag
+
+    if (pgb2->index_bisp_vp_squared != -1) {
+      double bisp_vp_squared;
+      for (int bin3 = 0; bin3 < ppt->selection_num; bin3++) {
+        for (int bin2 = 0; bin2 < ppt->selection_num; bin2++) {
+          for (int bin1 = 0; bin1 < ppt->selection_num; bin1++) {
+            for(int index_l_third = index_l_min; index_l_third < index_l_max+1; index_l_third++){
+              for(int index_l_second = index_l_min; index_l_second < index_l_max+1; index_l_second++){
+                for(int index_l_first = index_l_min; index_l_first < index_l_max+1; index_l_first++){
+                  for (int index_tau_third = 0; index_tau_third < pgb2->tau_size_selection; index_tau_third++) {
+                    for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
+                      for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
+                        Dl_permute(pgb2->index_type_quad_v_p,
+                                   pgb2->index_type_quad_v_p,
+                                   pgb2->index_type_delta,
+                                   pgb2->index_type_delta,
+                                   index_l_first,
+                                   index_l_second,
+                                   index_l_third,
+                                   bin1,
+                                   bin2,
+                                   bin3,
+                                   index_tau_first,
+                                   index_tau_second,
+                                   index_tau_third,
+                                   &bisp_vp_squared,     /* Output the permuted sum */
+                                   pgb2);
+
+
+
+
+                        // pgb2->redbi[index_bisp_vp_squared][bin1][bin2][bin3][A*index_tau_first+B*index_tau_second+C*index_tau_third][index_l_first][index_l_second][index_l_third]
+                      } // end of tau_first
+                    } //end_of_tau_second
+                  } //end of tau_third
+                } // end of index_l_first
+              } // end of index_l_second
+            } // end of index_l_third
+          } // end of bin1
+        } //end of bin2
+      } //end of bin3
+    } // end of if flag
+
+    if (pgb2->index_bisp_v_densp != -1) {
+      double bisp_v_densp;
+      for (int bin3 = 0; bin3 < ppt->selection_num; bin3++) {
+        for (int bin2 = 0; bin2 < ppt->selection_num; bin2++) {
+          for (int bin1 = 0; bin1 < ppt->selection_num; bin1++) {
+            for(int index_l_third = index_l_min; index_l_third < index_l_max+1; index_l_third++){
+              for(int index_l_second = index_l_min; index_l_second < index_l_max+1; index_l_second++){
+                for(int index_l_first = index_l_min; index_l_first < index_l_max+1; index_l_first++){
+                  for (int index_tau_third = 0; index_tau_third < pgb2->tau_size_selection; index_tau_third++) {
+                    for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
+                      for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
+                        Dl_permute(pgb2->index_type_quad_v,
+                                   pgb2->index_type_quad_density_p,
+                                   pgb2->index_type_delta,
+                                   pgb2->index_type_delta,
+                                   index_l_first,
+                                   index_l_second,
+                                   index_l_third,
+                                   bin1,
+                                   bin2,
+                                   bin3,
+                                   index_tau_first,
+                                   index_tau_second,
+                                   index_tau_third,
+                                   &bisp_v_densp,     /* Output the permuted sum */
+                                   pgb2);
+
+
+
+
+                        // pgb2->redbi[index_bisp_v_densp][bin1][bin2][bin3][A*index_tau_first+B*index_tau_second+C*index_tau_third][index_l_first][index_l_second][index_l_third]
+                      } // end of tau_first
+                    } //end_of_tau_second
+                  } //end of tau_third
+                } // end of index_l_first
+              } // end of index_l_second
+            } // end of index_l_third
+          } // end of bin1
+        } //end of bin2
+      } //end of bin3
+    } // end of if flag
+
+    if (pgb2->index_bisp_vp_dens != -1) {
+      double bisp_vp_dens;
+      for (int bin3 = 0; bin3 < ppt->selection_num; bin3++) {
+        for (int bin2 = 0; bin2 < ppt->selection_num; bin2++) {
+          for (int bin1 = 0; bin1 < ppt->selection_num; bin1++) {
+            for(int index_l_third = index_l_min; index_l_third < index_l_max+1; index_l_third++){
+              for(int index_l_second = index_l_min; index_l_second < index_l_max+1; index_l_second++){
+                for(int index_l_first = index_l_min; index_l_first < index_l_max+1; index_l_first++){
+                  for (int index_tau_third = 0; index_tau_third < pgb2->tau_size_selection; index_tau_third++) {
+                    for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
+                      for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
+                        Dl_permute(pgb2->index_type_quad_v_p,
+                                   pgb2->index_type_density,
+                                   pgb2->index_type_delta,
+                                   pgb2->index_type_delta,
+                                   index_l_first,
+                                   index_l_second,
+                                   index_l_third,
+                                   bin1,
+                                   bin2,
+                                   bin3,
+                                   index_tau_first,
+                                   index_tau_second,
+                                   index_tau_third,
+                                   &bisp_vp_dens,     /* Output the permuted sum */
+                                   pgb2);
+
+
+
+
+                        // pgb2->redbi[index_bisp_v_densp][bin1][bin2][bin3][A*index_tau_first+B*index_tau_second+C*index_tau_third][index_l_first][index_l_second][index_l_third]
+                      } // end of tau_first
+                    } //end_of_tau_second
+                  } //end of tau_third
+                } // end of index_l_first
+              } // end of index_l_second
+            } // end of index_l_third
+          } // end of bin1
+        } //end of bin2
+      } //end of bin3
+    } // end of if flag
+
+    if (pgb2->index_bisp_lens_dens != -1) {
+      double bisp_lens_dens;
+      for (int bin3 = 0; bin3 < ppt->selection_num; bin3++) {
+        for (int bin2 = 0; bin2 < ppt->selection_num; bin2++) {
+          for (int bin1 = 0; bin1 < ppt->selection_num; bin1++) {
+            for(int index_l_third = index_l_min; index_l_third < index_l_max+1; index_l_third++){
+              for(int index_l_second = index_l_min; index_l_second < index_l_max+1; index_l_second++){
+                for(int index_l_first = index_l_min; index_l_first < index_l_max+1; index_l_first++){
+                  for (int index_tau_third = 0; index_tau_third < pgb2->tau_size_selection; index_tau_third++) {
+                    for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
+                      for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
+                        Dl_permute(pgb2->index_type_lens,
+                                   pgb2->index_type_density,
+                                   pgb2->index_type_delta,
+                                   pgb2->index_type_delta,
+                                   index_l_first,
+                                   index_l_second,
+                                   index_l_third,
+                                   bin1,
+                                   bin2,
+                                   bin3,
+                                   index_tau_first,
+                                   index_tau_second,
+                                   index_tau_third,
+                                   &bisp_lens_dens,     /* Output the permuted sum */
+                                   pgb2);
+
+
+
+
+                        // pgb2->redbi[bisp_lens_dens][bin1][bin2][bin3][A*index_tau_first+B*index_tau_second+C*index_tau_third][index_l_first][index_l_second][index_l_third]
+                      } // end of tau_first
+                    } //end_of_tau_second
+                  } //end of tau_third
+                } // end of index_l_first
+              } // end of index_l_second
+            } // end of index_l_third
+          } // end of bin1
+        } //end of bin2
+      } //end of bin3
+    } // end of if flag
+
+    if (pgb2->index_bisp_vp_lens != -1) {
+      double bisp_vp_lens;
+      for (int bin3 = 0; bin3 < ppt->selection_num; bin3++) {
+        for (int bin2 = 0; bin2 < ppt->selection_num; bin2++) {
+          for (int bin1 = 0; bin1 < ppt->selection_num; bin1++) {
+            for(int index_l_third = index_l_min; index_l_third < index_l_max+1; index_l_third++){
+              for(int index_l_second = index_l_min; index_l_second < index_l_max+1; index_l_second++){
+                for(int index_l_first = index_l_min; index_l_first < index_l_max+1; index_l_first++){
+                  for (int index_tau_third = 0; index_tau_third < pgb2->tau_size_selection; index_tau_third++) {
+                    for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
+                      for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
+                        Dl_permute(pgb2->index_type_quad_v_p,
+                                   pgb2->index_type_lens,
+                                   pgb2->index_type_delta,
+                                   pgb2->index_type_delta,
+                                   index_l_first,
+                                   index_l_second,
+                                   index_l_third,
+                                   bin1,
+                                   bin2,
+                                   bin3,
+                                   index_tau_first,
+                                   index_tau_second,
+                                   index_tau_third,
+                                   &bisp_vp_lens,     /* Output the permuted sum */
+                                   pgb2);
+
+
+
+
+                        // pgb2->redbi[bisp_vp_lens][bin1][bin2][bin3][A*index_tau_first+B*index_tau_second+C*index_tau_third][index_l_first][index_l_second][index_l_third]
+                      } // end of tau_first
+                    } //end_of_tau_second
+                  } //end of tau_third
+                } // end of index_l_first
+              } // end of index_l_second
+            } // end of index_l_third
+          } // end of bin1
+        } //end of bin2
+      } //end of bin3
+    } // end of if flag
+
+    if (pgb2->index_bisp_lens_squared != -1) {
+      double bisp_lens_squared;
+      for (int bin3 = 0; bin3 < ppt->selection_num; bin3++) {
+        for (int bin2 = 0; bin2 < ppt->selection_num; bin2++) {
+          for (int bin1 = 0; bin1 < ppt->selection_num; bin1++) {
+            for(int index_l_third = index_l_min; index_l_third < index_l_max+1; index_l_third++){
+              for(int index_l_second = index_l_min; index_l_second < index_l_max+1; index_l_second++){
+                for(int index_l_first = index_l_min; index_l_first < index_l_max+1; index_l_first++){
+                  for (int index_tau_third = 0; index_tau_third < pgb2->tau_size_selection; index_tau_third++) {
+                    for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
+                      for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
+                        Dl_permute(pgb2->index_type_lens,
+                                   pgb2->index_type_lens,
+                                   pgb2->index_type_delta,
+                                   pgb2->index_type_delta,
+                                   index_l_first,
+                                   index_l_second,
+                                   index_l_third,
+                                   bin1,
+                                   bin2,
+                                   bin3,
+                                   index_tau_first,
+                                   index_tau_second,
+                                   index_tau_third,
+                                   &bisp_lens_squared,     /* Output the permuted sum */
+                                   pgb2);
+
+
+
+
+                        // pgb2->redbi[bisp_lens_squared][bin1][bin2][bin3][A*index_tau_first+B*index_tau_second+C*index_tau_third][index_l_first][index_l_second][index_l_third]
+                      } // end of tau_first
+                    } //end_of_tau_second
+                  } //end of tau_third
+                } // end of index_l_first
+              } // end of index_l_second
+            } // end of index_l_third
+          } // end of bin1
+        } //end of bin2
+      } //end of bin3
+    } // end of if flag
 
 
 
@@ -4590,9 +5536,9 @@ int galbispectra2_init (
 
       //for (int index_l = 0; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
       for(int index_l = index_l_min; index_l < index_l_max+1; index_l++){
-        if (ptr->l[index_l] % 2 != 0) {
+        /*if (ptr->l[index_l] % 2 != 0) {
           continue;
-        }
+        }*/
       //for (int index_l = ptr->l_size[ppt->index_md_scalars]-1; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
       //for (int index_l = ptr->l_size[ppt->index_md_scalars]-2; index_l < ptr->l_size[ppt->index_md_scalars]-1; index_l++) {
         printf("#############index_l = %d (l=%d)##################\n", index_l, ptr->l[index_l]);

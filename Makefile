@@ -40,7 +40,9 @@ CFLAGS   += -w
 INCLUDES = -I../include -I../$(CLASS_DIR)/include
 LDFLAGS = -lm
 
-
+CFLAGS += -I../wig6j_lib/inc/
+LDFLAGS += -L../wig6j_lib/lib/
+LDLIBS += -lwigxjpf -lm
 # =========================================================================
 # =                        Directories locations                          =
 # =========================================================================
