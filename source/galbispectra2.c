@@ -1909,17 +1909,17 @@ int galbispectra2_init (
 
    //ALERT HARCDODED l-array
    printf("ptr->l[index_l_304] = %d\n", ptr->l[index_l_304] );
-   ptr->l[0]=2;
-   ptr->l[1]= 4;
-   ptr->l[2] = 4;
-   ptr->l[3] = 54;
-   ptr->l[4] = 104;
-   ptr->l[5] = 154;
-   ptr->l[6] = 204;
-   ptr->l[7] = 254;
-   ptr->l[8] = 304;
-   ptr->l[9] = 354;
-   ptr->l[10] = 404;
+   //ptr->l[0]=2;
+   //ptr->l[1]= 4;
+   //ptr->l[2] = 4;
+   //ptr->l[3] = 54;
+   //ptr->l[4] = 104;
+   //ptr->l[5] = 154;
+   //ptr->l[6] = 204;
+   //ptr->l[7] = 254;
+   //ptr->l[8] = 304;
+   //ptr->l[9] = 354;
+   //ptr->l[10] = 404;
 
    //ptr->l[9] = 5;
    //ptr->l[10] = 70;
@@ -1967,11 +1967,11 @@ int galbispectra2_init (
   printf("ppt2->k_size = %d\n", ppt2->k_size);
 
 
-  //int index_l_min = 0;
-  int index_l_min = index_l_4;
+  int index_l_min = 0;
+  //int index_l_min = index_l_4;
 
-  int index_l_max = index_l_404;
-  //int index_l_max = ptr->l_size[ppt->index_md_scalars]-1;
+  //int index_l_max = index_l_404;
+  int index_l_max = ptr->l_size[ppt->index_md_scalars]-1;
   //int index_l_max = 14;
   double val3j, val6j, val9j;
   /* Allocate memory for the Wigner symbol wig3jj function of the WIGXJPF library which we use later */
@@ -12617,6 +12617,7 @@ int galbispectra2_init (
     printf("Printing observed galaxy bispectrum to file...\n");
     print_obs_bisp_file(index_l_min, index_l_first_min, index_l_second_min, index_l_third_min, ppt, ppt2, ptr, ppr, pgb2);
   }
+  printf("Successfully completed galbispecta.\n");
   exit(0);
   const char* directory = "output/";
   const char* fileName = "obs_bisp";
