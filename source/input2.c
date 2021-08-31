@@ -34,6 +34,7 @@ int input2_init_from_arguments(
             struct bispectra *pbi,
             struct fisher *pfi,
             struct output *pop,
+            struct galbispectra2 *pgb2,
             ErrorMsg errmsg
             )
 {
@@ -115,6 +116,7 @@ int input2_init_from_arguments(
                 pbi,
                 pfi,
                 pop,
+                pgb2,
     errmsg),
     errmsg,
     errmsg);
@@ -153,6 +155,7 @@ int input2_init (
          struct bispectra *pbi,
          struct fisher *pfi,
          struct output *pop,
+         struct galbispectra2 *pgb2,
          ErrorMsg errmsg
          )
 {
@@ -163,7 +166,7 @@ int input2_init (
 
   /** - define local variables */
 
-  int flag1,flag2,flag3,flag;
+  int flag0,flag1,flag2,flag3,flag, flag4, flag5, flag_fo, flag_obs, flag_euclid;
   int int1;
   int found;
   double param1,param2,param3;
@@ -171,10 +174,14 @@ int input2_init (
   double * pointer, * pointer1, * pointer2;
   int * int_pointer, * int_pointer1, * int_pointer2;
   int * pointer_to_int;
+  char string0[_ARGUMENT_LENGTH_MAX_];
   char string1[_ARGUMENT_LENGTH_MAX_];
   char string2[_ARGUMENT_LENGTH_MAX_];
   char string3[_ARGUMENT_LENGTH_MAX_];
   char string[_ARGUMENT_LENGTH_MAX_];
+  char string_fo[_ARGUMENT_LENGTH_MAX_];
+  char string_obs[_ARGUMENT_LENGTH_MAX_];
+  char string_euclid[_ARGUMENT_LENGTH_MAX_];
   int i;
 
 
@@ -195,7 +202,8 @@ int input2_init (
                ple,
                pbi,
                pfi,
-               pop),
+               pop,
+               pgb2),
     errmsg,
     errmsg);
 
@@ -208,6 +216,144 @@ int input2_init (
   // ==================================================================================
   // =                                  Parse output                                  =
   // ==================================================================================
+  class_call (parser_read_string (pfc,"observed/theoretical",&string_obs, &flag_obs, errmsg),
+    errmsg,
+    errmsg);
+
+
+  if (flag_obs == _TRUE_) {
+    if ((strstr(string_obs,"observed") != NULL)) {
+      pgb2->has_observ_bisp = _TRUE_;
+    }
+
+    if ((strstr(string_obs,"theoretical") != NULL)) {
+      pgb2->has_unobserv_bisp = _TRUE_;
+    }
+
+  }
+
+  class_call (parser_read_string (pfc,"Euclid bias",&string_euclid, &flag_euclid, errmsg),
+    errmsg,
+    errmsg);
+
+  if (flag_euclid == _TRUE_) {
+    if ((strstr(string_euclid,"yes") != NULL)) {
+      pgb2->has_euclid_bias = _TRUE_;
+    }
+
+    if ((strstr(string_euclid,"no") != NULL)) {
+      pgb2->has_euclid_bias = -1;
+    }
+
+  }
+
+
+
+  class_call (parser_read_string (pfc,"bispectrum terms",&string0,&flag0,errmsg),
+    errmsg,
+    errmsg);
+
+  class_call (parser_read_string (pfc,"first order terms",&string_fo,&flag_fo,errmsg),
+    errmsg,
+    errmsg);
+
+  if (flag_fo == _TRUE_) {
+    if ((strstr(string_fo,"density") != NULL)) {
+      pgb2->has_first_order_density = _TRUE_;
+      //printf("HAS FO DENS\n");
+      //printf("pgb2->has_first_order_density = %d\n", pgb2->has_first_order_density);
+
+    }
+
+
+
+    if ((strstr(string_fo,"rsd") != NULL)) {
+      pgb2->has_first_order_rsd = _TRUE_;
+      printf("inside input2.c f.o. rsd flag\n" );
+    }
+
+
+    if ((strstr(string_fo,"lensing") != NULL)) {
+      pgb2->has_first_order_lensing = _TRUE_;
+
+
+    }
+  }
+
+
+  if (flag0 == _TRUE_) {
+
+    if ((strstr(string0,"dens_mono") != NULL)) {
+      pgb2->has_bisp_dens_mono = _TRUE_;
+
+    }
+
+    if ((strstr(string0,"dens_di") != NULL)) {
+      pgb2->has_bisp_dens_di = _TRUE_;
+    }
+
+    if ((strstr(string0,"dens_quad") != NULL)) {
+      pgb2->has_bisp_dens_quad = _TRUE_;
+    }
+
+    if ((strstr(string0,"v_vpp") != NULL)) {
+      pgb2->has_bisp_v_vpp = _TRUE_;
+    }
+
+    if ((strstr(string0,"vp_squared") != NULL)) {
+      pgb2->has_bisp_vp_squared = _TRUE_;
+    }
+
+    if ((strstr(string0,"v_densp") != NULL)) {
+      pgb2->has_bisp_v_densp = _TRUE_;
+    }
+
+    if ((strstr(string0,"vp_dens") != NULL)) {
+      pgb2->has_bisp_vp_dens = _TRUE_;
+    }
+
+    if ((strstr(string0,"so_rsd") != NULL)) {
+      pgb2->has_bisp_so_rsd = _TRUE_;
+    }
+
+    if ((strstr(string0,"lens_dens") != NULL)) {
+      pgb2->has_bisp_lens_dens = _TRUE_;
+    }
+
+    if ((strstr(string0,"vp_lens") != NULL)) {
+      pgb2->has_bisp_vp_lens = _TRUE_;
+    }
+
+    if ((strstr(string0,"lens_squared") != NULL)) {
+      pgb2->has_bisp_lens_squared = _TRUE_;
+    }
+
+    if ((strstr(string0,"Ddelta_Dpsi") != NULL)) {
+      pgb2->has_bisp_Ddelta_Dpsi = _TRUE_;
+    }
+
+    if ((strstr(string0,"Dvp_Dpsi") != NULL)) {
+      pgb2->has_bisp_Dvp_Dpsi = _TRUE_;
+    }
+
+    if ((strstr(string0,"Dlens_Dpsi") != NULL)) {
+      pgb2->has_bisp_Dlens_Dpsi = _TRUE_;
+    }
+
+    if ((strstr(string0,"int_Dlens_DPsi1") != NULL)) {
+      pgb2->has_bisp_int_Dlens_DPsi1 = _TRUE_;
+    }
+
+    if ((strstr(string0,"int_nabla2_DPsi1_DPsi1") != NULL)) {
+      pgb2->has_bisp_int_nabla2_DPsi1_DPsi1 = _TRUE_;
+    }
+
+    if ((strstr(string0,"so_lens") != NULL)) {
+      pgb2->has_bisp_so_lens = _TRUE_;
+    }
+
+  }
+
 
   class_call (parser_read_string (pfc,"output",&string1,&flag1,errmsg),
     errmsg,
@@ -2039,7 +2185,8 @@ int input2_default_params (
        struct lensing *ple,
        struct bispectra *pbi,
        struct fisher *pfi,
-       struct output *pop
+       struct output *pop,
+       struct galbispectra2 *pgb2
        ) {
 
 

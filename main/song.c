@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
 
   printf("Done with init 1st order \n");
   if (input2_init_from_arguments(argc,argv,&pr,&pr2,&ba,&th,
-    &pt,&pt2,&tr,&bs,&bs2,&tr2,&pm, &sp,&nl,&le,&bi,&fi,&op,errmsg) == _FAILURE_) {
+    &pt,&pt2,&tr,&bs,&bs2,&tr2,&pm, &sp,&nl,&le,&bi,&fi,&op,&gb2,&errmsg) == _FAILURE_) {
     printf("\n\nError running input_init_from_arguments \n=>%s\n",errmsg);
     return _FAILURE_;
   }
@@ -151,14 +151,12 @@ int main(int argc, char **argv) {
   }*/
 
 
-
-
-
   printf("Done with compute 1st order cl %p\n",&bs);
   if (galbispectra2_init (&pr,&pr2,&ba,&pm,&th,&pt,&pt2,&gb2,&bs,&tr) == _FAILURE_) {
     printf("\n\nError in galbispectra2_init \n =>%s\n",gb2.error_message);
     return _FAILURE_;
   }
+  wig_table_free();
 /*
   for(int index_l = 0; index_l < tr.l_size[pt.index_md_scalars]-1; index_l++){
     for (int index_tau_first = 0; index_tau_first < pt.tau_size; index_tau_first++){

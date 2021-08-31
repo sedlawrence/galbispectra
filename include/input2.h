@@ -8,6 +8,7 @@
 #include "bessel2.h"
 #include "perturbations2.h"
 #include "transfer2.h"
+#include "galbispectra2.h"
 
 /* macros for reading parameter values with routines from the parser */
 #define class_read_string_one_of_two(pfc,name1,name2)                   \
@@ -66,14 +67,14 @@
 /**************************************************************/
 
 /*
- * Boilerplate for C++ 
+ * Boilerplate for C++
  */
 #ifdef __cplusplus
 extern "C" {
 #endif
 
   int input2_init_from_arguments(
-		 int argc, 
+		 int argc,
 		 char **argv,
 		 struct precision * ppr,
 		 struct precision2 * ppr2,
@@ -92,6 +93,7 @@ extern "C" {
 		 struct bispectra *pbi,
      struct fisher *pfi,
 		 struct output *pop,
+     struct galbispectra2 *pgb2,
 		 ErrorMsg errmsg
 		 );
 
@@ -114,13 +116,14 @@ extern "C" {
 		 struct bispectra *pbi,
      struct fisher *pfi,
 		 struct output *pop,
+     struct galbispectra2*pgb2,
 		 ErrorMsg errmsg
 		 );
 
   int input2_default_params(
 			   struct background *pba,
 			   struct thermo *pth,
-			   struct perturbs *ppt,  
+			   struct perturbs *ppt,
          struct perturbs2 *ppt2,
 			   struct transfers *ptr,
 			   struct bessels * pbs,
@@ -132,9 +135,10 @@ extern "C" {
 			   struct lensing *ple,
 			   struct bispectra *pbi,
          struct fisher *pfi,
-			   struct output *pop
+			   struct output *pop,
+         struct galbispectra2*pgb2
 			   );
-  
+
   int input2_default_precision(
 			      struct precision2 * ppr2
 			      );

@@ -13,11 +13,11 @@
 l_max_scalars = 400
 #l_logstep = 1.15
 #this is the usual coarse sampling
-l_logstep = 3.2
+#l_logstep = 3.2
 #this is for a very fine (almost every) multipole sampling
 #l_logstep = 1.02
-#l_logstep = 1.25
 #l_logstep = 1.1
+l_logstep = 1.2
 #l_logstep = 1.2
 l_linstep = 50
 
@@ -114,21 +114,23 @@ k_min_tau0_song = 0.1
 #k_max_tau0_over_l_max_song = 90
 #for consistency checks with class use below with l_max_scalars = 400
 #k_max_tau0_over_l_max_song = 12.5
-#kmax 0.64:
-k_max_tau0_over_l_max_song = 23
 #kmax 1.29:
-#k_max_tau0_over_l_max_song = 46
+#k_max_tau0_over_l_max_song = 23
+#kmax 2.59:
 #k_max_tau0_over_l_max_song = 92
+#kmax 5.18
+k_max_tau0_over_l_max_song = 184
 
+#k_max_tau0_over_l_max_song = 46
 #k_max_tau0_over_l_max_song = 8
 #k_max_tau0_over_l_max_song = 15.1
 #k_max_tau0_over_l_max_song = 180
 
 #22.03.21 (lower precision ppt->k_size[scalars] = 87)
-#k_step_sub_song = 0.3
-#k_step_super_song = 0.025
-#k_logstep_super_song = 1.8
-#k_step_transition_song = 0.2
+k_step_sub_song = 0.3
+k_step_super_song = 0.025
+k_logstep_super_song = 1.8
+k_step_transition_song = 0.2
 
 #ppt->k_size ~ 4500
 #k_step_sub_song = 0.002
@@ -137,10 +139,10 @@ k_max_tau0_over_l_max_song = 23
 #k_step_transition_song = 0.05
 
 #medium precision
-k_step_sub_song = 0.1
-k_step_super_song = 0.015
-k_logstep_super_song = 1.2
-k_step_transition_song = 0.1
+#k_step_sub_song = 0.1
+#k_step_super_song = 0.015
+#k_logstep_super_song = 1.2
+#k_step_transition_song = 0.1
 
 #higher precision
 #k_step_sub_song = 0.05

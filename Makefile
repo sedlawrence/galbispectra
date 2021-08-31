@@ -37,12 +37,16 @@ CFLAGS   += -w
 # LDFLAGS += -fopenmp
 
 # Header files and libraries
-INCLUDES = -I../include -I../$(CLASS_DIR)/include
-LDFLAGS = -lm
+INCLUDES = -I../include -I../$(CLASS_DIR)/include -I/home/sam/wigxjpf-1.11/inc/
+LDFLAGS = -lm -lwigxjpf
 
-CFLAGS += -I../wig6j_lib/inc/
-LDFLAGS += -L../wig6j_lib/lib/
-LDLIBS += -lwigxjpf -lm
+#CFLAGS += -I../wig6j_lib/inc/
+#LDFLAGS += -L/home/sam/wigxjpf-1.11/lib
+#LDLIBS += -lwigxjpf -lm
+
+CFLAGS += -I/home/sam/wigxjpf-1.11/inc/
+LDFLAGS += -L/home/sam/wigxjpf-1.11/lib/
+#LDLIBS += -lwigxjpf -lm
 # =========================================================================
 # =                        Directories locations                          =
 # =========================================================================
@@ -111,6 +115,7 @@ BISPECTRA2 = bispectra2.o
 GALBISPECTRA2 = galbispectra2.o
 SPECTRA2 = spectra2.o
 FISHER = fisher.o
+CSIMPLE = csimple_song.o
 
 
 # ==========================================================================
@@ -143,8 +148,8 @@ PRINT_TAU_SONG = print_tau_song.o
 PRINT_K_SONG = print_k_song.o
 
 song: $(SONG_TOOLS) $(SOURCE_CLASS) $(INPUT2) $(PERTURBATIONS2)\
-	$(BESSEL2) $(TRANSFER2) $(BISPECTRA2) $(GALBISPECTRA2) $(SPECTRA2) $(OUTPUT) $(SONG)
-	$(CC) $(LDFLAGS) -o  $@ $(addprefix build/,$(notdir $^)) -lm
+	$(BESSEL2) $(TRANSFER2) $(BISPECTRA2) $(GALBISPECTRA2) $(SPECTRA2) $(CSIMPLE) $(OUTPUT) $(SONG)
+	$(CC) $(LDFLAGS) -o  $@ $(addprefix build/,$(notdir $^)) -lm -I/home/sam/wigxjpf-1.11/inc -L/home/sam/wigxjpf-1.11/lib -lwigxjpf 
 
 print_params: $(SONG_TOOLS) $(SOURCE_CLASS) $(INPUT2) $(PRINT_PARAMS)
 	$(CC) $(LDFLAGS) -o  $@ $(addprefix build/,$(notdir $^)) -lm

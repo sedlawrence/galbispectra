@@ -1041,23 +1041,25 @@ double Dl_1D_time_int(int index_type_A,
                       }
 
 
-double nDl_1D_time_int(int index_n,
-                       int index_l_dual,
-                       int index_l,
-                       int index_tau_first,
-                       int bin1,
-                       int bin2,
-                       double * result,
-                       struct galbispectra2 *pgb2){
+double nDl_1D_time_int(int index_type_A,
+                      int index_type_B,
+                      int index_n,
+                      int index_l_dual,
+                      int index_l,
+                      int index_tau_first,
+                      int bin1,
+                      int bin2,
+                      double * result,
+                      struct galbispectra2 *pgb2){
 
-                       double sum = 0.0;
+                      double sum = 0.0;
 
-                       for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
-                         sum += pgb2->densdens_nDl1l2[bin1][bin2][index_n][index_l_dual][index_l][index_tau_first][index_tau_second]*pgb2->selection[bin2][index_tau_second]*pgb2->w_trapz[bin2][index_tau_second];
+                      for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
+                        sum += pgb2->densdens_nDl1l2[bin1][bin2][index_n][index_l_dual][index_l][index_tau_first][index_tau_second]*pgb2->selection[bin2][index_tau_second]*pgb2->w_trapz[bin2][index_tau_second];
 
-                       }
+                      }
 
-                       *result = sum;
+                      *result = sum;
 
 
                       }
@@ -1620,7 +1622,7 @@ int print_obs_bisp_file(int index_l_min,
 
                         f = fopen(name_buffer,"w");
                         fprintf(f, "# This file contains the OBSERVED reduced angular galaxy bispectrum output data for each of the requested terms (pgb2->index_type_bisp_..)\n");
-                        fprintf(f, "#First column is redshift, the rest of the columns are b^A_lll(z1=%g, z2=%g, z3=%g) where A is a requested second-order perturbation\n", ppt->selection_mean[pgb2->bin1], ppt->selection_mean[pgb2->bin2], ppt->selection_mean[pgb2->bin3]);
+                        fprintf(f, "#First column is redshift, the rest of the columns are b^A_lll(z1=%g, z2=%g, z=%g) where A is a requested second-order perturbation\n", ppt->selection_mean[pgb2->bin1], ppt->selection_mean[pgb2->bin2], ppt->selection_mean[pgb2->bin3]);
                         fprintf(f, "# The following first order terms have been included:");
                         if (pgb2->has_first_order_density == _TRUE_) {
                           fprintf(f, " density;");
@@ -1641,8 +1643,6 @@ int print_obs_bisp_file(int index_l_min,
                         fprintf(f,"#selection size = %d\n", pgb2->tau_size_selection);
                         for (int bin = 0; bin < ppt->selection_num; bin++) {
                           fprintf(f,"#selection[%d] min/max %g/%g\n", bin, pgb2->tau_sampling_selection[bin][0], pgb2->tau_sampling_selection[bin][pgb2->tau_size_selection-1]);
-                          fprintf(f, "#selection_width[%d] = %g\n", bin, ppt->selection_width[bin]);
-
                         }
                         fprintf(f, "#ppt->tau_sampling_quadsources has %d points sampled between (%g,%g)\n", ppt->tau_size_quadsources, ppt->tau_sampling_quadsources[0], ppt->tau_sampling_quadsources[ppt->tau_size_quadsources-1] );
                         fprintf(f,"#cls size = %d\n", pgb2->tau_size_cls);
@@ -1684,17 +1684,6 @@ int print_obs_bisp_file(int index_l_min,
                               for (int index_type_bisp = 0; index_type_bisp < pgb2->bisp_type_size; index_type_bisp++) {
                                 sum += pgb2->obs_redbi[index_type_bisp][index_l_first-index_l_first_min][index_l_second-index_l_second_min][index_l_third-index_l_third_min][pgb2->bin1][pgb2->bin2][pgb2->bin3];
                                 class_fprintf_double(f, pgb2->obs_redbi[index_type_bisp][index_l_first-index_l_first_min][index_l_second-index_l_second_min][index_l_third-index_l_third_min][pgb2->bin1][pgb2->bin2][pgb2->bin3], _TRUE_);
-                                if (index_type_bisp == pgb2->index_bisp_int_Dlens_DPsi1) {
-                                  printf("Inside obs_print obs_redbi[%d][%d][%d][%d][%d][%d][%d] = %g\n", index_type_bisp,
-                                                                                                          index_l_first-index_l_first_min,
-                                                                                                          index_l_second-index_l_second_min,
-                                                                                                          index_l_third-index_l_third_min,
-                                                                                                          pgb2->bin1,
-                                                                                                          pgb2->bin2,
-                                                                                                          pgb2->bin3,
-                                                                                                          pgb2->obs_redbi[index_type_bisp][index_l_first-index_l_first_min][index_l_second-index_l_second_min][index_l_third-index_l_third_min][pgb2->bin1][pgb2->bin2][pgb2->bin3]);
-                                }
-
 
                               }
 
@@ -1712,6 +1701,124 @@ int print_obs_bisp_file(int index_l_min,
                         }
 
 
+
+
+int print_theo_bisp_file(int index_l_min,
+
+                      int index_l_first_min,
+                      int index_l_second_min,
+                      int index_l_third_min,
+                      struct perturbs * ppt,
+                      struct perturbs2 * ppt2,
+                      struct transfers * ptr,
+                      struct background * pba,
+                      struct precision *ppr,
+                      struct galbispectra2 * pgb2){
+
+                      double * pvecback_theo;
+
+                      class_alloc(pvecback_theo, pba->bg_size * sizeof(double), pba->error_message);
+
+                      for (int index_l = index_l_min; index_l < (index_l_min+pgb2->new_l_size); index_l++) {
+
+                        int l = ptr->l[index_l];
+                        const char* directory = "output/";
+                        const char* fileName = "_theo_bisp_l";
+
+
+
+                        const char* fileType = ".dat";
+
+
+                        int i;
+                        double z;
+
+                        const int count = 1;
+
+                        char name_buffer[600];
+                        FILE* f = NULL;
+
+                        double obs_bisp_result;
+                        //const char* inputFileName = ppr->ini_filename;
+                        sprintf(name_buffer,"%s%s%s%d%s",directory, ppr->ini_filename, fileName,l,fileType);
+
+                        f = fopen(name_buffer,"w");
+                        fprintf(f, "# This file contains the THEORETICAL reduced angular galaxy bispectrum output data for each of the requested terms (pgb2->index_type_bisp_..)\n");
+                        fprintf(f, "#First column is redshift, the rest of the columns are b^A_lll(z1=%g, z2=%g, z) where l=%d and A is a requested second-order perturbation\n", ppt->selection_mean[pgb2->bin1], ppt->selection_mean[pgb2->bin2], l);
+                        fprintf(f, "# The following first order terms have been included:");
+                        if (pgb2->has_first_order_density == _TRUE_) {
+                          fprintf(f, " density;");
+                        }
+                        if (pgb2->has_first_order_rsd == _TRUE_) {
+                          fprintf(f, " rsd;");
+                        }
+                        if (pgb2->has_first_order_lensing == _TRUE_) {
+                          fprintf(f, " lensing;");
+                        }
+                        fprintf(f, "\n");
+                        fprintf(f, "#The final column is the sum of the bispectra for that row\n");
+                        fprintf(f,"#selection size = %d\n", pgb2->tau_size_selection);
+
+                        for (int bin = 0; bin < ppt->selection_num; bin++) {
+                          fprintf(f,"#selection[%d] min/max %g/%g\n", bin, pgb2->tau_sampling_selection[bin][0], pgb2->tau_sampling_selection[bin][pgb2->tau_size_selection-1]);
+                        }
+                        fprintf(f, "#ppt->tau_sampling_quadsources has %d points sampled between (%g,%g)\n", ppt->tau_size_quadsources, ppt->tau_sampling_quadsources[0], ppt->tau_sampling_quadsources[ppt->tau_size_quadsources-1] );
+
+                        fprintf(f,"#cls size = %d\n", pgb2->tau_size_cls);
+                        fprintf(f,"#cls min/max %g/%g\n", pgb2->tau_sampling_cls[0], pgb2->tau_sampling_cls[pgb2->tau_size_cls-1]);
+                        //fprintf(f,"#bessel_boost = %d\n", bessel_boost);
+                        fprintf(f,"#k size = %d\n", pgb2->k_size_bessel);
+                        fprintf(f,"#k min/max %g/%g\n", pgb2->k_bessel[0], pgb2->k_bessel[pgb2->k_size_bessel-1]);
+                        fprintf(f, "# ppt->k[ppt->index_md_scalars] has %d points sampled between (%g,%g)\n",ppt->k_size[ppt->index_md_scalars], ppt->k[ppt->index_md_scalars][0],ppt->k[ppt->index_md_scalars][ppt->k_size[ppt->index_md_scalars]-1] );
+
+
+                        fprintf(f,"#               z              ");
+                        for (int bin1 = 0; bin1 < ppt->selection_num; bin1++) {
+                          for (int bin2 = 0; bin2 < ppt->selection_num; bin2++) {
+                            for (int index_type_bisp =0; index_type_bisp < pgb2->bisp_type_size; index_type_bisp++) {
+                              //class_fprintf_int(f, index_type_bisp, _TRUE_);
+                              fprintf(f, "%s                 ", pgb2->bisp_type_labels[index_type_bisp]);
+                            }
+                            //class_fprintf_columntitle(f, pgb2->bisp_type_labels, _TRUE_, pgb2->bisp_type_size);
+                            fprintf(f,"           sum          ");
+                            fprintf(f,"\n");
+
+                            int last_index;
+                            for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++) {
+                              class_call(background_at_tau(pba,
+                                                           pgb2->tau_sampling_selection[pgb2->bin3][index_tau],
+                                                           pba->long_info,
+                                                           pba->inter_normal,
+                                                           &last_index,
+                                                           pvecback_theo),
+                                                           pba->error_message,
+                                                           pgb2->error_message);
+
+                              z = pba->a_today/pvecback_theo[pba->index_bg_a]-1.;
+
+
+
+                              class_fprintf_double(f, z, _TRUE_);
+                              double sum =0.;
+                              for (int index_type_bisp = 0; index_type_bisp < pgb2->bisp_type_size; index_type_bisp++) {
+                                sum += pgb2->redbi[index_type_bisp][index_l-index_l_first_min][index_l-index_l_second_min][index_l-index_l_third_min][pgb2->bin1*pgb2->tau_size_selection+pgb2->bin_mean_index_selection[pgb2->bin1]-pgb2->index_tau_bin1_start][pgb2->bin2*pgb2->tau_size_selection+pgb2->bin_mean_index_selection[pgb2->bin2]-pgb2->index_tau_bin2_start][pgb2->bin3*pgb2->tau_size_selection+index_tau];
+                                class_fprintf_double(f, pgb2->redbi[index_type_bisp][index_l-index_l_first_min][index_l-index_l_second_min][index_l-index_l_third_min]
+                                    [pgb2->bin1*pgb2->tau_size_selection+pgb2->bin_mean_index_selection[pgb2->bin1]-pgb2->index_tau_bin1_start][pgb2->bin2*pgb2->tau_size_selection+pgb2->bin_mean_index_selection[pgb2->bin2]-pgb2->index_tau_bin2_start][pgb2->bin3*pgb2->tau_size_selection+index_tau], _TRUE_);
+
+                              }
+                              class_fprintf_double(f, sum, _TRUE_);
+                              fprintf(f,"\n");
+                            }
+
+
+                            //fclose(f);
+                            }
+                          }
+                        }
+
+
+                        return _SUCCESS_;
+                      }
 
   int print_theo_bisp_file_header(int index_bisp_type,
                                   struct perturbs * ppt,
@@ -1909,17 +2016,17 @@ int galbispectra2_init (
 
    //ALERT HARCDODED l-array
    printf("ptr->l[index_l_304] = %d\n", ptr->l[index_l_304] );
-   ptr->l[0]=2;
-   ptr->l[1]= 4;
-   ptr->l[2] = 4;
-   ptr->l[3] = 54;
-   ptr->l[4] = 104;
-   ptr->l[5] = 154;
-   ptr->l[6] = 204;
-   ptr->l[7] = 254;
-   ptr->l[8] = 304;
-   ptr->l[9] = 354;
-   ptr->l[10] = 404;
+   //ptr->l[0]=2;
+   //ptr->l[1]= 4;
+   //ptr->l[2] = 4;
+   //ptr->l[3] = 54;
+   //ptr->l[4] = 104;
+   //ptr->l[5] = 154;
+   //ptr->l[6] = 204;
+   //ptr->l[7] = 254;
+   //ptr->l[8] = 304;
+   //ptr->l[9] = 354;
+   //ptr->l[10] = 404;
 
    //ptr->l[9] = 5;
    //ptr->l[10] = 70;
@@ -1967,11 +2074,11 @@ int galbispectra2_init (
   printf("ppt2->k_size = %d\n", ppt2->k_size);
 
 
-  //int index_l_min = 0;
-  int index_l_min = index_l_4;
+  int index_l_min = 0;
+  //int index_l_min = index_l_4;
 
-  int index_l_max = index_l_404;
-  //int index_l_max = ptr->l_size[ppt->index_md_scalars]-1;
+  //int index_l_max = index_l_404;
+  int index_l_max = ptr->l_size[ppt->index_md_scalars]-1;
   //int index_l_max = 14;
   double val3j, val6j, val9j;
   /* Allocate memory for the Wigner symbol wig3jj function of the WIGXJPF library which we use later */
@@ -1998,7 +2105,7 @@ int galbispectra2_init (
 
 
   pgb2->tau_size_cls = 500; //prev on 500
-  pgb2->tau_size_selection = 500; //prev on 601
+  pgb2->tau_size_selection = 50; //prev on 601
 
 
 
@@ -2248,8 +2355,9 @@ int galbispectra2_init (
               pgb2->tau_size_cls * sizeof(double),
               pgb2->error_message);
 
-  //pgb2->has_euclid_bias = -1;
+  pgb2->has_euclid_bias = -1;
   if (pgb2->has_euclid_bias != -1) {
+    printf("Has Euclid bias..\n");
     int coarse_size = 17;
     /* Table 1 in 1911.02398 with some points added at the ends. s =(2/5)*Q*/
     //double Q_list_coarse[16] = {1.45, 1.66, 1.87, 2.08, 2.3, 2.51, 2.72, 2.94, 3.14, 3.35, 3.55, 3.75, 3.94, 4.13, 4.32, 4.51};
@@ -2380,6 +2488,7 @@ int galbispectra2_init (
 
 
   if (pgb2->has_euclid_bias == -1) {
+    printf("Does NOT have Euclid bias..\n");
     for(int index_tau = 0; index_tau < pgb2->tau_size_cls; index_tau++){
       pgb2->g_bias1[index_tau] = 1.;
       pgb2->g_bias2[index_tau] = 0.;
@@ -2400,6 +2509,7 @@ int galbispectra2_init (
       }
     }
   }//end of euclid_bias flag
+
 
 
 
@@ -2580,28 +2690,53 @@ int galbispectra2_init (
   if (k_log_sampling_flag == 1 ) {
     double N_step = pgb2->k_size_bessel-1;
     double epsilon_k = k_min;
+    //double epsilon_k = 1e-7;
     double ratio_k = pow((k_max)/epsilon_k,1./N_step);
     pgb2->k_bessel[0] = k_min;
-    double k_period = 0.000452534;
-    double k_linstep = 0.2;
-    double k_logstep_spline = 20.;
+    /* original */
+    //double k_period = 0.000452534;
+    //double k_linstep = 0.2;
+    //double k_logstep_spline = 20.;
+
+    /* edits */
+    double k_period = 0.000252534;
+    double k_linstep = 0.1;
+    double k_logstep_spline = 10.;
+    //double k_logstep_spline = 10;
     for (int i = 1; i < pgb2->k_size_bessel; i++) {
       //pgb2->k_bessel[i] =  k_min+pow(k_logbase,i)*(k_max-k_min)/(pow(k_logbase,pgb2->k_size_bessel-1));
-    //  pgb2->k_bessel[i] = epsilon_k*pow(ratio_k,i);
+      pgb2->k_bessel[i] = epsilon_k*pow(ratio_k,i);
 
 
 
 
 
 
-      pgb2->k_bessel[i] = pgb2->k_bessel[i-1]
+      /*pgb2->k_bessel[i] = pgb2->k_bessel[i-1]
         + k_period * k_linstep * pgb2->k_bessel[i-1]
         / (pgb2->k_bessel[i-1] + k_linstep/k_logstep_spline);
-      //printf("pgb2->k_bessel[%d]\n", i, pgb2->k_bessel[i]);
-      //printf("%d    %g\n", i, pgb2->k_bessel[i]);
+      //printf("pgb2->k_bessel[%d]\n", i, pgb2->k_bessel[i]);*/
+      printf("%d      %g      %g\n", i, pgb2->k_bessel[i], pgb2->k_bessel[i]-pgb2->k_bessel[i-1]);
 
     }
   }
+
+  for (int i = 1; i < pgb2->k_size_bessel; i++) {
+
+    printf("%d      %g      %g\n", i, pgb2->k_bessel[i], pgb2->k_bessel[i]-pgb2->k_bessel[i-1]);
+
+  }
+
+
+
+  /*if (k_log_sampling_flag == 2 ) {
+
+    for (int i = 0; i < pgb2->k_size_bessel; i++) {
+      pgb2->k_bessel[i] = k_min + exp(
+    }
+
+  }*/
+
 
 
 
@@ -2626,9 +2761,10 @@ int galbispectra2_init (
   k_sum_test2 = 0.0;
   for (int index_k = 0; index_k < pgb2->k_size_bessel; index_k++) {
     k_sum_test2 += pgb2->k_bessel[index_k]*pgb2->k_bessel[index_k]*pgb2->w_trapz_k[index_k];
-    //printf("pgb2->w_trapz_k[%d] = %g\n", index_k, pgb2->w_trapz_k[index_k]);
+  //  printf("pgb2->w_trapz_k[%d] = %g\n", index_k, pgb2->w_trapz_k[index_k]);
   }
-  //printf("k_sum_test2 = %g should be *%g*\n", k_sum_test2 , (1./3.)*pow(k_max,3)-(1./3.)*pow(k_min,3));
+  printf("k_sum_test2 = %g should be *%g*\n", k_sum_test2 , (1./3.)*pow(k_max,3)-(1./3.)*pow(k_min,3));
+
   //printf("k_sum_test2 = %g should be *%g*\n", k_sum_test2 , k_max-k_min);
 
 
@@ -2723,33 +2859,6 @@ int galbispectra2_init (
                pgb2->error_message);
 
   }
-
-  FILE * selection_info=fopen("output/selection_info","w");
-
-
-  int last_index_sel;
-  for(int bin = 0; bin < ppt->selection_num; bin++){
-    for (int index_tau = 0; index_tau < pgb2->tau_size_selection; index_tau++) {
-      class_call(background_at_tau(pba,
-                                   pgb2->tau_sampling_selection[bin][index_tau],
-                                   pba->long_info,
-                                   pba->inter_normal,
-                                   &last_index_sel,
-                                   pvecback_bias),
-                                   pba->error_message,
-                                   pgb2->error_message);
-
-        /*infer redhsift */
-      double z_sel = pba->a_today/pvecback_bias[pba->index_bg_a]-1.;
-      fprintf(selection_info, "%d       %e        %e        %e        %e\n", index_tau,
-                                                                             z_sel,
-                                                                             pgb2->tau_sampling_selection[bin][index_tau],
-                                                                             pgb2->selection[bin][index_tau],
-                                                                             pgb2->w_trapz[bin][index_tau]);
-     }
-  }
-  fclose(selection_info);
-
 
 
 
@@ -4574,25 +4683,21 @@ int galbispectra2_init (
                 double term2 = pgb2->first_order_sources[pgb2->index_source_delta_cdm][index_tau][index_k_bessel]*j_second_deriv;
 
                 if (pgb2->has_first_order_density == _TRUE_) {
-
                   pgb2->first_order_sources_integ[pgb2->index_type_delta][index_l][index_tau][index_k_bessel] += pgb2->first_order_sources_integ[pgb2->index_type_density][index_l][index_tau][index_k_bessel];
 
                 }
 
                 if (pgb2->has_first_order_rsd == _TRUE_) {
-
                   pgb2->first_order_sources_integ[pgb2->index_type_delta][index_l][index_tau][index_k_bessel] += pgb2->first_order_sources_integ[pgb2->index_type_rsd][index_l][index_tau][index_k_bessel];
 
                 }
 
                 if (pgb2->has_first_order_lensing == _TRUE_) {
-
                   pgb2->first_order_sources_integ[pgb2->index_type_delta][index_l][index_tau][index_k_bessel] += pgb2->first_order_sources_integ[pgb2->index_type_lens][index_l][index_tau][index_k_bessel];
 
                 }
 
                 if (pgb2->index_type_j != -1) {
-
                   pgb2->first_order_sources_integ[pgb2->index_type_delta][index_l][index_tau][index_k_bessel] = pgb2->first_order_sources_integ[pgb2->index_type_j][index_l][index_tau][index_k_bessel];
 
                 }
@@ -4624,7 +4729,6 @@ int galbispectra2_init (
 
 
 
-
     /* Lensing source term preparation */
 
     double j_lens;
@@ -4638,7 +4742,9 @@ int galbispectra2_init (
       int last_index_k;
       int index_k;
       for(int index_l = index_l_min; index_l < index_l_max+1; index_l++){
-
+      //for (int index_l = ptr->l_size[ppt->index_md_scalars]-1; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
+      //for (int index_l = ptr->l_size[ppt->index_md_scalars]-1; index_l < ptr->l_size[ppt->index_md_scalars]; index_l++) {
+      //for (int index_l = ptr->l_size[ppt->index_md_scalars]-2; index_l < ptr->l_size[ppt->index_md_scalars]-1; index_l++) {
         index_k = 0;
         index_k_lens2 = 0;
         for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
@@ -4745,8 +4851,7 @@ int galbispectra2_init (
 
             /* Avoid the last index (tau_sampling_bessel[index_tau][bessel_boost*(index_tau+1)] = nan) to avoid division by zero */
             //for (int index_tau_bessel = 0; index_tau_bessel < bessel_boost*(index_tau+1)-1; index_tau_bessel++) {
-            //for (int index_tau_bessel = 0; index_tau_bessel < bessel_boost*(index_tau+1); index_tau_bessel++){
-              for (int index_tau_bessel = 0; index_tau_bessel < bessel_boost*(pgb2->tau_size_cls-0+1); index_tau_bessel++) {
+            for (int index_tau_bessel = 0; index_tau_bessel < bessel_boost*(index_tau+1); index_tau_bessel++){
             //  for (int index_tau_bessel = 0; index_tau_bessel < bessel_boost*((pgb2->tau_size_cls-1)-index_tau+1); index_tau_bessel++) {
 
               index_tau_quad = 0;
@@ -4861,8 +4966,7 @@ int galbispectra2_init (
                            +5.0*ptr->s_bias
                            -f_evo);
             /* Avoid the last index (tau_sampling_bessel[index_tau][bessel_boost*(index_tau+1)] = nan) to avoid division by zero */
-            //for (int index_tau_bessel = 0; index_tau_bessel < bessel_boost*(index_tau+1)-1; index_tau_bessel++) {
-              for (int index_tau_bessel = 0; index_tau_bessel < bessel_boost*(pgb2->tau_size_cls-0+1); index_tau_bessel++) {
+            for (int index_tau_bessel = 0; index_tau_bessel < bessel_boost*(index_tau+1)-1; index_tau_bessel++) {
 
               //printf("%dx%dx%dx%d\n", index_l, index_k_bessel, index_tau, index_tau_bessel);
 
@@ -5075,206 +5179,199 @@ int galbispectra2_init (
 
 
 
-  // useful to skip if one only wants to compute so_lens
+
+
+
+  FILE * Dl_file;
+
+  // use appropriate location if you are using MacOS or Linux
+  Dl_file = fopen("output/Dl_file.dat","w");
+  fprintf(Dl_file, "###l x Dl\n" );
+  for (int bin = 0; bin < ppt->selection_num; bin++) {
+    fprintf(Dl_file, "#ppt->selection_mean[%d] = %g\n", bin, ppt->selection_mean[bin]);
+    fprintf(Dl_file, "#ppt->selection_width[%d] = %g\n", bin, ppt->selection_width[bin]);
+  }
+
+  fprintf(Dl_file, "#ptr->s_bias = %g\n", ptr->s_bias);
+  fprintf(Dl_file, "#selection size = %d\n", pgb2->tau_size_selection);
+  fprintf(Dl_file, "#selection min/max %g/%g\n", pgb2->tau_sampling_selection[0][0], pgb2->tau_sampling_selection[0][pgb2->tau_size_selection-1]);
+  fprintf(Dl_file, "#cls size = %d\n", pgb2->tau_size_cls);
+  fprintf(Dl_file, "#cls min/max %g/%g\n", pgb2->tau_sampling_cls[0], pgb2->tau_sampling_cls[pgb2->tau_size_cls-1]);
+  fprintf(Dl_file, "#bessel_boost = %d\n", bessel_boost);
+  fprintf(Dl_file, "#k_log_sampling_flag = %d\n", k_log_sampling_flag);
+  fprintf(Dl_file, "#k size = %d\n", pgb2->k_size_bessel);
+  fprintf(Dl_file, "#k min/max %g/%g\n", pgb2->k_bessel[0], pgb2->k_bessel[pgb2->k_size_bessel-1]);
+
+
+  printf("Starting SONG style fixed grid integrations..\n");
+
+  double source_interp1;
+  double source_interp2;
+  double * pvecback_kint;
+  class_alloc1D(pvecback_kint, pba->bg_size, pgb2->error_message);
+  int last_index_kint;
+
   double tau_first;
   double tau_second;
   int index_of_cls1;
   int index_of_cls2;
-  int skip_dl_integ_flag = 100;
-  if (skip_dl_integ_flag != -1) {
+  double Pk_song;
+  for(int index_type_first = 0; index_type_first < pgb2->type_size; index_type_first++){
+    if (index_type_first == pgb2->index_type_delta) {
+      continue;
+    }
+    // Alert only looping over the first index in type_second
 
-    FILE * Dl_file;
+    //for(int index_type_second = 0; index_type_second < pgb2->type_size; index_type_second++){
+    for(int index_type_second = index_type_first; index_type_second < index_type_first+1; index_type_second++){
+    //for(int index_type_second = pgb2->index_type_delta; index_type_second < pgb2->index_type_delta+1; index_type_second++){
+      fprintf(Dl_file,"### index_type_first, index_type_second = %d, %d \n", index_type_first, index_type_second);
+    //Warning
+    //for(int index_type_first = 0; index_type_first < 1; index_type_first++){
+      //for(int index_type_second = 1; index_type_second < 2; index_type_second++){
+      for (int bin2 = 0; bin2 < ppt->selection_num; bin2++) {
+        for (int bin1 = 0; bin1 < ppt->selection_num; bin1++) {
+          fprintf(Dl_file, "#index_l = %d (l=%d)\n", index_l, ptr->l[index_l]);
+          for(int index_l = index_l_min; index_l < index_l_max+1; index_l++){
+            /*if (ptr->l[index_l] % 2 != 0) {
+              continue;
+            }*/
+            printf("index_l = %d (l=%d)\n", index_l, ptr->l[index_l]);
+            double tau_sum2 = 0.0;
+            for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
+              tau_second = pgb2->tau_sampling_selection[bin2][index_tau_second];
+              index_of_tau_sampling_cls(tau_second, &index_of_cls2, pgb2);
+              double tau_sum1 = 0.0;
 
-    // use appropriate location if you are using MacOS or Linux
-    Dl_file = fopen("output/Dl_file.dat","w");
-    fprintf(Dl_file, "###l x Dl\n" );
+              for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
+
+                tau_first = pgb2->tau_sampling_selection[bin1][index_tau_first];
+
+                index_of_tau_sampling_cls(tau_first, &index_of_cls1, pgb2);
+                double k_sum1 = 0.0;
+
+                for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
+
+                  /* We loop over the tau-selection indices and interpolate on the tau_cls grid */
+
+                    class_call(primordial_spectrum_at_k(ppm, ppt->index_md_scalars, linear, pgb2->k_bessel[index_k_bessel], &Pk_song), ppm->error_message, pgb2->error_message);
+
+
+                    source_interp1 = pgb2->first_order_sources_integ[index_type_first][index_l][index_of_cls1-1][index_k_bessel]*(pgb2->tau_sampling_cls[index_of_cls1]-tau_first)
+                                  + pgb2->first_order_sources_integ[index_type_first][index_l][index_of_cls1][index_k_bessel]*(tau_first-pgb2->tau_sampling_cls[index_of_cls1-1]);
+                    source_interp1 /= (pgb2->tau_sampling_cls[index_of_cls1] - pgb2->tau_sampling_cls[index_of_cls1-1]);
+
+                    source_interp2 = pgb2->first_order_sources_integ[index_type_second][index_l][index_of_cls2-1][index_k_bessel]*(pgb2->tau_sampling_cls[index_of_cls2]-tau_second)
+                                  + pgb2->first_order_sources_integ[index_type_second][index_l][index_of_cls2][index_k_bessel]*(tau_second-pgb2->tau_sampling_cls[index_of_cls2-1]);
+                    source_interp2 /= (pgb2->tau_sampling_cls[index_of_cls2] - pgb2->tau_sampling_cls[index_of_cls2-1]);
+
+
+
+                    k_sum1 += 4. * _PI_ *  Pk_song * pow(pgb2->k_bessel[index_k_bessel],-1.0)* source_interp1*source_interp2*pgb2->w_trapz_k[index_k_bessel];
+                    if (index_l == 52 && bin1 == 0 && bin2 == 1 && index_type_first == pgb2->index_type_density && index_type_second == pgb2->index_type_density && index_tau_first == pgb2->bin_mean_index_selection[0] && index_tau_second == pgb2->bin_mean_index_selection[1]) {
+                      fprintf(Dl_file, "%d       %g        %g\n", ptr->l[index_l], pgb2->k_bessel[index_k_bessel], k_sum1);
+                      //fprintf(Dl_file, "%g        %g\n", pgb2->k_bessel[index_k_bessel], k_sum1);
+                    }
+
+                    }
+
+
+                    pgb2->Dl[index_type_first][index_type_second][index_l][bin1][bin2][index_tau_first][index_tau_second] = k_sum1;
+
+                    //herehere
+
+                    class_call(background_at_tau(pba,
+                                                 tau_first,
+                                                 pba->long_info,
+                                                 pba->inter_normal,
+                                                 &last_index_kint,
+                                                 pvecback_kint),
+                                                 pba->error_message,
+                                                 pgb2->error_message);
+
+
+                     /* infer redshift */
+                    double z = pba->a_today/pvecback_kint[pba->index_bg_a]-1.;
+                    //if (index_type_first == pgb2->index_type_lens && index_type_second == pgb2->index_type_delta && index_tau_second == pgb2->bin_mean_index_selection[0]) {
+                      //fprintf(Dl_file, "%d       %g        %g\n", ptr->l[index_l], z, pgb2->Dl[index_type_first][index_type_second][index_l][bin1][bin2][index_tau_first][index_tau_second]);
+                      //fprintf(Dl_file, "%g        %g\n", pgb2->k_bessel[index_k_bessel], k_sum1);
+                    //}
+                    /*if (index_l == ptr->l_size[ppt->index_md_scalars]-1) {
+                      fprintf(Dl_file,"%g       %g        %g \n", tau_first, tau_second,  k_sum1);
+                    }*/
+
+
+                    //printf("pgb2->Dl[%d][%d][%d][%d][%d][%d][%d] = %g\n", index_type_first, index_type_second, index_l , bin1, bin2, index_tau_first, index_tau_second, ptr->l[index_l]*(ptr->l[index_l]+1)*k_sum1/(2*_PI_));
+
+                  tau_sum1 += k_sum1*pgb2->selection[bin1][index_tau_first]*pgb2->w_trapz[bin1][index_tau_first];
+                  }
+                tau_sum2 += tau_sum1*pgb2->selection[bin2][index_tau_second]*pgb2->w_trapz[bin2][index_tau_second];
+                //printf("WARNING! POWER SPECTRUM OMITTED!\n");
+            }
+
+            pgb2->Cl[index_type_first][index_type_second][index_l][bin1][bin2] = tau_sum2;
+            printf("Linear fixed SONG style: pgb2->Cl[%d][%d][%d][%d][%d] = %g\n",
+                    index_type_first,
+                    index_type_second,
+                    index_l,
+                    bin1,
+                    bin2,
+                    ptr->l[index_l]*(ptr->l[index_l]+1)*pgb2->Cl[index_type_first][index_type_second][index_l][bin1][bin2]/(2*_PI_));
+            }
+          }
+        }
+      }
+    }
+    fclose(Dl_file);
+
+
+    printf("###l x Dl\n" );
     for (int bin = 0; bin < ppt->selection_num; bin++) {
-      fprintf(Dl_file, "#ppt->selection_mean[%d] = %g\n", bin, ppt->selection_mean[bin]);
-      fprintf(Dl_file, "#ppt->selection_width[%d] = %g\n", bin, ppt->selection_width[bin]);
+      printf("#ppt->selection_mean[%d] = %g\n", bin, ppt->selection_mean[bin]);
+      printf("#ppt->selection_width[%d] = %g\n", bin, ppt->selection_width[bin]);
+      printf("#selection min/max %g/%g\n", pgb2->tau_sampling_selection[bin][0], pgb2->tau_sampling_selection[bin][pgb2->tau_size_selection-1]);
+
     }
 
-    fprintf(Dl_file, "#ptr->s_bias = %g\n", ptr->s_bias);
-    fprintf(Dl_file, "#selection size = %d\n", pgb2->tau_size_selection);
-    fprintf(Dl_file, "#selection min/max %g/%g\n", pgb2->tau_sampling_selection[0][0], pgb2->tau_sampling_selection[0][pgb2->tau_size_selection-1]);
-    fprintf(Dl_file, "#cls size = %d\n", pgb2->tau_size_cls);
-    fprintf(Dl_file, "#cls min/max %g/%g\n", pgb2->tau_sampling_cls[0], pgb2->tau_sampling_cls[pgb2->tau_size_cls-1]);
-    fprintf(Dl_file, "#bessel_boost = %d\n", bessel_boost);
-    fprintf(Dl_file, "#k_log_sampling_flag = %d\n", k_log_sampling_flag);
-    fprintf(Dl_file, "#k size = %d\n", pgb2->k_size_bessel);
-    fprintf(Dl_file, "#k min/max %g/%g\n", pgb2->k_bessel[0], pgb2->k_bessel[pgb2->k_size_bessel-1]);
+    printf("#ptr->s_bias = %g\n", ptr->s_bias);
+    printf("#selection size = %d\n", pgb2->tau_size_selection);
 
+    printf("#cls size = %d\n", pgb2->tau_size_cls);
+    printf("#cls min/max %g/%g\n", pgb2->tau_sampling_cls[0], pgb2->tau_sampling_cls[pgb2->tau_size_cls-1]);
+    printf("#bessel_boost = %d\n", bessel_boost);
+    printf("#k_log_sampling_flag = %d\n", k_log_sampling_flag);
+    printf("#k size = %d\n", pgb2->k_size_bessel);
+    printf("#k min/max %g/%g\n", pgb2->k_bessel[0], pgb2->k_bessel[pgb2->k_size_bessel-1]);
+    printf("#eps = %g\n", eps );
+    for (int bin1 = 0; bin1 < ppt->selection_num; bin1++) {
+      for (int bin2 = 0; bin2 < ppt->selection_num; bin2++) {
+        for(int index_type_first = 0; index_type_first < pgb2->type_size; index_type_first++){
+          // Alert only looping over the first index in type_second
+          for(int index_type_second = 0; index_type_second < pgb2->type_size; index_type_second++){
+            //for(int index_type_second = index_type_first; index_type_second < index_type_first+1; index_type_second++){
+            //for(int index_type_second = pgb2->index_type_delta; index_type_second < pgb2->index_type_delta+1; index_type_second++){
 
-    printf("Starting SONG style fixed grid integrations..\n");
-
-    double source_interp1;
-    double source_interp2;
-    double * pvecback_kint;
-    class_alloc1D(pvecback_kint, pba->bg_size, pgb2->error_message);
-    int last_index_kint;
-
-    double tau_first;
-    double tau_second;
-    int index_of_cls1;
-    int index_of_cls2;
-    double Pk_song;
-    for(int index_type_first = 0; index_type_first < pgb2->type_size; index_type_first++){
-      if (index_type_first == pgb2->index_type_delta) {
-        continue;
-      }
-      // Alert only looping over the first index in type_second
-
-      //for(int index_type_second = 0; index_type_second < pgb2->type_size; index_type_second++){
-      //for(int index_type_second = index_type_first; index_type_second < index_type_first+1; index_type_second++){
-      for(int index_type_second = pgb2->index_type_delta; index_type_second < pgb2->index_type_delta+1; index_type_second++){
-        fprintf(Dl_file,"### index_type_first, index_type_second = %d, %d \n", index_type_first, index_type_second);
-      //Warning
-      //for(int index_type_first = 0; index_type_first < 1; index_type_first++){
-        //for(int index_type_second = 1; index_type_second < 2; index_type_second++){
-        for (int bin2 = 0; bin2 < ppt->selection_num; bin2++) {
-          for (int bin1 = 0; bin1 < ppt->selection_num; bin1++) {
-            fprintf(Dl_file, "#index_l = %d (l=%d)\n", index_l, ptr->l[index_l]);
+            printf("#### Dl[%d][%d][%d][%d][%d][%d][%d]\n",  index_type_first, index_type_second, index_l, bin1, bin2, pgb2->bin_mean_index_selection[bin1], pgb2->bin_mean_index_selection[bin2]);
             for(int index_l = index_l_min; index_l < index_l_max+1; index_l++){
               /*if (ptr->l[index_l] % 2 != 0) {
                 continue;
               }*/
-              printf("index_l = %d (l=%d)\n", index_l, ptr->l[index_l]);
-              double tau_sum2 = 0.0;
-              for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
-                tau_second = pgb2->tau_sampling_selection[bin2][index_tau_second];
-                index_of_tau_sampling_cls(tau_second, &index_of_cls2, pgb2);
-                double tau_sum1 = 0.0;
-
-                for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
-
-                  tau_first = pgb2->tau_sampling_selection[bin1][index_tau_first];
-
-                  index_of_tau_sampling_cls(tau_first, &index_of_cls1, pgb2);
-                  double k_sum1 = 0.0;
-
-                  for (int index_k_bessel = 0; index_k_bessel < pgb2->k_size_bessel; index_k_bessel++) {
-
-                    /* We loop over the tau-selection indices and interpolate on the tau_cls grid */
-
-                      class_call(primordial_spectrum_at_k(ppm, ppt->index_md_scalars, linear, pgb2->k_bessel[index_k_bessel], &Pk_song), ppm->error_message, pgb2->error_message);
-
-
-                      source_interp1 = pgb2->first_order_sources_integ[index_type_first][index_l][index_of_cls1-1][index_k_bessel]*(pgb2->tau_sampling_cls[index_of_cls1]-tau_first)
-                                    + pgb2->first_order_sources_integ[index_type_first][index_l][index_of_cls1][index_k_bessel]*(tau_first-pgb2->tau_sampling_cls[index_of_cls1-1]);
-                      source_interp1 /= (pgb2->tau_sampling_cls[index_of_cls1] - pgb2->tau_sampling_cls[index_of_cls1-1]);
-
-                      source_interp2 = pgb2->first_order_sources_integ[index_type_second][index_l][index_of_cls2-1][index_k_bessel]*(pgb2->tau_sampling_cls[index_of_cls2]-tau_second)
-                                    + pgb2->first_order_sources_integ[index_type_second][index_l][index_of_cls2][index_k_bessel]*(tau_second-pgb2->tau_sampling_cls[index_of_cls2-1]);
-                      source_interp2 /= (pgb2->tau_sampling_cls[index_of_cls2] - pgb2->tau_sampling_cls[index_of_cls2-1]);
-
-
-
-                      k_sum1 += 4. * _PI_ *  Pk_song * pow(pgb2->k_bessel[index_k_bessel],-1.0)* source_interp1*source_interp2*pgb2->w_trapz_k[index_k_bessel];
-
-
-                      }
-
-
-                      pgb2->Dl[index_type_first][index_type_second][index_l][bin1][bin2][index_tau_first][index_tau_second] = k_sum1;
-
-                      //herehere
-
-                      class_call(background_at_tau(pba,
-                                                   tau_first,
-                                                   pba->long_info,
-                                                   pba->inter_normal,
-                                                   &last_index_kint,
-                                                   pvecback_kint),
-                                                   pba->error_message,
-                                                   pgb2->error_message);
-
-
-                       /* infer redshift */
-                      double z = pba->a_today/pvecback_kint[pba->index_bg_a]-1.;
-                      if (index_type_first == pgb2->index_type_lens && index_type_second == pgb2->index_type_delta && index_tau_second == pgb2->bin_mean_index_selection[0]) {
-                        fprintf(Dl_file, "%d       %g        %g\n", ptr->l[index_l], z, pgb2->Dl[index_type_first][index_type_second][index_l][bin1][bin2][index_tau_first][index_tau_second]);
-                        //fprintf(Dl_file, "%g        %g\n", pgb2->k_bessel[index_k_bessel], k_sum1);
-                      }
-                      /*if (index_l == ptr->l_size[ppt->index_md_scalars]-1) {
-                        fprintf(Dl_file,"%g       %g        %g \n", tau_first, tau_second,  k_sum1);
-                      }*/
-
-
-                      //printf("pgb2->Dl[%d][%d][%d][%d][%d][%d][%d] = %g\n", index_type_first, index_type_second, index_l , bin1, bin2, index_tau_first, index_tau_second, ptr->l[index_l]*(ptr->l[index_l]+1)*k_sum1/(2*_PI_));
-
-                    tau_sum1 += k_sum1*pgb2->selection[bin1][index_tau_first]*pgb2->w_trapz[bin1][index_tau_first];
-                    }
-                  tau_sum2 += tau_sum1*pgb2->selection[bin2][index_tau_second]*pgb2->w_trapz[bin2][index_tau_second];
-                  //printf("WARNING! POWER SPECTRUM OMITTED!\n");
-              }
-
-              pgb2->Cl[index_type_first][index_type_second][index_l][bin1][bin2] = tau_sum2;
-              printf("Linear fixed SONG style: pgb2->Cl[%d][%d][%d][%d][%d] = %g\n",
-                      index_type_first,
-                      index_type_second,
-                      index_l,
-                      bin1,
-                      bin2,
-                      ptr->l[index_l]*(ptr->l[index_l]+1)*pgb2->Cl[index_type_first][index_type_second][index_l][bin1][bin2]/(2*_PI_));
-              }
+              printf("%d      %g       %g\n", ptr->l[index_l],
+                                              ptr->l[index_l]*(ptr->l[index_l]+1)*pgb2->Dl[index_type_first][index_type_second][index_l][bin1][bin2][pgb2->bin_mean_index_selection[bin1]][pgb2->bin_mean_index_selection[bin2]]/(2*_PI_),
+                                              ptr->l[index_l]*(ptr->l[index_l]+1)*pgb2->Cl[index_type_first][index_type_second][index_l][bin1][bin2]/(2*_PI_));
             }
           }
         }
       }
-      fclose(Dl_file);
-
-
-      printf("###l x Dl\n" );
-      for (int bin = 0; bin < ppt->selection_num; bin++) {
-        printf("#ppt->selection_mean[%d] = %g\n", bin, ppt->selection_mean[bin]);
-        printf("#ppt->selection_width[%d] = %g\n", bin, ppt->selection_width[bin]);
-        printf("#selection min/max %g/%g\n", pgb2->tau_sampling_selection[bin][0], pgb2->tau_sampling_selection[bin][pgb2->tau_size_selection-1]);
-
-      }
-
-      printf("#ptr->s_bias = %g\n", ptr->s_bias);
-      printf("#selection size = %d\n", pgb2->tau_size_selection);
-
-      printf("#cls size = %d\n", pgb2->tau_size_cls);
-      printf("#cls min/max %g/%g\n", pgb2->tau_sampling_cls[0], pgb2->tau_sampling_cls[pgb2->tau_size_cls-1]);
-      printf("#bessel_boost = %d\n", bessel_boost);
-      printf("#k_log_sampling_flag = %d\n", k_log_sampling_flag);
-      printf("#k size = %d\n", pgb2->k_size_bessel);
-      printf("#k min/max %g/%g\n", pgb2->k_bessel[0], pgb2->k_bessel[pgb2->k_size_bessel-1]);
-      printf("#eps = %g\n", eps );
-      for (int bin1 = 0; bin1 < ppt->selection_num; bin1++) {
-        for (int bin2 = 0; bin2 < ppt->selection_num; bin2++) {
-          for(int index_type_first = 0; index_type_first < pgb2->type_size; index_type_first++){
-            // Alert only looping over the first index in type_second
-            for(int index_type_second = 0; index_type_second < pgb2->type_size; index_type_second++){
-              //for(int index_type_second = index_type_first; index_type_second < index_type_first+1; index_type_second++){
-              //for(int index_type_second = pgb2->index_type_delta; index_type_second < pgb2->index_type_delta+1; index_type_second++){
-
-              printf("#### Dl[%d][%d][%d][%d][%d][%d][%d]\n",  index_type_first, index_type_second, index_l, bin1, bin2, pgb2->bin_mean_index_selection[bin1], pgb2->bin_mean_index_selection[bin2]);
-              for(int index_l = index_l_min; index_l < index_l_max+1; index_l++){
-                /*if (ptr->l[index_l] % 2 != 0) {
-                  continue;
-                }*/
-                printf("%d      %g       %g\n", ptr->l[index_l],
-                                                ptr->l[index_l]*(ptr->l[index_l]+1)*pgb2->Dl[index_type_first][index_type_second][index_l][bin1][bin2][pgb2->bin_mean_index_selection[bin1]][pgb2->bin_mean_index_selection[bin2]]/(2*_PI_),
-                                                ptr->l[index_l]*(ptr->l[index_l]+1)*pgb2->Cl[index_type_first][index_type_second][index_l][bin1][bin2]/(2*_PI_));
-              }
-            }
-          }
-        }
-      }
-      printf("pgb2->index_type_density = %d\n", pgb2->index_type_density);
-      printf("pgb2->index_type_rsd = %d\n", pgb2->index_type_rsd);
-      printf("pgb2->index_type_lens = %d\n", pgb2->index_type_lens);
-      printf("pgb2->index_type_delta = %d\n", pgb2->index_type_delta);
-      double results_test;
     }
-
-
-
-
-
-
-
+    printf("pgb2->index_type_density = %d\n", pgb2->index_type_density);
+    printf("pgb2->index_type_rsd = %d\n", pgb2->index_type_rsd);
+    printf("pgb2->index_type_lens = %d\n", pgb2->index_type_lens);
+    printf("pgb2->index_type_j = %d\n", pgb2->index_type_j);
+    printf("pgb2->index_type_j = %d\n", pgb2->index_type_j_p);
+    printf("pgb2->index_type_j = %d\n", pgb2->index_type_j_p_k);
+    printf("pgb2->index_type_j = %d\n", pgb2->index_type_j_p_p_k);
+    exit(0);
 
 
 
@@ -5295,15 +5392,12 @@ int galbispectra2_init (
     int index_l_first_min = index_l_min;
     //int index_l_first_min = 2;
     int index_l_first_max = index_l_max;
-    //int index_l_first_max = index_l_min+2;
     //int index_l_first_max = 8;
     int index_l_first_size = index_l_first_max + 1 - index_l_first_min;
 
 
     int index_l_second_min = index_l_min;
     int index_l_second_max = index_l_max;
-    //int index_l_second_min = index_l_min+2;
-    //int index_l_second_max = index_l_min+4;
     //int index_l_second_min = 2;
     //int index_l_second_max = 8;
     int index_l_second_size = index_l_second_max + 1 - index_l_second_min;
@@ -6129,6 +6223,10 @@ int galbispectra2_init (
 
     if (pgb2->index_bisp_dens_di != -1) { /* Eq. 3.20 in 1510.04202 */
       printf("Computing bispectrum: density dipole\n");
+      /* Create an arrary to store the {}^nC_{ll'}(z_1,z_2) in pgb2->densdens_nDl1l2[n][l1][l2][index_tau_first][index_tau_second]. */
+
+
+
 
 
       if (pgb2->unobserv_bisp_flag != -1) {
@@ -6267,8 +6365,8 @@ int galbispectra2_init (
                                                   *pgb2->dipole_bias[bin2][index_tau_second]
                                                   *((pgb2->densdens_nDl1l2[bin2][bin1][pgb2->n_is_plus_one][index_l6][index_l_first][index_tau_second][index_tau_first]
                                                   *pgb2->densdens_nDl1l2[bin2][bin3][pgb2->n_is_minus_one][index_l5][index_l_third][index_tau_second][index_tau_third])
-                                                  +(pgb2->densdens_nDl1l2[bin2][bin1][pgb2->n_is_minus_one][index_l6][index_l_first][index_tau_second][index_tau_first]
-                                                  *pgb2->densdens_nDl1l2[bin2][bin3][pgb2->n_is_plus_one][index_l5][index_l_third][index_tau_second][index_tau_third]));
+                                                  +(pgb2->densdens_nDl1l2[bin2][bin1][pgb2->n_is_plus_one][index_l6][index_l_first][index_tau_second][index_tau_first]
+                                                  *pgb2->densdens_nDl1l2[bin2][bin3][pgb2->n_is_minus_one][index_l5][index_l_third][index_tau_second][index_tau_third]));
 
 
                                if ( abs(pair_factor123) != 1 || abs(pair_factor321) != 1 || abs(pair_factor132) != 1 ){
@@ -6341,8 +6439,8 @@ int galbispectra2_init (
 
                               sum_of_three_perms_di = (sum123_di+sum321_di+sum132_di);
 
-                            } // end of index_l6
-                          } // end of index_l5
+                            }
+                          }
 
 
 
@@ -6359,8 +6457,8 @@ int galbispectra2_init (
             }
           }
         }
-      } //end of unobserv_bisp_flag
-
+      }
+    } //end of unobserv_bisp_flag
 
     if (pgb2->observ_bisp_flag != -1) {
       double g_result_di;
@@ -6382,16 +6480,13 @@ int galbispectra2_init (
       double g_result_di123;
       double g_result_di321;
       double g_result_di132;
-      double perm123_di;
-      double perm321_di;
-      double perm132_di;
 
       int last_index;
 
       double * pvecback_theo;
       class_alloc(pvecback_theo, pba->bg_size * sizeof(double), pba->error_message);
 
-      //herehere
+
       for (int bin3 = 0; bin3 < ppt->selection_num; bin3++) {
         for (int bin2 = 0; bin2 < ppt->selection_num; bin2++) {
           for (int bin1 = 0; bin1 < ppt->selection_num; bin1++) {
@@ -6406,275 +6501,179 @@ int galbispectra2_init (
                     continue;
                   }
 
-                  g_result_di123 = 0.;
-                  g_result_di321 = 0.;
-                  g_result_di132 = 0.;
-
-                  gl1l2l3(ptr->l[index_l_first],
-                          ptr->l[index_l_second],
-                          ptr->l[index_l_third],
-                          g_temp_array_di,
-                          &g_result_di123,
-                          pgb2->error_message);
-
-                  gl1l2l3(ptr->l[index_l_third],
-                          ptr->l[index_l_second],
-                          ptr->l[index_l_first],
-                          g_temp_array_di,
-                          &g_result_di321,
-                          pgb2->error_message);
-
-                  gl1l2l3(ptr->l[index_l_first],
-                          ptr->l[index_l_third],
-                          ptr->l[index_l_second],
-                          g_temp_array_di,
-                          &g_result_di132,
-                          pgb2->error_message);
-
-
-                  double Dtilde_31_nplus, Dtilde_31_nminus, Dtilde_32_nplus, Dtilde_32_nminus;
-                  double sum_di123;
-                  sum_di123 = 0.0;
                   for (int index_tau_third = 0; index_tau_third < pgb2->tau_size_selection; index_tau_third++) {
-                    double pair_di123;
-                    pair_di123 = 0.0;
-                    for (int index_l5 = pgb2->l_minus_one; index_l5 <= pgb2->l_plus_one; index_l5++) {
 
-                      for (int index_l6 = pgb2->l_minus_one; index_l6 <= pgb2->l_plus_one; index_l6++) {
+                    class_call(background_at_tau(pba,
+                                                 pgb2->tau_sampling_selection[pgb2->bin3][index_tau_third],
+                                                 pba->long_info,
+                                                 pba->inter_normal,
+                                                 &last_index,
+                                                 pvecback_theo),
+                                                 pba->error_message,
+                                                 pgb2->error_message);
 
-                        Q_result_di123 = pgb2->Q[index_l_first-index_l_min][index_l_second-index_l_min][index_l_third-index_l_min][1][(index_l_second-index_l_min)*pgb2->l_dual_size+index_l5][(index_l_first-index_l_min)*pgb2->l_dual_size+index_l6];
+                    double z = pba->a_today/pvecback_theo[pba->index_bg_a]-1.;
 
-                        nDl_1D_time_int(pgb2->n_is_plus_one,
-                                        index_l6,
-                                        index_l_first,
-                                        index_tau_third,
-                                        bin3,
-                                        bin1,
-                                        &Dtilde_31_nplus,
-                                        pgb2);
+                    g_result_di123 = 0.;
+                    g_result_di321 = 0.;
+                    g_result_di132 = 0.;
 
-                        nDl_1D_time_int(pgb2->n_is_minus_one,
-                                        index_l6,
-                                        index_l_first,
-                                        index_tau_third,
-                                        bin3,
-                                        bin1,
-                                        &Dtilde_31_nminus,
-                                        pgb2);
+                    gl1l2l3(ptr->l[index_l_first],
+                            ptr->l[index_l_second],
+                            ptr->l[index_l_third],
+                            g_temp_array_di,
+                            &g_result_di123,
+                            pgb2->error_message);
 
+                    gl1l2l3(ptr->l[index_l_third],
+                            ptr->l[index_l_second],
+                            ptr->l[index_l_first],
+                            g_temp_array_di,
+                            &g_result_di321,
+                            pgb2->error_message);
 
-                        nDl_1D_time_int(pgb2->n_is_plus_one,
-                                        index_l5,
-                                        index_l_second,
-                                        index_tau_third,
-                                        bin3,
-                                        bin2,
-                                        &Dtilde_32_nplus,
-                                        pgb2);
-
-                        nDl_1D_time_int(pgb2->n_is_minus_one,
-                                        index_l5,
-                                        index_l_second,
-                                        index_tau_third,
-                                        bin3,
-                                        bin2,
-                                        &Dtilde_32_nminus,
-                                        pgb2);
+                    gl1l2l3(ptr->l[index_l_first],
+                            ptr->l[index_l_third],
+                            ptr->l[index_l_second],
+                            g_temp_array_di,
+                            &g_result_di132,
+                            pgb2->error_message);
 
 
-                        double pair_factor123 = pow(-1, 0.5*(pgb2->l_dual[index_l5][index_l_second]+pgb2->l_dual[index_l6][index_l_first]-ptr->l[index_l_first]-ptr->l[index_l_second]));
+                      for (int index_tau_second = pgb2->index_tau_bin2_start; index_tau_second < pgb2->index_tau_bin2_end; index_tau_second++) {
+                        //for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
+                        for (int index_tau_first = pgb2->index_tau_bin1_start; index_tau_first < pgb2->index_tau_bin1_end; index_tau_first++) {
+                          //for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
 
 
 
-                        pair_di123 += pair_factor123
-                                      *Q_result_di123
-                                      *(2.*pgb2->l_dual[index_l5][index_l_second]+1.)
-                                      *(2.*pgb2->l_dual[index_l6][index_l_first]+1.)
-                                      *pgb2->dipole_bias[bin3][index_tau_third]
-                                      *((Dtilde_31_nplus*Dtilde_32_nminus)
-                                      +(Dtilde_31_nminus*Dtilde_32_nplus));
+                        double sum123_di = 0.0;
+                        double sum132_di = 0.0;
+                        double sum321_di = 0.0;
+
+                        for (int index_l5 = pgb2->l_minus_one; index_l5 <= pgb2->l_plus_one; index_l5++) {
+                          //printf("density dipole: index_l5 = %d\n", index_l5);
+                          for (int index_l6 = pgb2->l_minus_one; index_l6 <= pgb2->l_plus_one; index_l6++) {
+                          //  printf("density dipole: index_l6 = %d\n", index_l6);
+                            //printf("2.5. pgb2->densdens_nDl1l2[0][0][2][2][2][0][0] = %g\n", pgb2->densdens_nDl1l2[0][0][2][2][2][0][0]);
+                            //double pair12A = pow(-1, -pgb2->l_dual[index_l5][index_l_second]-pgb2->l_dual[index_l6][index_l_first]);
+                            double pair_factor123 = pow(-1, 0.5*(pgb2->l_dual[index_l5][index_l_second]+pgb2->l_dual[index_l6][index_l_first]-ptr->l[index_l_first]-ptr->l[index_l_second]));
+
+                            double pair_di123 = pair_factor123
+                                                *pgb2->dipole_bias[bin3][index_tau_third]
+                                                *((pgb2->densdens_nDl1l2[bin3][bin1][pgb2->n_is_plus_one][index_l6][index_l_first][index_tau_third][index_tau_first]
+                                                *pgb2->densdens_nDl1l2[bin3][bin2][pgb2->n_is_minus_one][index_l5][index_l_second][index_tau_third][index_tau_second])
+                                                +(pgb2->densdens_nDl1l2[bin3][bin1][pgb2->n_is_minus_one][index_l6][index_l_first][index_tau_third][index_tau_first]
+                                                *pgb2->densdens_nDl1l2[bin3][bin2][pgb2->n_is_plus_one][index_l5][index_l_second][index_tau_third][index_tau_second]));
+
+                            double pair_factor321 = pow(-1, 0.5*(pgb2->l_dual[index_l5][index_l_second]+pgb2->l_dual[index_l6][index_l_third]-ptr->l[index_l_second]-ptr->l[index_l_third]));
+
+                            double pair_di321 = pair_factor321
+                                                *pgb2->dipole_bias[bin1][index_tau_first]
+                                                *((pgb2->densdens_nDl1l2[bin1][bin2][pgb2->n_is_plus_one][index_l5][index_l_second][index_tau_first][index_tau_second]
+                                                *pgb2->densdens_nDl1l2[bin1][bin3][pgb2->n_is_minus_one][index_l6][index_l_third][index_tau_first][index_tau_third])
+                                                +(pgb2->densdens_nDl1l2[bin1][bin2][pgb2->n_is_minus_one][index_l5][index_l_second][index_tau_first][index_tau_second]
+                                                *pgb2->densdens_nDl1l2[bin1][bin3][pgb2->n_is_plus_one][index_l6][index_l_third][index_tau_first][index_tau_third]));
+
+                            double pair_factor132 = pow(-1, 0.5*(pgb2->l_dual[index_l5][index_l_third]+pgb2->l_dual[index_l6][index_l_first]-ptr->l[index_l_first]-ptr->l[index_l_third]));
+
+                            double pair_di132 = pair_factor132
+                                                *pgb2->dipole_bias[bin2][index_tau_second]
+                                                *((pgb2->densdens_nDl1l2[bin2][bin1][pgb2->n_is_plus_one][index_l6][index_l_first][index_tau_second][index_tau_first]
+                                                *pgb2->densdens_nDl1l2[bin2][bin3][pgb2->n_is_minus_one][index_l5][index_l_third][index_tau_second][index_tau_third])
+                                                +(pgb2->densdens_nDl1l2[bin2][bin1][pgb2->n_is_plus_one][index_l6][index_l_first][index_tau_second][index_tau_first]
+                                                *pgb2->densdens_nDl1l2[bin2][bin3][pgb2->n_is_minus_one][index_l5][index_l_third][index_tau_second][index_tau_third]));
+
+
+                             if ( abs(pair_factor123) != 1 || abs(pair_factor321) != 1 || abs(pair_factor132) != 1 ){
+                               printf("pair_factor123 = %g\n", pair_factor123);
+                               printf("pair_factor321 = %g\n", pair_factor321);
+                               printf("pair_factor132 = %g\n", pair_factor132);
+                               printf("ERROR! The factors of each Dl-pair should only ever be equal to +- 1 in the density dipole and this is not the case\n" );
+                               exit(0);
+                             }
+                            /* Swapping the two multipoles within each generalised angular power spectra yields a factor of 2 if the cross-terms are dens-dens */
+
+                            /*Ql1l2l3l4l5l6(ptr->l[index_l_first],
+                                          ptr->l[index_l_second],
+                                          ptr->l[index_l_third],
+                                          2,
+                                          pgb2->l_dual[index_l5][index_l_second],
+                                          pgb2->l_dual[index_l6][index_l_first],
+                                          Q_temp_array_quad,
+                                          &Q_result_quad123,
+                                          pgb2);*/
+
+                            Q_result_di123 = pgb2->Q[index_l_first-index_l_min][index_l_second-index_l_min][index_l_third-index_l_min][1][(index_l_second-index_l_min)*pgb2->l_dual_size+index_l5][(index_l_first-index_l_min)*pgb2->l_dual_size+index_l6];
+
+                            /*Ql1l2l3l4l5l6(ptr->l[index_l_third],
+                                          ptr->l[index_l_second],
+                                          ptr->l[index_l_first],
+                                          2,
+                                          pgb2->l_dual[index_l5][index_l_second],
+                                          pgb2->l_dual[index_l6][index_l_third],
+                                          Q_temp_array_quad,
+                                          &Q_result_quad321,
+                                          pgb2);*/
+
+                            Q_result_di321 = pgb2->Q[index_l_third-index_l_min][index_l_second-index_l_min][index_l_first-index_l_min][1][(index_l_second-index_l_min)*pgb2->l_dual_size+index_l5][(index_l_third-index_l_min)*pgb2->l_dual_size+index_l6];
+
+                            /*Ql1l2l3l4l5l6(ptr->l[index_l_first],
+                                          ptr->l[index_l_third],
+                                          ptr->l[index_l_second],
+                                          2,
+                                          pgb2->l_dual[index_l5][index_l_third],
+                                          pgb2->l_dual[index_l6][index_l_first],
+                                          Q_temp_array_quad,
+                                          &Q_result_quad132,
+                                          pgb2);*/
+
+                            Q_result_di132 = pgb2->Q[index_l_first-index_l_min][index_l_third-index_l_min][index_l_second-index_l_min][1][(index_l_third-index_l_min)*pgb2->l_dual_size+index_l5][(index_l_first-index_l_min)*pgb2->l_dual_size+index_l6];
+
+                            sum123_di += (2.*pgb2->l_dual[index_l5][index_l_second]+1.)
+                                         *(2.*pgb2->l_dual[index_l6][index_l_first]+1.)
+                                         *Q_result_di123
+                                         *pair_di123
+                                         /g_result_di123;
 
 
 
-                         if ( abs(pair_factor123) != 1){
-                           printf("pair_factor123 = %g\n", pair_factor123);
-                           printf("ERROR! The factors of each Dl-pair should only ever be equal to +- 1 in the density dipole and this is not the case\n" );
-                           exit(0);
-                         }
-                       }
-                     }
 
-                     sum_di123 += pair_di123*pgb2->selection[bin3][index_tau_third]*pgb2->w_trapz[bin3][index_tau_third];
+                            sum321_di += (2.*pgb2->l_dual[index_l5][index_l_second]+1.)
+                                         *(2.*pgb2->l_dual[index_l6][index_l_third]+1.)
+                                         *Q_result_di321
+                                         *pair_di321
+                                         /g_result_di321;
+
+
+                            sum132_di += (2.*pgb2->l_dual[index_l5][index_l_third]+1.)
+                                         *(2.*pgb2->l_dual[index_l6][index_l_first]+1.)
+                                         *Q_result_di132
+                                         *pair_di132
+                                         /g_result_di132;
+
+
+                            sum_of_three_perms_di = (sum123_di+sum321_di+sum132_di);
+
+                          }
+                        }
+
+
+
+                        //pgb2->redbi[pgb2->index_bisp_dens_di][index_l_first-index_l_first_min][index_l_second-index_l_second_min][index_l_third-index_l_third_min][bin1*pgb2->tau_size_selection+index_tau_first-pgb2->index_tau_bin1_start]
+                          //       [bin2*pgb2->tau_size_selection+index_tau_second-pgb2->index_tau_bin2_start][bin3*pgb2->tau_size_selection+index_tau_third] = sum_of_three_perms_di/16./_PI_/_PI_;
+                      //  fprintf(f, "%d        %d        %d        %g        %g\n", ptr->l[index_l_first], ptr->l[index_l_second], ptr->l[index_l_third], z, sum_of_three_perms_di/16./_PI_/_PI_);
+                      }
+
+                    }
                   }
-                  double Dtilde_21_nplus, Dtilde_21_nminus, Dtilde_23_nplus, Dtilde_23_nminus;
-                  double sum_di132;
-                  sum_di132 = 0.0;
-                  for (int index_tau_second = 0; index_tau_second <  pgb2->tau_size_selection; index_tau_second++) {
-                    double pair_di132;
-                    pair_di132 = 0.0;
-                    for (int index_l5 = pgb2->l_minus_one; index_l5 <= pgb2->l_plus_one; index_l5++) {
-                      for (int index_l6 = pgb2->l_minus_one; index_l6 <= pgb2->l_plus_one; index_l6++) {
-
-                        Q_result_di132 = pgb2->Q[index_l_first-index_l_min][index_l_third-index_l_min][index_l_second-index_l_min][1][(index_l_third-index_l_min)*pgb2->l_dual_size+index_l5][(index_l_first-index_l_min)*pgb2->l_dual_size+index_l6];
-
-
-                        nDl_1D_time_int(pgb2->n_is_plus_one,
-                                        index_l6,
-                                        index_l_first,
-                                        index_tau_second,
-                                        bin2,
-                                        bin1,
-                                        &Dtilde_21_nplus,
-                                        pgb2);
-
-                        nDl_1D_time_int(pgb2->n_is_minus_one,
-                                        index_l6,
-                                        index_l_first,
-                                        index_tau_second,
-                                        bin2,
-                                        bin1,
-                                        &Dtilde_21_nminus,
-                                        pgb2);
-
-
-                        nDl_1D_time_int(pgb2->n_is_plus_one,
-                                        index_l5,
-                                        index_l_third,
-                                        index_tau_second,
-                                        bin2,
-                                        bin3,
-                                        &Dtilde_23_nplus,
-                                        pgb2);
-
-                        nDl_1D_time_int(pgb2->n_is_minus_one,
-                                        index_l5,
-                                        index_l_third,
-                                        index_tau_second,
-                                        bin2,
-                                        bin3,
-                                        &Dtilde_23_nminus,
-                                        pgb2);
-
-                        double pair_factor132 = pow(-1, 0.5*(pgb2->l_dual[index_l5][index_l_third]+pgb2->l_dual[index_l6][index_l_first]-ptr->l[index_l_first]-ptr->l[index_l_third]));
-
-                        pair_di132 += pair_factor132
-                                      *Q_result_di132
-                                      *pgb2->dipole_bias[bin2][index_tau_second]
-                                      *(2.*pgb2->l_dual[index_l5][index_l_third]+1.)
-                                      *(2.*pgb2->l_dual[index_l6][index_l_first]+1.)
-                                      *((Dtilde_21_nplus*Dtilde_23_nminus)+(Dtilde_21_nminus*Dtilde_23_nplus));
-
-
-                         if ( abs(pair_factor132) != 1 ){
-                           printf("pair_factor132 = %g\n", pair_factor132);
-                           printf("ERROR! The factors of each Dl-pair should only ever be equal to +- 1 in the density dipole and this is not the case\n" );
-                           exit(0);
-                         }
-                       }
-                     }
-
-                     sum_di132 += pair_di132*pgb2->selection[bin2][index_tau_second]*pgb2->w_trapz[bin2][index_tau_second];
-
-                  }
-
-                  double Dtilde_12_nplus, Dtilde_12_nminus, Dtilde_13_nplus, Dtilde_13_nminus;
-                  double sum_di321;
-                  sum_di321 = 0.0;
-                  for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
-                    double pair_di321;
-                    pair_di321 = 0.0;
-                    for (int index_l5 = pgb2->l_minus_one; index_l5 <= pgb2->l_plus_one; index_l5++) {
-                      for (int index_l6 = pgb2->l_minus_one; index_l6 <= pgb2->l_plus_one; index_l6++) {
-
-                        Q_result_di321 = pgb2->Q[index_l_third-index_l_min][index_l_second-index_l_min][index_l_first-index_l_min][1][(index_l_second-index_l_min)*pgb2->l_dual_size+index_l5][(index_l_third-index_l_min)*pgb2->l_dual_size+index_l6];
-
-                        nDl_1D_time_int(pgb2->n_is_plus_one,
-                                        index_l5,
-                                        index_l_second,
-                                        index_tau_first,
-                                        bin1,
-                                        bin2,
-                                        &Dtilde_12_nplus,
-                                        pgb2);
-
-                        nDl_1D_time_int(pgb2->n_is_minus_one,
-                                        index_l5,
-                                        index_l_second,
-                                        index_tau_first,
-                                        bin1,
-                                        bin2,
-                                        &Dtilde_12_nminus,
-                                        pgb2);
-
-
-                        nDl_1D_time_int(pgb2->n_is_plus_one,
-                                        index_l6,
-                                        index_l_third,
-                                        index_tau_first,
-                                        bin1,
-                                        bin3,
-                                        &Dtilde_13_nplus,
-                                        pgb2);
-
-                        nDl_1D_time_int(pgb2->n_is_minus_one,
-                                        index_l6,
-                                        index_l_third,
-                                        index_tau_first,
-                                        bin1,
-                                        bin3,
-                                        &Dtilde_13_nminus,
-                                        pgb2);
-
-                        double pair_factor321 = pow(-1, 0.5*(pgb2->l_dual[index_l5][index_l_second]+pgb2->l_dual[index_l6][index_l_third]-ptr->l[index_l_second]-ptr->l[index_l_third]));
-
-                        pair_di321 += pair_factor321
-                                      *Q_result_di321
-                                      *(2.*pgb2->l_dual[index_l5][index_l_second]+1.)
-                                      *(2.*pgb2->l_dual[index_l6][index_l_third]+1.)
-                                      *pgb2->dipole_bias[bin1][index_tau_first]
-                                      *((Dtilde_12_nplus*Dtilde_13_nminus)+(Dtilde_12_nminus*Dtilde_13_nplus));
-
-
-
-                         if (abs(pair_factor321) != 1){
-                           printf("pair_factor321 = %g\n", pair_factor321);
-                           printf("ERROR! The factors of each Dl-pair should only ever be equal to +- 1 in the density dipole and this is not the case\n" );
-                           exit(0);
-                         }
-                       }
-                     }
-
-
-                     sum_di321 += pair_di321*pgb2->selection[bin1][index_tau_first]*pgb2->w_trapz[bin1][index_tau_first];
-                  }
-
-
-                  perm123_di = sum_di123
-                               /g_result_di123;
-
-
-                  perm321_di = sum_di321
-                               /g_result_di321;
-
-
-                  perm132_di = sum_di132
-                               /g_result_di132;
-
-
-                  sum_of_three_perms_di = (perm123_di+perm321_di+perm132_di)/16./_PI_/_PI_;
-
-                  pgb2->obs_redbi[pgb2->index_bisp_dens_di][index_l_first-index_l_first_min][index_l_second-index_l_second_min][index_l_third-index_l_third_min][bin1]
-                           [bin2][bin3] = sum_of_three_perms_di;
-
-                } //end of index_l_first
-              } // end of index_l_second
-            } //end of index_l_third
-          } //end of bin1
-        } // end of bin2
-      } //end of bin3
-    } // end of observ_bisp_flag
-  } // end of dens_di
-
+                }
+              }
+            }
+          }
+        }
+      }
+    }
 
 
 
@@ -6688,498 +6687,244 @@ int galbispectra2_init (
 
 
     if (pgb2->index_bisp_dens_quad != -1) { /* Eq. A.22 in 1510.04202 */
+      printf("Computing bispectrum: density quadrupole\n");
+      /* First we need to compute generalised angular power spectra with n=0 and two mulitpoles per {}^nD_{l_1l_2} */
+      double fo_dens_integ_hires_in_l_interp_minus2;
+      double fo_dens_integ_hires_in_l_interp_plus2;
+      double source_interp_quad;
+      double sum_l_minus_two_quad;
+      double sum_l_plus_two_quad;
+      double Pk_bisp_quad;
+
+
+      double * g_temp_array_quad;
+      double * Q_temp_array_quad;
+      double g_result_quad123;
+      double g_result_quad321;
+      double g_result_quad132;
+      double Q_result_quad123;
+      double Q_result_quad321;
+      double Q_result_quad132;
+      double sum_of_three_perms_quad;
+      class_alloc1D(g_temp_array_quad, ptr->l_size[ppt->index_md_scalars], pgb2->error_message);
+      class_alloc1D(Q_temp_array_quad, ptr->l_size[ppt->index_md_scalars], pgb2->error_message);
+
+      double g_result_di;
+      double * g_temp_array_di;
+      class_alloc1D(g_temp_array_di, ptr->l_size[ppt->index_md_scalars], pgb2->error_message);
+
+      int last_index;
+
+      double * pvecback_theo;
+
+      class_alloc(pvecback_theo, pba->bg_size * sizeof(double), pba->error_message);
+      FILE * f;
+      const char* directory = "output/";
+      const char* fileName = "_theo_bisp_";
+      const char* fileType = ".dat";
+      char name_buffer[600];
+      f = NULL;
+      sprintf(name_buffer,"%s%s%s%s%s",directory, ppr->ini_filename, fileName, pgb2->bisp_type_labels[pgb2->index_bisp_dens_quad], fileType);
+      f = fopen(name_buffer,"w");
+      print_theo_bisp_file_header(pgb2->index_bisp_dens_quad,
+                                  ppt,
+                                  ppt2,
+                                  ptr,
+                                  pba,
+                                  ppr,
+                                  pgb2,
+                                  f);
+
+      for (int bin3 = 0; bin3 < ppt->selection_num; bin3++) {
+        for (int bin2 = 0; bin2 < ppt->selection_num; bin2++) {
+          for (int bin1 = 0; bin1 < ppt->selection_num; bin1++) {
+            for(int index_l_third = index_l_third_min; index_l_third < index_l_third_max+1; index_l_third++){
+              for(int index_l_second = index_l_second_min; index_l_second < index_l_second_max+1; index_l_second++){
+                for(int index_l_first = index_l_first_min; index_l_first < index_l_first_max+1; index_l_first++){
+                  if ((pgb2->equilateral_bisp_flag != -1) && ((index_l_first != index_l_second) || (index_l_first != index_l_third) || (index_l_third != index_l_second)) ) {
+                    continue;
+                  }
+
+                  if ((pgb2->folded_bisp_flag != -1) && (index_l_first != index_l_second)  ) {
+                    continue;
+                  }
+                  fprintf(f, "######l1 = %d, l2 = %d, l3 = %d\n", ptr->l[index_l_first], ptr->l[index_l_second], ptr->l[index_l_third]);
+                  g_result_quad123 = 0.;
+                  g_result_quad321 = 0.;
+                  g_result_quad132 = 0.;
+
+                  gl1l2l3(ptr->l[index_l_first],
+                          ptr->l[index_l_second],
+                          ptr->l[index_l_third],
+                          g_temp_array_quad,
+                          &g_result_quad123,
+                          pgb2->error_message);
+
+                  gl1l2l3(ptr->l[index_l_third],
+                          ptr->l[index_l_second],
+                          ptr->l[index_l_first],
+                          g_temp_array_quad,
+                          &g_result_quad321,
+                          pgb2->error_message);
+
+                  gl1l2l3(ptr->l[index_l_first],
+                          ptr->l[index_l_third],
+                          ptr->l[index_l_second],
+                          g_temp_array_quad,
+                          &g_result_quad132,
+                          pgb2->error_message);
+
+
+                  for (int index_tau_third = 0; index_tau_third < pgb2->tau_size_selection; index_tau_third++) {
+                    class_call(background_at_tau(pba,
+                                                 pgb2->tau_sampling_selection[pgb2->bin3][index_tau_third],
+                                                 pba->long_info,
+                                                 pba->inter_normal,
+                                                 &last_index,
+                                                 pvecback_theo),
+                                                 pba->error_message,
+                                                 pgb2->error_message);
+
+                    double z = pba->a_today/pvecback_theo[pba->index_bg_a]-1.;
+                    for (int index_tau_second = pgb2->index_tau_bin2_start; index_tau_second < pgb2->index_tau_bin2_end; index_tau_second++) {
+                      //for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
+                      for (int index_tau_first = pgb2->index_tau_bin1_start; index_tau_first < pgb2->index_tau_bin1_end; index_tau_first++) {
+                        //for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
 
+                        /* There are 6 multipoles that need to be taken into consideration. l_1,l_2,l_3 are paired with the three redshift bins.
+                          The remaining three are l_4=2 (quadrupole) l_5=l_2+-1 and l_6=l_1+-1. We have to sum over the conjugate mulitpoles l_4 and l_5,
+                          for each l_1 and l_2.*/
 
 
-      if (pgb2->unobserv_bisp_flag != -1) {
-
-        printf("Computing bispectrum: density quadrupole\n");
-        /* First we need to compute generalised angular power spectra with n=0 and two mulitpoles per {}^nD_{l_1l_2} */
-        double fo_dens_integ_hires_in_l_interp_minus2;
-        double fo_dens_integ_hires_in_l_interp_plus2;
-        double source_interp_quad;
-        double sum_l_minus_two_quad;
-        double sum_l_plus_two_quad;
-        double Pk_bisp_quad;
-
-
-        double * g_temp_array_quad;
-        double * Q_temp_array_quad;
-        double g_result_quad123;
-        double g_result_quad321;
-        double g_result_quad132;
-        double Q_result_quad123;
-        double Q_result_quad321;
-        double Q_result_quad132;
-        double sum_of_three_perms_quad;
-        class_alloc1D(g_temp_array_quad, ptr->l_size[ppt->index_md_scalars], pgb2->error_message);
-        class_alloc1D(Q_temp_array_quad, ptr->l_size[ppt->index_md_scalars], pgb2->error_message);
-
-        double g_result_di;
-        double * g_temp_array_di;
-        class_alloc1D(g_temp_array_di, ptr->l_size[ppt->index_md_scalars], pgb2->error_message);
-
-        int last_index;
-
-        double * pvecback_theo;
-
-        class_alloc(pvecback_theo, pba->bg_size * sizeof(double), pba->error_message);
-        FILE * f;
-        const char* directory = "output/";
-        const char* fileName = "_theo_bisp_";
-        const char* fileType = ".dat";
-        char name_buffer[600];
-        f = NULL;
-        sprintf(name_buffer,"%s%s%s%s%s",directory, ppr->ini_filename, fileName, pgb2->bisp_type_labels[pgb2->index_bisp_dens_quad], fileType);
-        f = fopen(name_buffer,"w");
-        print_theo_bisp_file_header(pgb2->index_bisp_dens_quad,
-                                    ppt,
-                                    ppt2,
-                                    ptr,
-                                    pba,
-                                    ppr,
-                                    pgb2,
-                                    f);
-
-        for (int bin3 = 0; bin3 < ppt->selection_num; bin3++) {
-          for (int bin2 = 0; bin2 < ppt->selection_num; bin2++) {
-            for (int bin1 = 0; bin1 < ppt->selection_num; bin1++) {
-              for(int index_l_third = index_l_third_min; index_l_third < index_l_third_max+1; index_l_third++){
-                for(int index_l_second = index_l_second_min; index_l_second < index_l_second_max+1; index_l_second++){
-                  for(int index_l_first = index_l_first_min; index_l_first < index_l_first_max+1; index_l_first++){
-                    if ((pgb2->equilateral_bisp_flag != -1) && ((index_l_first != index_l_second) || (index_l_first != index_l_third) || (index_l_third != index_l_second)) ) {
-                      continue;
-                    }
-
-                    if ((pgb2->folded_bisp_flag != -1) && (index_l_first != index_l_second)  ) {
-                      continue;
-                    }
-                    fprintf(f, "######l1 = %d, l2 = %d, l3 = %d\n", ptr->l[index_l_first], ptr->l[index_l_second], ptr->l[index_l_third]);
-                    g_result_quad123 = 0.;
-                    g_result_quad321 = 0.;
-                    g_result_quad132 = 0.;
-
-                    gl1l2l3(ptr->l[index_l_first],
-                            ptr->l[index_l_second],
-                            ptr->l[index_l_third],
-                            g_temp_array_quad,
-                            &g_result_quad123,
-                            pgb2->error_message);
-
-                    gl1l2l3(ptr->l[index_l_third],
-                            ptr->l[index_l_second],
-                            ptr->l[index_l_first],
-                            g_temp_array_quad,
-                            &g_result_quad321,
-                            pgb2->error_message);
 
-                    gl1l2l3(ptr->l[index_l_first],
-                            ptr->l[index_l_third],
-                            ptr->l[index_l_second],
-                            g_temp_array_quad,
-                            &g_result_quad132,
-                            pgb2->error_message);
 
-
-                    for (int index_tau_third = 0; index_tau_third < pgb2->tau_size_selection; index_tau_third++) {
-                      class_call(background_at_tau(pba,
-                                                   pgb2->tau_sampling_selection[pgb2->bin3][index_tau_third],
-                                                   pba->long_info,
-                                                   pba->inter_normal,
-                                                   &last_index,
-                                                   pvecback_theo),
-                                                   pba->error_message,
-                                                   pgb2->error_message);
-
-                      double z = pba->a_today/pvecback_theo[pba->index_bg_a]-1.;
-                      for (int index_tau_second = pgb2->index_tau_bin2_start; index_tau_second < pgb2->index_tau_bin2_end; index_tau_second++) {
-                        //for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
-                        for (int index_tau_first = pgb2->index_tau_bin1_start; index_tau_first < pgb2->index_tau_bin1_end; index_tau_first++) {
-                          //for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
-
-                          /* There are 6 multipoles that need to be taken into consideration. l_1,l_2,l_3 are paired with the three redshift bins.
-                            The remaining three are l_4=2 (quadrupole) l_5=l_2+-1 and l_6=l_1+-1. We have to sum over the conjugate mulitpoles l_4 and l_5,
-                            for each l_1 and l_2.*/
-
-
-
-
-                          double l5l6_permuted_sum_quad = 0.0;
-                          double sum123 = 0.0;
-                          double sum321 = 0.0;
-                          double sum132 = 0.0;
-                          double sum_test_quad = 0.0;
-                          for (int index_l5 = pgb2->l_minus_two; index_l5 <= pgb2->l_plus_two; index_l5++) {
-                            for (int index_l6 = pgb2->l_minus_two; index_l6 <= pgb2->l_plus_two; index_l6++) {
-                              //printf("l5 = %d\n", pgb2->l_dual[index_l5][index_l_first]);
-                              //printf("l6 = %d\n", pgb2->l_dual[index_l6][index_l_second]);
-
-
-
-                              /* NOTE: I don't think this is correct. needs to be checked */
-                              double pair_factor123 = pow(-1, 0.5*(pgb2->l_dual[index_l5][index_l_second]+pgb2->l_dual[index_l6][index_l_first]-ptr->l[index_l_first]-ptr->l[index_l_second]));
-
-                              double pair_quad123 = pair_factor123
-                                                    *pgb2->quadrupole_bias[bin3][index_tau_third]
-                                                    *pgb2->densdens_nDl1l2[bin3][bin1][pgb2->n_is_zero][index_l6][index_l_first][index_tau_third][index_tau_first]
-                                                    *pgb2->densdens_nDl1l2[bin3][bin2][pgb2->n_is_zero][index_l5][index_l_second][index_tau_third][index_tau_second];
-
-                              double pair_factor321 = pow(-1, 0.5*(pgb2->l_dual[index_l5][index_l_second]+pgb2->l_dual[index_l6][index_l_third]-ptr->l[index_l_second]-ptr->l[index_l_third]));
-
-                              double pair_quad321 = pair_factor321
-                                                    *pgb2->quadrupole_bias[bin1][index_tau_first]
-                                                    *pgb2->densdens_nDl1l2[bin1][bin2][pgb2->n_is_zero][index_l5][index_l_second][index_tau_first][index_tau_second]
-                                                    *pgb2->densdens_nDl1l2[bin1][bin3][pgb2->n_is_zero][index_l6][index_l_third][index_tau_first][index_tau_third];
-
-                              double pair_factor132 = pow(-1, 0.5*(pgb2->l_dual[index_l5][index_l_third]+pgb2->l_dual[index_l6][index_l_first]-ptr->l[index_l_first]-ptr->l[index_l_third]));
-
-                              double pair_quad132 = pair_factor132
-                                                    *pgb2->quadrupole_bias[bin2][index_tau_second]
-                                                    *pgb2->densdens_nDl1l2[bin2][bin1][pgb2->n_is_zero][index_l6][index_l_first][index_tau_second][index_tau_first]
-                                                    *pgb2->densdens_nDl1l2[bin2][bin3][pgb2->n_is_zero][index_l5][index_l_third][index_tau_second][index_tau_third];
-
-
-                               if ( abs(pair_factor123) != 1 || abs(pair_factor321) != 1 || abs(pair_factor132) != 1 ){
-                                 printf("pair_factor123 = %g\n", pair_factor123);
-                                 printf("pair_factor321 = %g\n", pair_factor321);
-                                 printf("pair_factor132 = %g\n", pair_factor132);
-                                 printf("ERROR! The factors of each Dl-pair should only ever be equal to +- 1 in the quadrupole and this is not the case\n" );
-                                 exit(0);
-                               }
-
-
-                              Q_result_quad123 = pgb2->Q[index_l_first-index_l_min][index_l_second-index_l_min][index_l_third-index_l_min][2][(index_l_second-index_l_min)*pgb2->l_dual_size+index_l5][(index_l_first-index_l_min)*pgb2->l_dual_size+index_l6];
-
-
-
-                              Q_result_quad321 = pgb2->Q[index_l_third-index_l_min][index_l_second-index_l_min][index_l_first-index_l_min][2][(index_l_second-index_l_min)*pgb2->l_dual_size+index_l5][(index_l_third-index_l_min)*pgb2->l_dual_size+index_l6];
-
-
-
-                              Q_result_quad132 = pgb2->Q[index_l_first-index_l_min][index_l_third-index_l_min][index_l_second-index_l_min][2][(index_l_third-index_l_min)*pgb2->l_dual_size+index_l5][(index_l_first-index_l_min)*pgb2->l_dual_size+index_l6];
-
-
-
-                              sum123 += (2.*pgb2->l_dual[index_l5][index_l_second]+1.)
-                                        *(2.*pgb2->l_dual[index_l6][index_l_first]+1.)
-                                        *Q_result_quad123
-                                        *pair_quad123
-                                        /g_result_quad123;
-
-
-
-
-                              sum321 += (2.*pgb2->l_dual[index_l5][index_l_second]+1.)
-                                        *(2.*pgb2->l_dual[index_l6][index_l_third]+1.)
-                                        *Q_result_quad321
-                                        *pair_quad321
-                                        /g_result_quad321;
-
-
-                              sum132 += (2.*pgb2->l_dual[index_l5][index_l_third]+1.)
-                                        *(2.*pgb2->l_dual[index_l6][index_l_first]+1.)
-                                        *Q_result_quad132
-                                        *pair_quad132
-                                        /g_result_quad132;
-
-
-                              sum_of_three_perms_quad = (sum132+sum321+sum132);
-
-                            }
-                          }
-
-
-
-                          //pgb2->redbi[pgb2->index_bisp_dens_quad][index_l_first-index_l_first_min][index_l_second-index_l_second_min][index_l_third-index_l_third_min][bin1*pgb2->tau_size_selection+index_tau_first-pgb2->index_tau_bin1_start]
-                          //         [bin2*pgb2->tau_size_selection+index_tau_second-pgb2->index_tau_bin2_start][bin3*pgb2->tau_size_selection+index_tau_third] = sum_of_three_perms_quad/42./_PI_/_PI_;
-                          fprintf(f, "%d        %d        %d        %g        %g\n", ptr->l[index_l_first], ptr->l[index_l_second], ptr->l[index_l_third], z, sum_of_three_perms_quad/42./_PI_/_PI_);
-                        } // end of tau_first
-                      } //end_of_tau_second
-                    } //end of tau_third
-                  } // end of index_l_first
-                } // end of index_l_second
-              } // end of index_l_third
-            } // end of bin1
-          } //end of bin2
-        } //end of bin3
-      } //end of unobserv_bisp_flag
-
-
-
-        if (pgb2->observ_bisp_flag != -1) {
-
-          printf("Computing observed bispectrum: density quadrupole\n");
-          /* First we need to compute generalised angular power spectra with n=0 and two mulitpoles per {}^nD_{l_1l_2} */
-          double fo_dens_integ_hires_in_l_interp_minus2;
-          double fo_dens_integ_hires_in_l_interp_plus2;
-          double source_interp_quad;
-          double sum_l_minus_two_quad;
-          double sum_l_plus_two_quad;
-          double Pk_bisp_quad;
-
-
-          double * g_temp_array_quad;
-          double * Q_temp_array_quad;
-          double g_result_quad123;
-          double g_result_quad321;
-          double g_result_quad132;
-          double Q_result_quad123;
-          double Q_result_quad321;
-          double Q_result_quad132;
-          double sum_of_three_perms_quad;
-          class_alloc1D(g_temp_array_quad, ptr->l_size[ppt->index_md_scalars], pgb2->error_message);
-          class_alloc1D(Q_temp_array_quad, ptr->l_size[ppt->index_md_scalars], pgb2->error_message);
-
-          double g_result_di;
-          double * g_temp_array_di;
-          class_alloc1D(g_temp_array_di, ptr->l_size[ppt->index_md_scalars], pgb2->error_message);
-
-          int last_index;
-
-          double * pvecback_theo;
-
-          class_alloc(pvecback_theo, pba->bg_size * sizeof(double), pba->error_message);
-
-
-          double perm123, perm132, perm321;
-
-          for (int bin3 = 0; bin3 < ppt->selection_num; bin3++) {
-            for (int bin2 = 0; bin2 < ppt->selection_num; bin2++) {
-              for (int bin1 = 0; bin1 < ppt->selection_num; bin1++) {
-                for(int index_l_third = index_l_third_min; index_l_third < index_l_third_max+1; index_l_third++){
-                  for(int index_l_second = index_l_second_min; index_l_second < index_l_second_max+1; index_l_second++){
-                    for(int index_l_first = index_l_first_min; index_l_first < index_l_first_max+1; index_l_first++){
-                      if ((pgb2->equilateral_bisp_flag != -1) && ((index_l_first != index_l_second) || (index_l_first != index_l_third) || (index_l_third != index_l_second)) ) {
-                        continue;
-                      }
-
-                      if ((pgb2->folded_bisp_flag != -1) && (index_l_first != index_l_second)  ) {
-                        continue;
-                      }
-
-                      g_result_quad123 = 0.;
-                      g_result_quad321 = 0.;
-                      g_result_quad132 = 0.;
-
-                      gl1l2l3(ptr->l[index_l_first],
-                              ptr->l[index_l_second],
-                              ptr->l[index_l_third],
-                              g_temp_array_quad,
-                              &g_result_quad123,
-                              pgb2->error_message);
-
-                      gl1l2l3(ptr->l[index_l_third],
-                              ptr->l[index_l_second],
-                              ptr->l[index_l_first],
-                              g_temp_array_quad,
-                              &g_result_quad321,
-                              pgb2->error_message);
-
-                      gl1l2l3(ptr->l[index_l_first],
-                              ptr->l[index_l_third],
-                              ptr->l[index_l_second],
-                              g_temp_array_quad,
-                              &g_result_quad132,
-                              pgb2->error_message);
-
-                      double l5l6_permuted_sum_quad = 0.0;
-                      double sum123 = 0.0;
-                      double sum321 = 0.0;
-                      double sum132 = 0.0;
-                      double sum_test_quad = 0.0;
-                      /* There are 6 multipoles that need to be taken into consideration. l_1,l_2,l_3 are paired with the three redshift bins.
-                        The remaining three are l_4=2 (quadrupole) l_5=l_2+-2 and l_6=l_1+-2. We have to sum over the conjugate mulitpoles l_4 and l_5,
-                        for each l_1 and l_2.*/
-
-                      double sum_quad123;
-                      sum_quad123 = 0.0;
-                      double Dtilde_31_nzero, Dtilde_32_nzero;
-                      for (int index_tau_third = 0; index_tau_third < pgb2->tau_size_selection; index_tau_third++) {
-                        double pair_quad123;
-                        pair_quad123 = 0.0;
+                        double l5l6_permuted_sum_quad = 0.0;
+                        double sum123 = 0.0;
+                        double sum321 = 0.0;
+                        double sum132 = 0.0;
+                        double sum_test_quad = 0.0;
                         for (int index_l5 = pgb2->l_minus_two; index_l5 <= pgb2->l_plus_two; index_l5++) {
                           for (int index_l6 = pgb2->l_minus_two; index_l6 <= pgb2->l_plus_two; index_l6++) {
-
-                            Q_result_quad123 = pgb2->Q[index_l_first-index_l_min][index_l_second-index_l_min][index_l_third-index_l_min][2][(index_l_second-index_l_min)*pgb2->l_dual_size+index_l5][(index_l_first-index_l_min)*pgb2->l_dual_size+index_l6];
-
-                            nDl_1D_time_int(pgb2->n_is_zero,
-                                            index_l6,
-                                            index_l_first,
-                                            index_tau_third,
-                                            bin3,
-                                            bin1,
-                                            &Dtilde_31_nzero,
-                                            pgb2);
+                            //printf("l5 = %d\n", pgb2->l_dual[index_l5][index_l_first]);
+                            //printf("l6 = %d\n", pgb2->l_dual[index_l6][index_l_second]);
 
 
-                            nDl_1D_time_int(pgb2->n_is_zero,
-                                            index_l5,
-                                            index_l_second,
-                                            index_tau_third,
-                                            bin3,
-                                            bin1,
-                                            &Dtilde_32_nzero,
-                                            pgb2);
 
+                            /* NOTE: I don't think this is correct. needs to be checked */
                             double pair_factor123 = pow(-1, 0.5*(pgb2->l_dual[index_l5][index_l_second]+pgb2->l_dual[index_l6][index_l_first]-ptr->l[index_l_first]-ptr->l[index_l_second]));
 
-                            pair_quad123 += pair_factor123
-                                            *(2.*pgb2->l_dual[index_l5][index_l_second]+1.)
-                                            *(2.*pgb2->l_dual[index_l6][index_l_first]+1.)
-                                            *Q_result_quad123
-                                            *pgb2->quadrupole_bias[bin3][index_tau_third]
-                                            *Dtilde_31_nzero
-                                            *Dtilde_32_nzero;
+                            double pair_quad123 = pair_factor123
+                                                  *pgb2->quadrupole_bias[bin3][index_tau_third]
+                                                  *pgb2->densdens_nDl1l2[bin3][bin1][pgb2->n_is_zero][index_l6][index_l_first][index_tau_third][index_tau_first]
+                                                  *pgb2->densdens_nDl1l2[bin3][bin2][pgb2->n_is_zero][index_l5][index_l_second][index_tau_third][index_tau_second];
 
+                            double pair_factor321 = pow(-1, 0.5*(pgb2->l_dual[index_l5][index_l_second]+pgb2->l_dual[index_l6][index_l_third]-ptr->l[index_l_second]-ptr->l[index_l_third]));
 
-
-
-                             if ( abs(pair_factor123) != 1){
-                               printf("pair_factor123 = %g\n", pair_factor123);
-                               printf("ERROR! The factors of each Dl-pair should only ever be equal to +- 1 in the quadrupole and this is not the case\n" );
-                               exit(0);
-                             }
-                           } // end of index_l6
-                         } //end_of index_l5
-
-                         sum_quad123 += pair_quad123*pgb2->selection[bin3][index_tau_third]*pgb2->w_trapz[bin3][index_tau_third];
-                      }// end of index_tau_third
-
-                      double sum_quad132;
-                      sum_quad132 = 0.0;
-                      double Dtilde_21_nzero, Dtilde_23_nzero;
-                      for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
-                        double pair_quad132;
-                        pair_quad132 = 0.0;
-                        for (int index_l5 = pgb2->l_minus_two; index_l5 <= pgb2->l_plus_two; index_l5++) {
-                          for (int index_l6 = pgb2->l_minus_two; index_l6 <= pgb2->l_plus_two; index_l6++) {
-
-                            Q_result_quad132 = pgb2->Q[index_l_first-index_l_min][index_l_third-index_l_min][index_l_second-index_l_min][2][(index_l_third-index_l_min)*pgb2->l_dual_size+index_l5][(index_l_first-index_l_min)*pgb2->l_dual_size+index_l6];
-
-                            nDl_1D_time_int(pgb2->n_is_zero,
-                                            index_l6,
-                                            index_l_first,
-                                            index_tau_second,
-                                            bin2,
-                                            bin1,
-                                            &Dtilde_21_nzero,
-                                            pgb2);
-
-
-                            nDl_1D_time_int(pgb2->n_is_zero,
-                                            index_l5,
-                                            index_l_third,
-                                            index_tau_second,
-                                            bin2,
-                                            bin3,
-                                            &Dtilde_23_nzero,
-                                            pgb2);
+                            double pair_quad321 = pair_factor321
+                                                  *pgb2->quadrupole_bias[bin1][index_tau_first]
+                                                  *pgb2->densdens_nDl1l2[bin1][bin2][pgb2->n_is_zero][index_l5][index_l_second][index_tau_first][index_tau_second]
+                                                  *pgb2->densdens_nDl1l2[bin1][bin3][pgb2->n_is_zero][index_l6][index_l_third][index_tau_first][index_tau_third];
 
                             double pair_factor132 = pow(-1, 0.5*(pgb2->l_dual[index_l5][index_l_third]+pgb2->l_dual[index_l6][index_l_first]-ptr->l[index_l_first]-ptr->l[index_l_third]));
 
-                            pair_quad132 += pair_factor132
-                                            *(2.*pgb2->l_dual[index_l5][index_l_third]+1.)
-                                            *(2.*pgb2->l_dual[index_l6][index_l_first]+1.)
-                                            *Q_result_quad132
-                                            *pgb2->quadrupole_bias[bin2][index_tau_second]
-                                            *Dtilde_21_nzero
-                                            *Dtilde_23_nzero;
+                            double pair_quad132 = pair_factor132
+                                                  *pgb2->quadrupole_bias[bin2][index_tau_second]
+                                                  *pgb2->densdens_nDl1l2[bin2][bin1][pgb2->n_is_zero][index_l6][index_l_first][index_tau_second][index_tau_first]
+                                                  *pgb2->densdens_nDl1l2[bin2][bin3][pgb2->n_is_zero][index_l5][index_l_third][index_tau_second][index_tau_third];
 
 
-                             if (abs(pair_factor132) != 1 ){
+                             if ( abs(pair_factor123) != 1 || abs(pair_factor321) != 1 || abs(pair_factor132) != 1 ){
+                               printf("pair_factor123 = %g\n", pair_factor123);
+                               printf("pair_factor321 = %g\n", pair_factor321);
                                printf("pair_factor132 = %g\n", pair_factor132);
                                printf("ERROR! The factors of each Dl-pair should only ever be equal to +- 1 in the quadrupole and this is not the case\n" );
                                exit(0);
                              }
-                           } // end of index_l6
-                         } //end_of index_l5
+                            /* Swapping the two multipoles within each generalised angular power spectra yields a factor of 2 if the cross-terms are dens-dens */
 
-                         sum_quad123 += pair_quad132*pgb2->selection[bin2][index_tau_second]*pgb2->w_trapz[bin2][index_tau_second];
-                      } // end of index_tau_second
+                            /*Ql1l2l3l4l5l6(ptr->l[index_l_first],
+                                          ptr->l[index_l_second],
+                                          ptr->l[index_l_third],
+                                          2,
+                                          pgb2->l_dual[index_l5][index_l_second],
+                                          pgb2->l_dual[index_l6][index_l_first],
+                                          Q_temp_array_quad,
+                                          &Q_result_quad123,
+                                          pgb2);*/
 
-                      double sum_quad321;
-                      sum_quad321 = 0.0;
-                      double Dtilde_12_nzero, Dtilde_13_nzero;
-                      for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
-                        double pair_quad321;
-                        pair_quad321 = 0.0;
-                        for (int index_l5 = pgb2->l_minus_two; index_l5 <= pgb2->l_plus_two; index_l5++) {
-                          for (int index_l6 = pgb2->l_minus_two; index_l6 <= pgb2->l_plus_two; index_l6++) {
+                            Q_result_quad123 = pgb2->Q[index_l_first-index_l_min][index_l_second-index_l_min][index_l_third-index_l_min][2][(index_l_second-index_l_min)*pgb2->l_dual_size+index_l5][(index_l_first-index_l_min)*pgb2->l_dual_size+index_l6];
+
+                            /*Ql1l2l3l4l5l6(ptr->l[index_l_third],
+                                          ptr->l[index_l_second],
+                                          ptr->l[index_l_first],
+                                          2,
+                                          pgb2->l_dual[index_l5][index_l_second],
+                                          pgb2->l_dual[index_l6][index_l_third],
+                                          Q_temp_array_quad,
+                                          &Q_result_quad321,
+                                          pgb2);*/
 
                             Q_result_quad321 = pgb2->Q[index_l_third-index_l_min][index_l_second-index_l_min][index_l_first-index_l_min][2][(index_l_second-index_l_min)*pgb2->l_dual_size+index_l5][(index_l_third-index_l_min)*pgb2->l_dual_size+index_l6];
 
-                            nDl_1D_time_int(pgb2->n_is_zero,
-                                            index_l5,
-                                            index_l_second,
-                                            index_tau_first,
-                                            bin1,
-                                            bin2,
-                                            &Dtilde_12_nzero,
-                                            pgb2);
+                            /*Ql1l2l3l4l5l6(ptr->l[index_l_first],
+                                          ptr->l[index_l_third],
+                                          ptr->l[index_l_second],
+                                          2,
+                                          pgb2->l_dual[index_l5][index_l_third],
+                                          pgb2->l_dual[index_l6][index_l_first],
+                                          Q_temp_array_quad,
+                                          &Q_result_quad132,
+                                          pgb2);*/
+
+                            Q_result_quad132 = pgb2->Q[index_l_first-index_l_min][index_l_third-index_l_min][index_l_second-index_l_min][2][(index_l_third-index_l_min)*pgb2->l_dual_size+index_l5][(index_l_first-index_l_min)*pgb2->l_dual_size+index_l6];
 
 
-                            nDl_1D_time_int(pgb2->n_is_zero,
-                                            index_l6,
-                                            index_l_third,
-                                            index_tau_first,
-                                            bin1,
-                                            bin3,
-                                            &Dtilde_13_nzero,
-                                            pgb2);
 
-                            double pair_factor321 = pow(-1, 0.5*(pgb2->l_dual[index_l5][index_l_second]+pgb2->l_dual[index_l6][index_l_third]-ptr->l[index_l_second]-ptr->l[index_l_third]));
-
-                            pair_quad321 += pair_factor321
-                                            *(2.*pgb2->l_dual[index_l5][index_l_second]+1.)
-                                            *(2.*pgb2->l_dual[index_l6][index_l_third]+1.)
-                                            *Q_result_quad321
-                                            *pgb2->quadrupole_bias[bin1][index_tau_first]
-                                            *Dtilde_12_nzero
-                                            *Dtilde_13_nzero;
+                            sum123 += (2.*pgb2->l_dual[index_l5][index_l_second]+1.)
+                                      *(2.*pgb2->l_dual[index_l6][index_l_first]+1.)
+                                      *Q_result_quad123
+                                      *pair_quad123
+                                      /g_result_quad123;
 
 
 
 
-                             if (abs(pair_factor321) != 1){
-
-                               printf("pair_factor321 = %g\n", pair_factor321);
-
-                               printf("ERROR! The factors of each Dl-pair should only ever be equal to +- 1 in the quadrupole and this is not the case\n" );
-                               exit(0);
-                             }
-                           } // end of index_l6
-                         } //end_of index_l5
-
-                         sum_quad321 += pair_quad321*pgb2->selection[bin1][index_tau_first]*pgb2->w_trapz[bin1][index_tau_first];
-                      } //end of index_tau_third
+                            sum321 += (2.*pgb2->l_dual[index_l5][index_l_second]+1.)
+                                      *(2.*pgb2->l_dual[index_l6][index_l_third]+1.)
+                                      *Q_result_quad321
+                                      *pair_quad321
+                                      /g_result_quad321;
 
 
-                      perm123 = sum_quad123
-                                /g_result_quad123;
+                            sum132 += (2.*pgb2->l_dual[index_l5][index_l_third]+1.)
+                                      *(2.*pgb2->l_dual[index_l6][index_l_first]+1.)
+                                      *Q_result_quad132
+                                      *pair_quad132
+                                      /g_result_quad132;
 
 
-                      perm321 = sum_quad321
-                                 /g_result_quad321;
+                            sum_of_three_perms_quad = (sum132+sum321+sum132);
+                            //printf("sum132 = %g\n", sum123 );
+                            //printf("sum321 = %g\n", sum321 );
+                            //printf("sum132 = %g\n", sum132 );
+                          }
+                        }
 
 
-                      perm132 = sum_quad132
-                                /g_result_quad132;
 
-
-                      sum_of_three_perms_quad = (perm132+perm321+perm132)/42./_PI_/_PI_;
-
-                      pgb2->obs_redbi[pgb2->index_bisp_dens_quad][index_l_first-index_l_first_min][index_l_second-index_l_second_min][index_l_third-index_l_third_min][bin1]
-                               [bin2][bin3] = sum_of_three_perms_quad;
-
-
-                    } // end of index_l_first
-                  } // end of index_l_second
-                } // end of index_l_third
-              } // end of bin1
-            } //end of bin2
-          } //end of bin3
-        } //end of obs_bisp flag
-    } // end of dens_quad
+                        //pgb2->redbi[pgb2->index_bisp_dens_quad][index_l_first-index_l_first_min][index_l_second-index_l_second_min][index_l_third-index_l_third_min][bin1*pgb2->tau_size_selection+index_tau_first-pgb2->index_tau_bin1_start]
+                        //         [bin2*pgb2->tau_size_selection+index_tau_second-pgb2->index_tau_bin2_start][bin3*pgb2->tau_size_selection+index_tau_third] = sum_of_three_perms_quad/42./_PI_/_PI_;
+                        fprintf(f, "%d        %d        %d        %g        %g\n", ptr->l[index_l_first], ptr->l[index_l_second], ptr->l[index_l_third], z, sum_of_three_perms_quad/42./_PI_/_PI_);
+                      } // end of tau_first
+                    } //end_of_tau_second
+                  } //end of tau_third
+                } // end of index_l_first
+              } // end of index_l_second
+            } // end of index_l_third
+          } // end of bin1
+        } //end of bin2
+      } //end of bin3
+    } // end of if flag
 
 
 
@@ -8050,11 +7795,6 @@ int galbispectra2_init (
         } //end of bin2
       } //end of bin3
     } // end of if flag
-    printf("# 8141\n");
-    printf("pgb2->index_type_density = %d\n", pgb2->index_type_density);
-    printf("pgb2->index_type_rsd = %d\n", pgb2->index_type_rsd);
-    printf("pgb2->index_type_lens = %d\n", pgb2->index_type_lens);
-    printf("pgb2->index_type_delta = %d\n", pgb2->index_type_delta);
 
     if (pgb2->index_bisp_Ddelta_Dpsi != -1) {
 
@@ -8214,14 +7954,6 @@ int galbispectra2_init (
                   int l2 = ptr->l[index_l_second];
                   for(int index_l_first = index_l_first_min; index_l_first < index_l_first_max+1; index_l_first++){
                     int l1 = ptr->l[index_l_first];
-
-                    if ((pgb2->equilateral_bisp_flag != -1) && ((index_l_first != index_l_second) || (index_l_first != index_l_third) || (index_l_third != index_l_second)) ) {
-                      continue;
-                    }
-                    if ((pgb2->folded_bisp_flag != -1) && (index_l_first != index_l_second)  ) {
-                      continue;
-                    }
-
                     a_result_Ddelta123 = 0.;
                     a_result_Ddelta321 = 0.;
                     a_result_Ddelta132 = 0.;
@@ -8248,7 +7980,6 @@ int galbispectra2_init (
                             pgb2->error_message);
 
 
-
                     sum123 = 0.;
                     for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
 
@@ -8261,7 +7992,7 @@ int galbispectra2_init (
                                      bin1,
                                      bin2,
                                      &lensD12,
-                                     pgb2);
+                                     pgb2->error_message);
 
                       Dl_1D_time_int(pgb2->index_type_density,
                                      pgb2->index_type_delta,
@@ -8270,7 +8001,7 @@ int galbispectra2_init (
                                      bin1,
                                      bin3,
                                      &densD13,
-                                     pgb2);
+                                     pgb2->error_message);
 
 
                       Dl_1D_time_int(pgb2->index_type_lens,
@@ -8280,7 +8011,7 @@ int galbispectra2_init (
                                      bin1,
                                      bin3,
                                      &lensD13,
-                                     pgb2);
+                                     pgb2->error_message);
 
                       Dl_1D_time_int(pgb2->index_type_density,
                                      pgb2->index_type_delta,
@@ -8289,7 +8020,7 @@ int galbispectra2_init (
                                      bin1,
                                      bin2,
                                      &densD12,
-                                     pgb2);
+                                     pgb2->error_message);
 
                       sum123 += a_result_Ddelta123
                                 *(sqrt(l3*(l3+1)/l2/(l2+1))
@@ -8311,7 +8042,7 @@ int galbispectra2_init (
                                        bin2,
                                        bin1,
                                        &lensD21,
-                                       pgb2);
+                                       pgb2->error_message);
 
                         Dl_1D_time_int(pgb2->index_type_density,
                                        pgb2->index_type_delta,
@@ -8320,7 +8051,7 @@ int galbispectra2_init (
                                        bin2,
                                        bin3,
                                        &densD23,
-                                       pgb2);
+                                       pgb2->error_message);
 
 
                         Dl_1D_time_int(pgb2->index_type_lens,
@@ -8330,7 +8061,7 @@ int galbispectra2_init (
                                        bin2,
                                        bin3,
                                        &lensD23,
-                                       pgb2);
+                                       pgb2->error_message);
 
                         Dl_1D_time_int(pgb2->index_type_density,
                                        pgb2->index_type_delta,
@@ -8339,7 +8070,7 @@ int galbispectra2_init (
                                        bin2,
                                        bin1,
                                        &densD21,
-                                       pgb2);
+                                       pgb2->error_message);
 
                         sum132 += a_result_Ddelta132
                                   *(sqrt(l3*(l3+1)/l1/(l1+1))
@@ -8363,7 +8094,7 @@ int galbispectra2_init (
                                        bin3,
                                        bin2,
                                        &lensD32,
-                                       pgb2);
+                                       pgb2->error_message);
 
                         Dl_1D_time_int(pgb2->index_type_density,
                                        pgb2->index_type_delta,
@@ -8372,7 +8103,7 @@ int galbispectra2_init (
                                        bin3,
                                        bin1,
                                        &densD31,
-                                       pgb2);
+                                       pgb2->error_message);
 
 
                         Dl_1D_time_int(pgb2->index_type_lens,
@@ -8382,7 +8113,7 @@ int galbispectra2_init (
                                        bin3,
                                        bin1,
                                        &lensD31,
-                                       pgb2);
+                                       pgb2->error_message);
 
                         Dl_1D_time_int(pgb2->index_type_density,
                                        pgb2->index_type_delta,
@@ -8391,7 +8122,7 @@ int galbispectra2_init (
                                        bin3,
                                        bin2,
                                        &densD32,
-                                       pgb2);
+                                       pgb2->error_message);
 
 
                         sum321 += a_result_Ddelta321
@@ -8465,7 +8196,6 @@ int galbispectra2_init (
                       continue;
                     }
                     fprintf(f, "######l1 = %d, l2 = %d, l3 = %d\n", ptr->l[index_l_first], ptr->l[index_l_second], ptr->l[index_l_third]);
-
                     a_result_Dvp123 = 0.;
                     a_result_Dvp321 = 0.;
                     a_result_Dvp132 = 0.;
@@ -8610,7 +8340,7 @@ int galbispectra2_init (
                                      bin1,
                                      bin2,
                                      &lensD12,
-                                     pgb2);
+                                     pgb2->error_message);
 
                       Dl_1D_time_int(pgb2->index_type_quad_v_p,
                                      pgb2->index_type_delta,
@@ -8619,7 +8349,7 @@ int galbispectra2_init (
                                      bin1,
                                      bin3,
                                      &vpD13,
-                                     pgb2);
+                                     pgb2->error_message);
 
 
                       Dl_1D_time_int(pgb2->index_type_lens,
@@ -8629,7 +8359,7 @@ int galbispectra2_init (
                                      bin1,
                                      bin3,
                                      &lensD13,
-                                     pgb2);
+                                     pgb2->error_message);
 
                       Dl_1D_time_int(pgb2->index_type_quad_v_p,
                                      pgb2->index_type_delta,
@@ -8638,7 +8368,7 @@ int galbispectra2_init (
                                      bin1,
                                      bin2,
                                      &vpD12,
-                                     pgb2);
+                                     pgb2->error_message);
 
                       sum123 += a_result_Dvp123
                                 *(sqrt(l3*(l3+1)/l2/(l2+1))
@@ -8660,7 +8390,7 @@ int galbispectra2_init (
                                        bin2,
                                        bin1,
                                        &lensD21,
-                                       pgb2);
+                                       pgb2->error_message);
 
                         Dl_1D_time_int(pgb2->index_type_quad_v_p,
                                        pgb2->index_type_delta,
@@ -8669,7 +8399,7 @@ int galbispectra2_init (
                                        bin2,
                                        bin3,
                                        &vpD23,
-                                       pgb2);
+                                       pgb2->error_message);
 
 
                         Dl_1D_time_int(pgb2->index_type_lens,
@@ -8679,7 +8409,7 @@ int galbispectra2_init (
                                        bin2,
                                        bin3,
                                        &lensD23,
-                                       pgb2);
+                                       pgb2->error_message);
 
                         Dl_1D_time_int(pgb2->index_type_quad_v_p,
                                        pgb2->index_type_delta,
@@ -8688,7 +8418,7 @@ int galbispectra2_init (
                                        bin2,
                                        bin1,
                                        &vpD21,
-                                       pgb2);
+                                       pgb2->error_message);
 
                         sum132 += a_result_Dvp132
                                   *(sqrt(l3*(l3+1)/l1/(l1+1))
@@ -8711,7 +8441,7 @@ int galbispectra2_init (
                                        bin3,
                                        bin2,
                                        &lensD32,
-                                       pgb2);
+                                       pgb2->error_message);
 
                         Dl_1D_time_int(pgb2->index_type_quad_v_p,
                                        pgb2->index_type_delta,
@@ -8720,7 +8450,7 @@ int galbispectra2_init (
                                        bin3,
                                        bin1,
                                        &vpD31,
-                                       pgb2);
+                                       pgb2->error_message);
 
 
                         Dl_1D_time_int(pgb2->index_type_lens,
@@ -8730,7 +8460,7 @@ int galbispectra2_init (
                                        bin3,
                                        bin1,
                                        &lensD31,
-                                       pgb2);
+                                       pgb2->error_message);
 
                         Dl_1D_time_int(pgb2->index_type_quad_v_p,
                                        pgb2->index_type_delta,
@@ -8739,7 +8469,7 @@ int galbispectra2_init (
                                        bin3,
                                        bin2,
                                        &vpD32,
-                                       pgb2);
+                                       pgb2->error_message);
 
 
                         sum321 += a_result_Dvp321
@@ -8769,7 +8499,7 @@ int galbispectra2_init (
 
 
 
-      if (pgb2->unobserv_bisp_flag != -1) {
+      if (pgb2->unobserv_bisp_flag != 0) {
 
 
 
@@ -8961,7 +8691,7 @@ int galbispectra2_init (
                                      bin1,
                                      bin2,
                                      &lensD12,
-                                     pgb2);
+                                     pgb2->error_message);
 
                       Dl_1D_time_int(pgb2->index_type_lens,
                                      pgb2->index_type_delta,
@@ -8970,7 +8700,7 @@ int galbispectra2_init (
                                      bin1,
                                      bin3,
                                      &lensD13,
-                                     pgb2);
+                                     pgb2->error_message);
 
                       sum123 += a_result_Dlens123
                                 *((l2*(l2+1))+(l3*(l3+1)))
@@ -8993,7 +8723,7 @@ int galbispectra2_init (
                                      bin2,
                                      bin1,
                                      &lensD21,
-                                     pgb2);
+                                     pgb2->error_message);
 
                       Dl_1D_time_int(pgb2->index_type_lens,
                                      pgb2->index_type_delta,
@@ -9002,7 +8732,7 @@ int galbispectra2_init (
                                      bin2,
                                      bin3,
                                      &lensD23,
-                                     pgb2);
+                                     pgb2->error_message);
 
                       sum132 += a_result_Dlens132
                                 *((l1*(l1+1))+(l3*(l3+1)))
@@ -9026,7 +8756,7 @@ int galbispectra2_init (
                                      bin3,
                                      bin2,
                                      &lensD32,
-                                     pgb2);
+                                     pgb2->error_message);
 
                       Dl_1D_time_int(pgb2->index_type_lens,
                                      pgb2->index_type_delta,
@@ -9035,7 +8765,7 @@ int galbispectra2_init (
                                      bin3,
                                      bin1,
                                      &lensD31,
-                                     pgb2);
+                                     pgb2->error_message);
 
                       sum321 += a_result_Dlens321
                                 *((l2*(l2+1))+(l1*(l1+1)))
@@ -9518,359 +9248,372 @@ int galbispectra2_init (
                             &a_result_nabla132,
                             pgb2->error_message);
 
-
-
-
-
-                    /* There's three separate double-integrations that occur in this loop due to the three permutations about z1,z2 and z3/ */
-                    sum123_integrated = 0.;
-                    for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
-                      double chi_bar_first = tau0 - pgb2->tau_sampling_selection[bin1][index_tau_first];
-                      sum123 = 0.0;
-                      index_of_selection_third = 0;
-                      for (int index_tau_bessel = 0; index_tau_bessel < bessel_boost*((pgb2->tau_size_selection-1)-index_tau_first+1); index_tau_bessel++) {
-                        double chi_tilde_first = tau0-pgb2->tau_sampling_selection_hires[bin1][index_tau_first][index_tau_bessel];
-                        double tau_tilde_first = pgb2->tau_sampling_selection_hires[bin1][index_tau_first][index_tau_bessel];
-
-
-                        index_of_tau_sampling_selection(tau_tilde_first,
-                                        bin1,
-                                        &index_of_selection_first,
-                                        pgb2);
-
-                        if (index_of_selection_first == 0) {
-                          /*Dl_g4_l2 = 0.0;
-                          Dl_g4_l3 = 0.0;
-                          Dl_lens_l2 = 0.0;
-                          Dl_lens_l3 = 0.0;
-                          for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
-                            Dl_g4_l2 += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_second][bin1][bin2][pgb2->bin_mean_index_selection[bin1]][pgb2->bin_mean_index_selection[bin2]];
-                                          *pgb2->w_trapz[bin2][index_tau_second]
-                                          *pgb2->selection[bin2][index_tau_second];
-                            Dl_lens_l2 += pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_second][bin1][bin2][pgb2->bin_mean_index_selection[bin1]][pgb2->bin_mean_index_selection[bin2]];
-                                          *pgb2->w_trapz[bin2][index_tau_second]
-                                          *pgb2->selection[bin2][index_tau_second];
-                          }
-                          for (int index_tau_third = 0; index_tau_third < pgb2->tau_size_selection; index_tau_third++) {
-                            Dl_g4_l3 += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_third][bin1][bin2][pgb2->bin_mean_index_selection[bin1]][pgb2->bin_mean_index_selection[bin2]];
-                                          *pgb2->w_trapz[bin3][index_tau_third]
-                                          *pgb2->selection[bin3][index_tau_third];
-                            Dl_lens_l3 += pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_third][bin1][bin2][pgb2->bin_mean_index_selection[bin1]][pgb2->bin_mean_index_selection[bin2]];
-                                          *pgb2->w_trapz[bin3][index_tau_third]
-                                          *pgb2->selection[bin3][index_tau_third];
-                          }*/
-                          index_of_selection_first = 1;
-                        }
-
-                        else{
-                          D_tilde_g4_l2_minus = 0.0;
-                          D_tilde_g4_l2_plus = 0.0;
-                          D_tilde_lens_l2_minus = 0.0;
-                          D_tilde_lens_l2_plus = 0.0;
-                          for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
-                            D_tilde_g4_l2_minus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_second][bin1][bin2][index_of_selection_first-1][index_tau_second]
-                                                        *pgb2->w_trapz[bin2][index_tau_second]
-                                                        *pgb2->selection[bin2][index_tau_second];
-
-                            D_tilde_g4_l2_plus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_second][bin1][bin2][index_of_selection_first][index_tau_second]
-                                                        *pgb2->w_trapz[bin2][index_tau_second]
-                                                        *pgb2->selection[bin2][index_tau_second];
-
-
-                            D_tilde_lens_l2_minus += pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_second][bin1][bin2][index_of_selection_first-1][index_tau_second]
-                                                        *pgb2->w_trapz[bin2][index_tau_second]
-                                                        *pgb2->selection[bin2][index_tau_second];
-
-                            D_tilde_lens_l2_plus += pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_second][bin1][bin2][index_of_selection_first][index_tau_second]
-                                                        *pgb2->w_trapz[bin2][index_tau_second]
-                                                        *pgb2->selection[bin2][index_tau_second];
-
-                          }
-
-                          D_tilde_g4_l3_minus = 0.0;
-                          D_tilde_g4_l3_plus = 0.0;
-                          D_tilde_lens_l3_minus = 0.0;
-                          D_tilde_lens_l3_plus = 0.0;
-                          for (int index_tau_third = 0; index_tau_third < pgb2->tau_size_selection; index_tau_third++) {
-                            D_tilde_g4_l3_minus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_third][bin1][bin3][index_of_selection_first-1][index_tau_third]
-                                                        *pgb2->w_trapz[bin3][index_tau_third]
-                                                        *pgb2->selection[bin3][index_tau_third];
-
-                            D_tilde_g4_l3_plus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_third][bin1][bin3][index_of_selection_first][index_tau_third]
-                                                        *pgb2->w_trapz[bin3][index_tau_third]
-                                                        *pgb2->selection[bin3][index_tau_third];
-
-
-                            D_tilde_lens_l3_minus += pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_third][bin1][bin3][index_of_selection_first-1][index_tau_third]
-                                                        *pgb2->w_trapz[bin3][index_tau_third]
-                                                        *pgb2->selection[bin3][index_tau_third];
-
-                            D_tilde_lens_l3_plus += pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_third][bin1][bin3][index_of_selection_first][index_tau_third]
-                                                        *pgb2->w_trapz[bin3][index_tau_third]
-                                                        *pgb2->selection[bin3][index_tau_third];
-
-                          }
-
-
-
-                          Dl_g4_l2 =  D_tilde_g4_l2_minus*(pgb2->tau_sampling_selection[bin1][index_of_selection_first]-tau_tilde_first)
-                                        +D_tilde_g4_l2_plus*(tau_tilde_first-pgb2->tau_sampling_selection[bin1][index_of_selection_first-1]);
-                          Dl_g4_l2 /= (pgb2->tau_sampling_selection[bin1][index_of_selection_first] - pgb2->tau_sampling_selection[bin1][index_of_selection_first-1]);
-
-                          Dl_lens_l2 = D_tilde_lens_l2_minus*(pgb2->tau_sampling_selection[bin1][index_of_selection_first]-tau_tilde_first)
-                                        +D_tilde_lens_l2_plus*(tau_tilde_first-pgb2->tau_sampling_selection[bin1][index_of_selection_first-1]);
-                          Dl_lens_l2 /= (pgb2->tau_sampling_selection[bin1][index_of_selection_first] - pgb2->tau_sampling_selection[bin1][index_of_selection_first-1]);
-
-                          Dl_g4_l3 = D_tilde_g4_l3_minus*(pgb2->tau_sampling_selection[bin1][index_of_selection_first]-tau_tilde_first)
-                                        +D_tilde_g4_l3_plus*(tau_tilde_first-pgb2->tau_sampling_selection[bin1][index_of_selection_first-1]);
-                          Dl_g4_l3 /= (pgb2->tau_sampling_selection[bin1][index_of_selection_first] - pgb2->tau_sampling_selection[bin1][index_of_selection_first-1]);
-
-                          Dl_lens_l3 = D_tilde_lens_l3_minus*(pgb2->tau_sampling_selection[bin1][index_of_selection_first]-tau_tilde_first)
-                                        +D_tilde_lens_l3_plus*(tau_tilde_first-pgb2->tau_sampling_selection[bin1][index_of_selection_first-1]);
-                          Dl_lens_l3 /= (pgb2->tau_sampling_selection[bin1][index_of_selection_first] - pgb2->tau_sampling_selection[bin1][index_of_selection_first-1]);
-                        }
-
-
-                        sum123 +=(1./chi_bar_first)*(Dl_g4_l2*Dl_lens_l3+Dl_g4_l3*Dl_lens_l2)*w_trapz_selection_hires[bin1][index_tau_first][index_tau_bessel];
-                      }
-
-                      sum123_integrated += sum123*pgb2->w_trapz[bin1][index_tau_first]*pgb2->selection[bin1][index_tau_first];
-                    }
-
-
-                    sum321_integrated = 0.;
                     for (int index_tau_third = 0; index_tau_third < pgb2->tau_size_selection; index_tau_third++) {
-                      sum321 = 0.0;
-                      index_of_selection_third = 0;
+                      class_call(background_at_tau(pba,
+                                                   pgb2->tau_sampling_selection[pgb2->bin3][index_tau_third],
+                                                   pba->long_info,
+                                                   pba->inter_normal,
+                                                   &last_index,
+                                                   pvecback_theo),
+                                                   pba->error_message,
+                                                   pgb2->error_message);
+
+                      double z = pba->a_today/pvecback_theo[pba->index_bg_a]-1.;
+                      /* each chi_bar quantity is the upper limit of its respective integral */
                       double chi_bar_third = tau0 - pgb2->tau_sampling_selection[bin3][index_tau_third];
-                      for (int index_tau_bessel = 0; index_tau_bessel < bessel_boost*((pgb2->tau_size_selection-1)-index_tau_third+1); index_tau_bessel++) {
+                      //for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
+                      for (int index_tau_second = pgb2->index_tau_bin2_start; index_tau_second < pgb2->index_tau_bin2_end; index_tau_second++) {
+                        double chi_bar_second = tau0 - pgb2->tau_sampling_selection[bin2][index_tau_second];
+                        //for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
+
+                            //for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
+                        for (int index_tau_first = pgb2->index_tau_bin1_start; index_tau_first < pgb2->index_tau_bin1_end; index_tau_first++) {
+                              //for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
+                          double chi_bar_first = tau0 - pgb2->tau_sampling_selection[bin1][index_tau_first];
+                          //Three integrations with limits up to each time index_y
+                          index_of_selection_first = 0;
+                          index_of_selection_second = 0;
+                          index_of_selection_third = 0;
 
 
-                        double chi_tilde_third = tau0-pgb2->tau_sampling_selection_hires[bin3][index_tau_third][index_tau_bessel];
-                        double tau_tilde_third = pgb2->tau_sampling_selection_hires[bin3][index_tau_third][index_tau_bessel];
+
+                          /* There's three separate double-integrations that occur in this loop due to the three permutations about z1,z2 and z3/ */
+                          sum123 = 0.0;
+                          for (int index_tau_bessel = 0; index_tau_bessel < bessel_boost*((pgb2->tau_size_selection-1)-index_tau_first+1); index_tau_bessel++) {
+                            double chi_tilde_first = tau0-pgb2->tau_sampling_selection_hires[bin1][index_tau_first][index_tau_bessel];
+                            double tau_tilde_first = pgb2->tau_sampling_selection_hires[bin1][index_tau_first][index_tau_bessel];
 
 
-                        index_of_tau_sampling_selection(tau_tilde_third,
-                                        bin3,
-                                        &index_of_selection_third,
-                                        pgb2);
+                            index_of_tau_sampling_selection(tau_tilde_first,
+                                            bin1,
+                                            &index_of_selection_first,
+                                            pgb2);
 
-                        if (index_of_selection_third == 0) {
-                          /*Dl_g4_l2 = 0.;
-                          Dl_lens_l2 = 0.;
-                          Dl_g4_l1 = 0.;
-                          Dl_lens_l1 = 0.;
-                          for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
-                            Dl_g4_l2 += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_second][bin3][bin2][pgb2->bin_mean_index_selection[bin3]][pgb2->bin_mean_index_selection[bin2]];
-                                          *pgb2->w_trapz[bin2][index_tau_second]
-                                          *pgb2->selection[bin2][index_tau_second];
-                            Dl_lens_l2 += pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_second][bin3][bin2][pgb2->bin_mean_index_selection[bin3]][pgb2->bin_mean_index_selection[bin2]];
-                                          *pgb2->w_trapz[bin2][index_tau_second]
-                                          *pgb2->selection[bin2][index_tau_second];
+                            if (index_of_selection_first == 0) {
+                              /*Dl_g4_l2 = 0.0;
+                              Dl_g4_l3 = 0.0;
+                              Dl_lens_l2 = 0.0;
+                              Dl_lens_l3 = 0.0;
+                              for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
+                                Dl_g4_l2 += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_second][bin1][bin2][pgb2->bin_mean_index_selection[bin1]][pgb2->bin_mean_index_selection[bin2]];
+                                              *pgb2->w_trapz[bin2][index_tau_second]
+                                              *pgb2->selection[bin2][index_tau_second];
+                                Dl_lens_l2 += pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_second][bin1][bin2][pgb2->bin_mean_index_selection[bin1]][pgb2->bin_mean_index_selection[bin2]];
+                                              *pgb2->w_trapz[bin2][index_tau_second]
+                                              *pgb2->selection[bin2][index_tau_second];
+                              }
+                              for (int index_tau_third = 0; index_tau_third < pgb2->tau_size_selection; index_tau_third++) {
+                                Dl_g4_l3 += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_third][bin1][bin2][pgb2->bin_mean_index_selection[bin1]][pgb2->bin_mean_index_selection[bin2]];
+                                              *pgb2->w_trapz[bin3][index_tau_third]
+                                              *pgb2->selection[bin3][index_tau_third];
+                                Dl_lens_l3 += pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_third][bin1][bin2][pgb2->bin_mean_index_selection[bin1]][pgb2->bin_mean_index_selection[bin2]];
+                                              *pgb2->w_trapz[bin3][index_tau_third]
+                                              *pgb2->selection[bin3][index_tau_third];
+                              }*/
+                              index_of_selection_first = 1;
+                            }
+
+                            else{
+                              D_tilde_g4_l2_minus = 0.0;
+                              D_tilde_g4_l2_plus = 0.0;
+                              D_tilde_lens_l2_minus = 0.0;
+                              D_tilde_lens_l2_plus = 0.0;
+                              for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
+                                D_tilde_g4_l2_minus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_second][bin1][bin2][index_of_selection_first-1][index_tau_second]
+                                                            *pgb2->w_trapz[bin2][index_tau_second]
+                                                            *pgb2->selection[bin2][index_tau_second];
+
+                                D_tilde_g4_l2_plus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_second][bin1][bin2][index_of_selection_first][index_tau_second]
+                                                            *pgb2->w_trapz[bin2][index_tau_second]
+                                                            *pgb2->selection[bin2][index_tau_second];
+
+
+                                D_tilde_lens_l2_minus += pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_second][bin1][bin2][index_of_selection_first-1][index_tau_second]
+                                                            *pgb2->w_trapz[bin2][index_tau_second]
+                                                            *pgb2->selection[bin2][index_tau_second];
+
+                                D_tilde_lens_l2_plus += pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_second][bin1][bin2][index_of_selection_first][index_tau_second]
+                                                            *pgb2->w_trapz[bin2][index_tau_second]
+                                                            *pgb2->selection[bin2][index_tau_second];
+
+                              }
+
+                              D_tilde_g4_l3_minus = 0.0;
+                              D_tilde_g4_l3_plus = 0.0;
+                              D_tilde_lens_l3_minus = 0.0;
+                              D_tilde_lens_l3_plus = 0.0;
+                              for (int index_tau_third = 0; index_tau_third < pgb2->tau_size_selection; index_tau_third++) {
+                                D_tilde_g4_l3_minus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_third][bin1][bin3][index_of_selection_first-1][index_tau_third]
+                                                            *pgb2->w_trapz[bin3][index_tau_third]
+                                                            *pgb2->selection[bin3][index_tau_third];
+
+                                D_tilde_g4_l3_plus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_third][bin1][bin3][index_of_selection_first][index_tau_third]
+                                                            *pgb2->w_trapz[bin3][index_tau_third]
+                                                            *pgb2->selection[bin3][index_tau_third];
+
+
+                                D_tilde_lens_l3_minus += pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_third][bin1][bin3][index_of_selection_first-1][index_tau_third]
+                                                            *pgb2->w_trapz[bin3][index_tau_third]
+                                                            *pgb2->selection[bin3][index_tau_third];
+
+                                D_tilde_lens_l3_plus += pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_third][bin1][bin3][index_of_selection_first][index_tau_third]
+                                                            *pgb2->w_trapz[bin3][index_tau_third]
+                                                            *pgb2->selection[bin3][index_tau_third];
+
+                              }
+
+
+
+                              Dl_g4_l2 =  D_tilde_g4_l2_minus*(pgb2->tau_sampling_selection[bin1][index_of_selection_first]-tau_tilde_first)
+                                            +D_tilde_g4_l2_plus*(tau_tilde_first-pgb2->tau_sampling_selection[bin1][index_of_selection_first-1]);
+                              Dl_g4_l2 /= (pgb2->tau_sampling_selection[bin1][index_of_selection_first] - pgb2->tau_sampling_selection[bin1][index_of_selection_first-1]);
+
+                              Dl_lens_l2 = D_tilde_lens_l2_minus*(pgb2->tau_sampling_selection[bin1][index_of_selection_first]-tau_tilde_first)
+                                            +D_tilde_lens_l2_plus*(tau_tilde_first-pgb2->tau_sampling_selection[bin1][index_of_selection_first-1]);
+                              Dl_lens_l2 /= (pgb2->tau_sampling_selection[bin1][index_of_selection_first] - pgb2->tau_sampling_selection[bin1][index_of_selection_first-1]);
+
+                              Dl_g4_l3 = D_tilde_g4_l3_minus*(pgb2->tau_sampling_selection[bin1][index_of_selection_first]-tau_tilde_first)
+                                            +D_tilde_g4_l3_plus*(tau_tilde_first-pgb2->tau_sampling_selection[bin1][index_of_selection_first-1]);
+                              Dl_g4_l3 /= (pgb2->tau_sampling_selection[bin1][index_of_selection_first] - pgb2->tau_sampling_selection[bin1][index_of_selection_first-1]);
+
+                              Dl_lens_l3 = D_tilde_lens_l3_minus*(pgb2->tau_sampling_selection[bin1][index_of_selection_first]-tau_tilde_first)
+                                            +D_tilde_lens_l3_plus*(tau_tilde_first-pgb2->tau_sampling_selection[bin1][index_of_selection_first-1]);
+                              Dl_lens_l3 /= (pgb2->tau_sampling_selection[bin1][index_of_selection_first] - pgb2->tau_sampling_selection[bin1][index_of_selection_first-1]);
+                            }
+
+
+                            sum123 +=(1./chi_bar_first)*(Dl_g4_l2*Dl_lens_l3+Dl_g4_l3*Dl_lens_l2)*w_trapz_selection_hires[bin1][index_tau_first][index_tau_bessel];
                           }
+                          sum123_integrated = 0.;
                           for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
-                            Dl_g4_l1 += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_first][bin3][bin1][pgb2->bin_mean_index_selection[bin3]][pgb2->bin_mean_index_selection[bin1]];
-                                          *pgb2->w_trapz[bin1][index_tau_first]
-                                          *pgb2->selection[bin1][index_tau_first];
-                            Dl_lens_l1 += pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_first][bin3][bin1][pgb2->bin_mean_index_selection[bin3]][pgb2->bin_mean_index_selection[bin1]];
-                                          *pgb2->w_trapz[bin1][index_tau_first]
-                                          *pgb2->selection[bin1][index_tau_first];
-                          }*/
-                          index_of_selection_third =1;
-                        }
-
-                        else{
-                          Dl_tilde_g4_l2_minus = 0.0;
-                          Dl_tilde_g4_l2_plus = 0.0;
-                          Dl_tilde_lens_l2_minus = 0.0;
-                          Dl_tilde_lens_l2_plus = 0.0;
-                          for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
-                            Dl_tilde_g4_l2_minus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_second][bin3][bin2][index_of_selection_third-1][index_tau_second]
-                                                        *pgb2->w_trapz[bin2][index_tau_second]
-                                                        *pgb2->selection[bin2][index_tau_second];
-
-
-                            Dl_tilde_g4_l2_plus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_second][bin3][bin2][index_of_selection_third][index_tau_second]
-                                                        *pgb2->w_trapz[bin2][index_tau_second]
-                                                        *pgb2->selection[bin2][index_tau_second];
-
-
-                            Dl_tilde_lens_l2_minus += pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_second][bin3][bin2][index_of_selection_third-1][index_tau_second]
-                                                        *pgb2->w_trapz[bin2][index_tau_second]
-                                                        *pgb2->selection[bin2][index_tau_second];
-
-                            Dl_tilde_lens_l2_plus += pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_second][bin3][bin2][index_of_selection_third][index_tau_second]
-                                                        *pgb2->w_trapz[bin2][index_tau_second]
-                                                        *pgb2->selection[bin2][index_tau_second];
+                            sum123_integrated += sum123*pgb2->w_trapz[bin1][index_tau_first]*pgb2->selection[bin1][index_tau_first];
                           }
 
-                          Dl_tilde_g4_l1_minus = 0.0;
-                          Dl_tilde_g4_l1_plus = 0.0;
-                          Dl_tilde_lens_l1_minus = 0.0;
-                          Dl_tilde_lens_l1_plus = 0.0;
-                          for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
-                            Dl_tilde_g4_l1_minus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_first][bin3][bin1][index_of_selection_third-1][index_tau_first]
-                                                        *pgb2->w_trapz[bin1][index_tau_first]
-                                                        *pgb2->selection[bin1][index_tau_first];
 
 
-                            Dl_tilde_g4_l1_plus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_first][bin3][bin1][index_of_selection_third][index_tau_first]
-                                                        *pgb2->w_trapz[bin1][index_tau_first]
-                                                        *pgb2->selection[bin1][index_tau_first];
+                          sum321 = 0.0;
+                          for (int index_tau_bessel = 0; index_tau_bessel < bessel_boost*((pgb2->tau_size_selection-1)-index_tau_third+1); index_tau_bessel++) {
 
 
-                            Dl_tilde_lens_l1_minus += pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_first][bin3][bin1][index_of_selection_third-1][index_tau_first]
-                                                        *pgb2->w_trapz[bin1][index_tau_first]
-                                                        *pgb2->selection[bin1][index_tau_first];
+                            double chi_tilde_third = tau0-pgb2->tau_sampling_selection_hires[bin3][index_tau_third][index_tau_bessel];
+                            double tau_tilde_third = pgb2->tau_sampling_selection_hires[bin3][index_tau_third][index_tau_bessel];
 
-                            Dl_tilde_lens_l1_plus += pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_first][bin3][bin1][index_of_selection_third][index_tau_first]
-                                                        *pgb2->w_trapz[bin1][index_tau_first]
-                                                        *pgb2->selection[bin1][index_tau_first];
+
+                            index_of_tau_sampling_selection(tau_tilde_third,
+                                            bin3,
+                                            &index_of_selection_third,
+                                            pgb2);
+
+                            if (index_of_selection_third == 0) {
+                              /*Dl_g4_l2 = 0.;
+                              Dl_lens_l2 = 0.;
+                              Dl_g4_l1 = 0.;
+                              Dl_lens_l1 = 0.;
+                              for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
+                                Dl_g4_l2 += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_second][bin3][bin2][pgb2->bin_mean_index_selection[bin3]][pgb2->bin_mean_index_selection[bin2]];
+                                              *pgb2->w_trapz[bin2][index_tau_second]
+                                              *pgb2->selection[bin2][index_tau_second];
+                                Dl_lens_l2 += pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_second][bin3][bin2][pgb2->bin_mean_index_selection[bin3]][pgb2->bin_mean_index_selection[bin2]];
+                                              *pgb2->w_trapz[bin2][index_tau_second]
+                                              *pgb2->selection[bin2][index_tau_second];
+                              }
+                              for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
+                                Dl_g4_l1 += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_first][bin3][bin1][pgb2->bin_mean_index_selection[bin3]][pgb2->bin_mean_index_selection[bin1]];
+                                              *pgb2->w_trapz[bin1][index_tau_first]
+                                              *pgb2->selection[bin1][index_tau_first];
+                                Dl_lens_l1 += pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_first][bin3][bin1][pgb2->bin_mean_index_selection[bin3]][pgb2->bin_mean_index_selection[bin1]];
+                                              *pgb2->w_trapz[bin1][index_tau_first]
+                                              *pgb2->selection[bin1][index_tau_first];
+                              }*/
+                              index_of_selection_third =1;
+                            }
+
+                            else{
+                              Dl_tilde_g4_l2_minus = 0.0;
+                              Dl_tilde_g4_l2_plus = 0.0;
+                              Dl_tilde_lens_l2_minus = 0.0;
+                              Dl_tilde_lens_l2_plus = 0.0;
+                              for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
+                                Dl_tilde_g4_l2_minus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_second][bin3][bin2][index_of_selection_third-1][index_tau_second]
+                                                            *pgb2->w_trapz[bin2][index_tau_second]
+                                                            *pgb2->selection[bin2][index_tau_second];
+
+
+                                Dl_tilde_g4_l2_plus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_second][bin3][bin2][index_of_selection_third][index_tau_second]
+                                                            *pgb2->w_trapz[bin2][index_tau_second]
+                                                            *pgb2->selection[bin2][index_tau_second];
+
+
+                                Dl_tilde_lens_l2_minus += pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_second][bin3][bin2][index_of_selection_third-1][index_tau_second]
+                                                            *pgb2->w_trapz[bin2][index_tau_second]
+                                                            *pgb2->selection[bin2][index_tau_second];
+
+                                Dl_tilde_lens_l2_plus += pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_second][bin3][bin2][index_of_selection_third][index_tau_second]
+                                                            *pgb2->w_trapz[bin2][index_tau_second]
+                                                            *pgb2->selection[bin2][index_tau_second];
+                              }
+
+                              Dl_tilde_g4_l1_minus = 0.0;
+                              Dl_tilde_g4_l1_plus = 0.0;
+                              Dl_tilde_lens_l1_minus = 0.0;
+                              Dl_tilde_lens_l1_plus = 0.0;
+                              for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
+                                Dl_tilde_g4_l1_minus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_first][bin3][bin1][index_of_selection_third-1][index_tau_first]
+                                                            *pgb2->w_trapz[bin1][index_tau_first]
+                                                            *pgb2->selection[bin1][index_tau_first];
+
+
+                                Dl_tilde_g4_l1_plus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_first][bin3][bin1][index_of_selection_third][index_tau_first]
+                                                            *pgb2->w_trapz[bin1][index_tau_first]
+                                                            *pgb2->selection[bin1][index_tau_first];
+
+
+                                Dl_tilde_lens_l1_minus += pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_first][bin3][bin1][index_of_selection_third-1][index_tau_first]
+                                                            *pgb2->w_trapz[bin1][index_tau_first]
+                                                            *pgb2->selection[bin1][index_tau_first];
+
+                                Dl_tilde_lens_l1_plus += pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_first][bin3][bin1][index_of_selection_third][index_tau_first]
+                                                            *pgb2->w_trapz[bin1][index_tau_first]
+                                                            *pgb2->selection[bin1][index_tau_first];
+                              }
+
+                              Dl_g4_l2 = Dl_tilde_g4_l2_minus*(pgb2->tau_sampling_selection[bin3][index_of_selection_third]-tau_tilde_third)
+                                            +Dl_tilde_g4_l2_plus*(tau_tilde_third-pgb2->tau_sampling_selection[bin3][index_of_selection_third-1]);
+                              Dl_g4_l2 /= (pgb2->tau_sampling_selection[bin3][index_of_selection_third] - pgb2->tau_sampling_selection[bin3][index_of_selection_third-1]);
+
+                              Dl_lens_l2 = Dl_tilde_lens_l2_minus*(pgb2->tau_sampling_selection[bin3][index_of_selection_third]-tau_tilde_third)
+                                            +Dl_tilde_lens_l2_plus*(tau_tilde_third-pgb2->tau_sampling_selection[bin3][index_of_selection_third-1]);
+                              Dl_lens_l2 /= (pgb2->tau_sampling_selection[bin3][index_of_selection_third] - pgb2->tau_sampling_selection[bin3][index_of_selection_third-1]);
+
+                              Dl_g4_l1 = Dl_tilde_g4_l1_minus*(pgb2->tau_sampling_selection[bin3][index_of_selection_third]-tau_tilde_third)
+                                            +Dl_tilde_g4_l1_plus*(tau_tilde_third-pgb2->tau_sampling_selection[bin3][index_of_selection_third-1]);
+                              Dl_g4_l1 /= (pgb2->tau_sampling_selection[bin3][index_of_selection_third] - pgb2->tau_sampling_selection[bin3][index_of_selection_third-1]);
+
+                              Dl_lens_l1 = Dl_tilde_lens_l1_minus*(pgb2->tau_sampling_selection[bin3][index_of_selection_third]-tau_tilde_third)
+                                            +Dl_tilde_lens_l1_plus*(tau_tilde_third-pgb2->tau_sampling_selection[bin3][index_of_selection_third-1]);
+                              Dl_lens_l1 /= (pgb2->tau_sampling_selection[bin3][index_of_selection_third] - pgb2->tau_sampling_selection[bin3][index_of_selection_third-1]);
+                            }
+
+
+                            sum321 +=(1./chi_bar_third)*(Dl_g4_l2*Dl_lens_l1+Dl_g4_l1*Dl_lens_l2)*w_trapz_selection_hires[bin3][index_tau_third][index_tau_bessel];
                           }
-
-                          Dl_g4_l2 = Dl_tilde_g4_l2_minus*(pgb2->tau_sampling_selection[bin3][index_of_selection_third]-tau_tilde_third)
-                                        +Dl_tilde_g4_l2_plus*(tau_tilde_third-pgb2->tau_sampling_selection[bin3][index_of_selection_third-1]);
-                          Dl_g4_l2 /= (pgb2->tau_sampling_selection[bin3][index_of_selection_third] - pgb2->tau_sampling_selection[bin3][index_of_selection_third-1]);
-
-                          Dl_lens_l2 = Dl_tilde_lens_l2_minus*(pgb2->tau_sampling_selection[bin3][index_of_selection_third]-tau_tilde_third)
-                                        +Dl_tilde_lens_l2_plus*(tau_tilde_third-pgb2->tau_sampling_selection[bin3][index_of_selection_third-1]);
-                          Dl_lens_l2 /= (pgb2->tau_sampling_selection[bin3][index_of_selection_third] - pgb2->tau_sampling_selection[bin3][index_of_selection_third-1]);
-
-                          Dl_g4_l1 = Dl_tilde_g4_l1_minus*(pgb2->tau_sampling_selection[bin3][index_of_selection_third]-tau_tilde_third)
-                                        +Dl_tilde_g4_l1_plus*(tau_tilde_third-pgb2->tau_sampling_selection[bin3][index_of_selection_third-1]);
-                          Dl_g4_l1 /= (pgb2->tau_sampling_selection[bin3][index_of_selection_third] - pgb2->tau_sampling_selection[bin3][index_of_selection_third-1]);
-
-                          Dl_lens_l1 = Dl_tilde_lens_l1_minus*(pgb2->tau_sampling_selection[bin3][index_of_selection_third]-tau_tilde_third)
-                                        +Dl_tilde_lens_l1_plus*(tau_tilde_third-pgb2->tau_sampling_selection[bin3][index_of_selection_third-1]);
-                          Dl_lens_l1 /= (pgb2->tau_sampling_selection[bin3][index_of_selection_third] - pgb2->tau_sampling_selection[bin3][index_of_selection_third-1]);
-                        }
-
-
-                        sum321 +=(1./chi_bar_third)*(Dl_g4_l2*Dl_lens_l1+Dl_g4_l1*Dl_lens_l2)*w_trapz_selection_hires[bin3][index_tau_third][index_tau_bessel];
-                      }
-
-                      sum321_integrated += sum321*pgb2->w_trapz[bin3][index_tau_third]*pgb2->selection[bin3][index_tau_third];
-                    }
-
-
-                    sum132_integrated = 0.0;
-                    for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
-
-                      double chi_bar_second = tau0 - pgb2->tau_sampling_selection[bin2][index_tau_second];
-                      sum132 = 0.0;
-                      index_of_selection_second = 0;
-                      for (int index_tau_bessel = 0; index_tau_bessel < bessel_boost*((pgb2->tau_size_selection-1)-index_tau_second+1); index_tau_bessel++) {
-                        double chi_tilde_second = tau0-pgb2->tau_sampling_selection_hires[bin2][index_tau_second][index_tau_bessel];
-                        double tau_tilde_second = pgb2->tau_sampling_selection_hires[bin2][index_tau_second][index_tau_bessel];
-
-
-                        index_of_tau_sampling_selection(tau_tilde_second,
-                                        bin2,
-                                        &index_of_selection_second,
-                                        pgb2);
-
-                        if (index_of_selection_second == 0) {
-                          /*Dl_g4_l1 = pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_first][bin2][bin1][pgb2->bin_mean_index_selection[bin2]][pgb2->bin_mean_index_selection[bin1]];
-                          Dl_g4_l3 = pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_third][bin2][bin1][pgb2->bin_mean_index_selection[bin2]][pgb2->bin_mean_index_selection[bin1]];
-                          Dl_lens_l1 = pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_first][bin2][bin1][pgb2->bin_mean_index_selection[bin2]][pgb2->bin_mean_index_selection[bin1]];
-                          Dl_lens_l3 = pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_third][bin2][bin1][pgb2->bin_mean_index_selection[bin2]][pgb2->bin_mean_index_selection[bin1]];*/
-                          index_of_selection_second = 1;
-                        }
-
-                        else{
-                          Dl_tilde_g4_l1_plus = 0.0;
-                          Dl_tilde_g4_l1_minus = 0.0;
-                          Dl_tilde_lens_l1_plus = 0.0;
-                          Dl_tilde_lens_l1_minus = 0.0;
-
-                          for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
-                            Dl_tilde_g4_l1_minus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_first][bin2][bin1][index_of_selection_second-1][index_tau_first]
-                                                      *pgb2->w_trapz[bin1][index_tau_first]
-                                                      *pgb2->selection[bin1][index_tau_first];
-
-                            Dl_tilde_g4_l1_plus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_first][bin2][bin1][index_of_selection_second][index_tau_first]
-                                                      *pgb2->w_trapz[bin1][index_tau_first]
-                                                      *pgb2->selection[bin1][index_tau_first];
-
-                            Dl_tilde_lens_l1_minus += pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_first][bin2][bin1][index_of_selection_second-1][index_tau_first]
-                                                        *pgb2->w_trapz[bin1][index_tau_first]
-                                                        *pgb2->selection[bin1][index_tau_first];
-
-                            Dl_tilde_lens_l1_plus += pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_first][bin2][bin1][index_of_selection_second][index_tau_first]
-                                                        *pgb2->w_trapz[bin1][index_tau_first]
-                                                        *pgb2->selection[bin1][index_tau_first];
-
-                          }
-                          Dl_tilde_g4_l3_plus = 0.0;
-                          Dl_tilde_g4_l3_minus = 0.0;
-                          Dl_tilde_lens_l3_plus = 0.0;
-                          Dl_tilde_lens_l3_minus = 0.0;
+                          sum321_integrated = 0.;
                           for (int index_tau_third = 0; index_tau_third < pgb2->tau_size_selection; index_tau_third++) {
-                            Dl_tilde_g4_l3_minus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_third][bin2][bin3][index_of_selection_second-1][index_tau_third]
-                                                      *pgb2->w_trapz[bin3][index_tau_third]
-                                                      *pgb2->selection[bin3][index_tau_third];
-
-                            Dl_tilde_g4_l3_plus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_third][bin2][bin3][index_of_selection_second][index_tau_third]
-                                                      *pgb2->w_trapz[bin3][index_tau_third]
-                                                      *pgb2->selection[bin3][index_tau_third];
-
-                            Dl_tilde_lens_l3_minus += pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_third][bin2][bin3][index_of_selection_second-1][index_tau_third]
-                                                        *pgb2->w_trapz[bin3][index_tau_third]
-                                                        *pgb2->selection[bin3][index_tau_third];
-
-                            Dl_tilde_lens_l3_plus += pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_third][bin2][bin3][index_of_selection_second][index_tau_third]
-                                                        *pgb2->w_trapz[bin3][index_tau_third]
-                                                        *pgb2->selection[bin3][index_tau_third];
-
+                            sum321_integrated += sum321*pgb2->w_trapz[bin3][index_tau_third]*pgb2->selection[bin3][index_tau_third];
                           }
 
-
-                          Dl_g4_l1 = Dl_tilde_g4_l1_minus*(pgb2->tau_sampling_selection[bin2][index_of_selection_second]-tau_tilde_second)
-                                        +Dl_tilde_g4_l1_plus*(tau_tilde_second-pgb2->tau_sampling_selection[bin2][index_of_selection_second-1]);
-                          Dl_g4_l1 /= (pgb2->tau_sampling_selection[bin2][index_of_selection_second] - pgb2->tau_sampling_selection[bin2][index_of_selection_second-1]);
-
-                          Dl_lens_l1 = Dl_tilde_lens_l1_minus*(pgb2->tau_sampling_selection[bin2][index_of_selection_second]-tau_tilde_second)
-                                        +Dl_tilde_lens_l1_plus*(tau_tilde_second-pgb2->tau_sampling_selection[bin2][index_of_selection_second-1]);
-                          Dl_lens_l1 /= (pgb2->tau_sampling_selection[bin2][index_of_selection_second] - pgb2->tau_sampling_selection[bin2][index_of_selection_second-1]);
-
-                          Dl_g4_l3 = Dl_tilde_g4_l3_minus*(pgb2->tau_sampling_selection[bin2][index_of_selection_second]-tau_tilde_second)
-                                        +Dl_tilde_g4_l3_plus*(tau_tilde_second-pgb2->tau_sampling_selection[bin2][index_of_selection_second-1]);
-                          Dl_g4_l3 /= (pgb2->tau_sampling_selection[bin2][index_of_selection_second] - pgb2->tau_sampling_selection[bin2][index_of_selection_second-1]);
-
-                          Dl_lens_l3 = Dl_tilde_lens_l3_minus*(pgb2->tau_sampling_selection[bin2][index_of_selection_second]-tau_tilde_second)
-                                        +Dl_tilde_lens_l3_plus*(tau_tilde_second-pgb2->tau_sampling_selection[bin2][index_of_selection_second-1]);
-                          Dl_lens_l3 /= (pgb2->tau_sampling_selection[bin2][index_of_selection_second] - pgb2->tau_sampling_selection[bin2][index_of_selection_second-1]);
-                        }
+                          sum132 = 0.0;
+                          for (int index_tau_bessel = 0; index_tau_bessel < bessel_boost*((pgb2->tau_size_selection-1)-index_tau_second+1); index_tau_bessel++) {
+                            double chi_tilde_second = tau0-pgb2->tau_sampling_selection_hires[bin2][index_tau_second][index_tau_bessel];
+                            double tau_tilde_second = pgb2->tau_sampling_selection_hires[bin2][index_tau_second][index_tau_bessel];
 
 
-                        sum132 +=(1./chi_bar_second)*(Dl_g4_l1*Dl_lens_l3+Dl_g4_l3*Dl_lens_l1)*w_trapz_selection_hires[bin2][index_tau_second][index_tau_bessel];
-                      }
+                            index_of_tau_sampling_selection(tau_tilde_second,
+                                            bin2,
+                                            &index_of_selection_second,
+                                            pgb2);
 
-                      sum132_integrated += sum132*pgb2->w_trapz[bin2][index_tau_second]*pgb2->selection[bin2][index_tau_second];
-                    }
+                            if (index_of_selection_second == 0) {
+                              /*Dl_g4_l1 = pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_first][bin2][bin1][pgb2->bin_mean_index_selection[bin2]][pgb2->bin_mean_index_selection[bin1]];
+                              Dl_g4_l3 = pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_third][bin2][bin1][pgb2->bin_mean_index_selection[bin2]][pgb2->bin_mean_index_selection[bin1]];
+                              Dl_lens_l1 = pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_first][bin2][bin1][pgb2->bin_mean_index_selection[bin2]][pgb2->bin_mean_index_selection[bin1]];
+                              Dl_lens_l3 = pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_third][bin2][bin1][pgb2->bin_mean_index_selection[bin2]][pgb2->bin_mean_index_selection[bin1]];*/
+                              index_of_selection_second = 1;
+                            }
 
-                    double part123 = sum123_integrated
-                                    *a_result_nabla123
-                                    *sqrt(l2)*sqrt(l2+1)*sqrt(l3)*sqrt(l3+1);
+                            else{
+                              Dl_tilde_g4_l1_plus = 0.0;
+                              Dl_tilde_g4_l1_minus = 0.0;
+                              Dl_tilde_lens_l1_plus = 0.0;
+                              Dl_tilde_lens_l1_minus = 0.0;
 
-                    double part321 = sum321_integrated
-                                    *a_result_nabla321
-                                    *sqrt(l2)*sqrt(l2+1)*sqrt(l1)*sqrt(l1+1);
+                              for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
+                                Dl_tilde_g4_l1_minus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_first][bin2][bin1][index_of_selection_second-1][index_tau_first]
+                                                          *pgb2->w_trapz[bin1][index_tau_first]
+                                                          *pgb2->selection[bin1][index_tau_first];
 
-                    double part132 = sum132_integrated
-                                    *a_result_nabla132
-                                    *sqrt(l1)*sqrt(l1+1)*sqrt(l3)*sqrt(l3+1);
+                                Dl_tilde_g4_l1_plus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_first][bin2][bin1][index_of_selection_second][index_tau_first]
+                                                          *pgb2->w_trapz[bin1][index_tau_first]
+                                                          *pgb2->selection[bin1][index_tau_first];
 
-                    bisp_int_Dlens_DPsi1 = -1.*(part123+part321+part132);
-                    printf("bisp_int_Dlens_DPsi1 = %g\n", bisp_int_Dlens_DPsi1);
+                                Dl_tilde_lens_l1_minus += pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_first][bin2][bin1][index_of_selection_second-1][index_tau_first]
+                                                            *pgb2->w_trapz[bin1][index_tau_first]
+                                                            *pgb2->selection[bin1][index_tau_first];
 
-                    //printf("int_Dlens_DPsi1: %d      %d      %d      %g      %g      %g\n", l1 , l2, l3, sqrt(l2)*sqrt(l2+1)*sqrt(l3)*sqrt(l3+1), sqrt(l2)*sqrt(l2+1)*sqrt(l1)*sqrt(l1+1), sqrt(l1)*sqrt(l1+1)*sqrt(l3)*sqrt(l3+1));
-                    pgb2->obs_redbi[pgb2->index_bisp_int_Dlens_DPsi1][index_l_first-index_l_first_min][index_l_second-index_l_second_min][index_l_third-index_l_third_min][bin1][bin2][bin3] = bisp_int_Dlens_DPsi1;
-                    printf("bisp_int_Dlens_DPsi1 = %g\n", bisp_int_Dlens_DPsi1);
-                    printf("obs_redbi[%d][%d][%d][%d][%d][%d][%d] = %g\n", pgb2->index_bisp_int_Dlens_DPsi1, index_l_first-index_l_first_min, index_l_second-index_l_second_min, index_l_third-index_l_third_min, bin1, bin2, bin3, bisp_int_Dlens_DPsi1);
-                    printf("obs_redbi = %g\n", pgb2->obs_redbi[pgb2->index_bisp_int_Dlens_DPsi1][index_l_first-index_l_first_min][index_l_second-index_l_second_min][index_l_third-index_l_third_min][bin1][bin2][bin3] = bisp_int_Dlens_DPsi1);
-                    //fprintf("%d        %d        %d        %g        %g\n", ptr->l[index_l_first], ptr->l[index_l_second], ptr->l[index_l_third], z, bisp_int_Dlens_DPsi1);
+                                Dl_tilde_lens_l1_plus += pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_first][bin2][bin1][index_of_selection_second][index_tau_first]
+                                                            *pgb2->w_trapz[bin1][index_tau_first]
+                                                            *pgb2->selection[bin1][index_tau_first];
 
+                              }
+                              Dl_tilde_g4_l3_plus = 0.0;
+                              Dl_tilde_g4_l3_minus = 0.0;
+                              Dl_tilde_lens_l3_plus = 0.0;
+                              Dl_tilde_lens_l3_minus = 0.0;
+                              for (int index_tau_third = 0; index_tau_third < pgb2->tau_size_selection; index_tau_third++) {
+                                Dl_tilde_g4_l3_minus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_third][bin2][bin3][index_of_selection_second-1][index_tau_third]
+                                                          *pgb2->w_trapz[bin3][index_tau_third]
+                                                          *pgb2->selection[bin3][index_tau_third];
+
+                                Dl_tilde_g4_l3_plus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_third][bin2][bin3][index_of_selection_second][index_tau_third]
+                                                          *pgb2->w_trapz[bin3][index_tau_third]
+                                                          *pgb2->selection[bin3][index_tau_third];
+
+                                Dl_tilde_lens_l3_minus += pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_third][bin2][bin3][index_of_selection_second-1][index_tau_third]
+                                                            *pgb2->w_trapz[bin3][index_tau_third]
+                                                            *pgb2->selection[bin3][index_tau_third];
+
+                                Dl_tilde_lens_l3_plus += pgb2->Dl[pgb2->index_type_lens][pgb2->index_type_delta][index_l_third][bin2][bin3][index_of_selection_second][index_tau_third]
+                                                            *pgb2->w_trapz[bin3][index_tau_third]
+                                                            *pgb2->selection[bin3][index_tau_third];
+
+                              }
+
+
+                              Dl_g4_l1 = Dl_tilde_g4_l1_minus*(pgb2->tau_sampling_selection[bin2][index_of_selection_second]-tau_tilde_second)
+                                            +Dl_tilde_g4_l1_plus*(tau_tilde_second-pgb2->tau_sampling_selection[bin2][index_of_selection_second-1]);
+                              Dl_g4_l1 /= (pgb2->tau_sampling_selection[bin2][index_of_selection_second] - pgb2->tau_sampling_selection[bin2][index_of_selection_second-1]);
+
+                              Dl_lens_l1 = Dl_tilde_lens_l1_minus*(pgb2->tau_sampling_selection[bin2][index_of_selection_second]-tau_tilde_second)
+                                            +Dl_tilde_lens_l1_plus*(tau_tilde_second-pgb2->tau_sampling_selection[bin2][index_of_selection_second-1]);
+                              Dl_lens_l1 /= (pgb2->tau_sampling_selection[bin2][index_of_selection_second] - pgb2->tau_sampling_selection[bin2][index_of_selection_second-1]);
+
+                              Dl_g4_l3 = Dl_tilde_g4_l3_minus*(pgb2->tau_sampling_selection[bin2][index_of_selection_second]-tau_tilde_second)
+                                            +Dl_tilde_g4_l3_plus*(tau_tilde_second-pgb2->tau_sampling_selection[bin2][index_of_selection_second-1]);
+                              Dl_g4_l3 /= (pgb2->tau_sampling_selection[bin2][index_of_selection_second] - pgb2->tau_sampling_selection[bin2][index_of_selection_second-1]);
+
+                              Dl_lens_l3 = Dl_tilde_lens_l3_minus*(pgb2->tau_sampling_selection[bin2][index_of_selection_second]-tau_tilde_second)
+                                            +Dl_tilde_lens_l3_plus*(tau_tilde_second-pgb2->tau_sampling_selection[bin2][index_of_selection_second-1]);
+                              Dl_lens_l3 /= (pgb2->tau_sampling_selection[bin2][index_of_selection_second] - pgb2->tau_sampling_selection[bin2][index_of_selection_second-1]);
+                            }
+
+
+                            sum132 +=(1./chi_bar_second)*(Dl_g4_l1*Dl_lens_l3+Dl_g4_l3*Dl_lens_l1)*w_trapz_selection_hires[bin2][index_tau_second][index_tau_bessel];
+                          }
+                          sum132_integrated = 0.0;
+                          for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
+                            sum132_integrated += sum132*pgb2->w_trapz[bin2][index_tau_second]*pgb2->selection[bin2][index_tau_second];
+                          }
+
+                          double part123 = sum123_integrated
+                                          *a_result_nabla123
+                                          *sqrt(l2)*sqrt(l2+1)*sqrt(l3)*sqrt(l3+1);
+
+                          double part321 = sum321_integrated
+                                          *a_result_nabla321
+                                          *sqrt(l2)*sqrt(l2+1)*sqrt(l1)*sqrt(l1+1);
+
+                          double part132 = sum132_integrated
+                                          *a_result_nabla132
+                                          *sqrt(l1)*sqrt(l1+1)*sqrt(l3)*sqrt(l3+1);
+
+                          bisp_int_Dlens_DPsi1 = -1.*(part123+part321+part132);
+
+                          //printf("int_Dlens_DPsi1: %d      %d      %d      %g      %g      %g\n", l1 , l2, l3, sqrt(l2)*sqrt(l2+1)*sqrt(l3)*sqrt(l3+1), sqrt(l2)*sqrt(l2+1)*sqrt(l1)*sqrt(l1+1), sqrt(l1)*sqrt(l1+1)*sqrt(l3)*sqrt(l3+1));
+                          pgb2->obs_redbi[pgb2->index_bisp_int_Dlens_DPsi1][index_l_first-index_l_first_min][index_l_second-index_l_second_min][index_l_third-index_l_third_min][bin1][bin2][bin3] = bisp_int_Dlens_DPsi1;
+                          //fprintf(f, "%d        %d        %d        %g        %g\n", ptr->l[index_l_first], ptr->l[index_l_second], ptr->l[index_l_third], z, bisp_int_Dlens_DPsi1);
+                        } // end of tau_first
+                      } //end_of_tau_second
+                    } //end of tau_third
                   } // end of index_l_first
                 } // end of index_l_second
               } // end of index_l_third
@@ -10355,228 +10098,239 @@ int galbispectra2_init (
                             &c_result_nabla132,
                             pgb2->error_message);
 
+                    for (int index_tau_third = 0; index_tau_third < pgb2->tau_size_selection; index_tau_third++) {
+                      class_call(background_at_tau(pba,
+                                                   pgb2->tau_sampling_selection[pgb2->bin3][index_tau_third],
+                                                   pba->long_info,
+                                                   pba->inter_normal,
+                                                   &last_index,
+                                                   pvecback_theo),
+                                                   pba->error_message,
+                                                   pgb2->error_message);
 
-
-
-                      //Three integrations with limits up to each time index_y
-
-
-
-
-
-                    sum123_integrated = 0.0;
-                    for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
-                          //for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
-                      double chi_bar_first = tau0 - pgb2->tau_sampling_selection[bin1][index_tau_first];
-                    /* There's three separate integrations that occur in this loop due to the three permutations about z1,z2 and z3/ */
-                      index_of_selection_first = 0;
-                      sum123 = 0.0;
-                      for (int index_tau_bessel = 0; index_tau_bessel < bessel_boost*((pgb2->tau_size_selection-1)-index_tau_first+1); index_tau_bessel++) {
-                        double chi_tilde_first = tau0-pgb2->tau_sampling_selection_hires[bin1][index_tau_first][index_tau_bessel];
-                        double tau_tilde_first = pgb2->tau_sampling_selection_hires[bin1][index_tau_first][index_tau_bessel];
-
-
-                        index_of_tau_sampling_selection(tau_tilde_first,
-                                        bin1,
-                                        &index_of_selection_first,
-                                        pgb2);
-
-                        if (index_of_selection_first == 0) {
-                          index_of_selection_first =1;
-                          //Dlg4l2 = pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_second][bin1][bin2][pgb2->bin_mean_index_selection[bin1]][pgb2->bin_mean_index_selection[bin2]];
-                          //Dlg4l3 = pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_third][bin1][bin2][pgb2->bin_mean_index_selection[bin1]][pgb2->bin_mean_index_selection[bin2]];
-                        }
-
-                        else{
-
-                          Dl_tilde_g4_l2_minus = 0.0;
-                          Dl_tilde_g4_l2_plus = 0.0;
-                          Dl_tilde_g4_l3_minus = 0.0;
-                          Dl_tilde_g4_l3_plus = 0.0;
-
-                          for (int index_tau_tilde = 0; index_tau_tilde < pgb2->tau_size_selection; index_tau_tilde++) {
-                            Dl_tilde_g4_l2_minus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_second][bin1][bin2][index_of_selection_first-1][index_tau_tilde]
-                                                      *pgb2->w_trapz[bin2][index_tau_tilde]
-                                                      *pgb2->selection[bin2][index_tau_tilde];
-                            Dl_tilde_g4_l2_plus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_second][bin1][bin2][index_of_selection_first][index_tau_tilde]
-                                                      *pgb2->w_trapz[bin2][index_tau_tilde]
-                                                      *pgb2->selection[bin2][index_tau_tilde];
-
-                            Dl_tilde_g4_l3_minus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_third][bin1][bin3][index_of_selection_first-1][index_tau_tilde]
-                                                        *pgb2->w_trapz[bin3][index_tau_tilde]
-                                                        *pgb2->selection[bin3][index_tau_tilde];
-
-                            Dl_tilde_g4_l3_plus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_third][bin1][bin3][index_of_selection_first][index_tau_tilde]
-                                                        *pgb2->w_trapz[bin3][index_tau_tilde]
-                                                        *pgb2->selection[bin3][index_tau_tilde];
-
-                          }
-
-                          Dlg4l2 = Dl_tilde_g4_l2_minus*(pgb2->tau_sampling_selection[bin1][index_of_selection_first]-tau_tilde_first)
-                                        +Dl_tilde_g4_l2_plus*(tau_tilde_first-pgb2->tau_sampling_selection[bin1][index_of_selection_first-1]);
-                          Dlg4l2 /= (pgb2->tau_sampling_selection[bin1][index_of_selection_first] - pgb2->tau_sampling_selection[bin1][index_of_selection_first-1]);
-
-                          Dlg4l3 = Dl_tilde_g4_l3_minus*(pgb2->tau_sampling_selection[bin1][index_of_selection_first]-tau_tilde_first)
-                                        +Dl_tilde_g4_l3_plus*(tau_tilde_first-pgb2->tau_sampling_selection[bin1][index_of_selection_first-1]);
-                          Dlg4l3 /= (pgb2->tau_sampling_selection[bin1][index_of_selection_first] - pgb2->tau_sampling_selection[bin1][index_of_selection_first-1]);
-                        }
-
-
-                        sum123 +=((chi_bar_first-chi_tilde_first)/chi_tilde_first/chi_bar_first)*Dlg4l2*Dlg4l3*w_trapz_selection_hires[bin1][index_tau_first][index_tau_bessel];
-                      }
-
-                        sum123_integrated += (1.-5.*pgb2->s[bin1][index_tau_first]/2.)*sum123*pgb2->w_trapz[bin1][index_tau_first]*pgb2->selection[bin1][index_tau_first];
-                      }
-
-                      sum321_integrated = 0.0;
-                      for (int index_tau_third = 0; index_tau_third < pgb2->tau_size_selection; index_tau_third++) {
-
-                        /* each chi_bar quantity is the upper limit of its respective integral */
-                        double chi_bar_third = tau0 - pgb2->tau_sampling_selection[bin3][index_tau_third];
-                        sum321 = 0.0;
-                        index_of_selection_third = 0;
-                        for (int index_tau_bessel = 0; index_tau_bessel < bessel_boost*((pgb2->tau_size_selection-1)-index_tau_third+1); index_tau_bessel++) {
-
-
-                          double chi_tilde_third = tau0-pgb2->tau_sampling_selection_hires[bin3][index_tau_third][index_tau_bessel];
-                          double tau_tilde_third = pgb2->tau_sampling_selection_hires[bin3][index_tau_third][index_tau_bessel];
-
-
-                          index_of_tau_sampling_selection(tau_tilde_third,
-                                          bin3,
-                                          &index_of_selection_third,
-                                          pgb2);
-
-                          if (index_of_selection_third == 0) {
-                            index_of_selection_third = 1;
-                            //Dlg4l2 = pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_second][bin3][bin2][pgb2->bin_mean_index_selection[bin3]][pgb2->bin_mean_index_selection[bin2]];
-                            //Dlg4l1 = pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_first][bin3][bin2][pgb2->bin_mean_index_selection[bin3]][pgb2->bin_mean_index_selection[bin2]];
-                          }
-
-                          else{
-
-                            Dl_tilde_g4_l2_minus = 0.0;
-                            Dl_tilde_g4_l2_plus = 0.0;
-                            Dl_tilde_g4_l1_minus = 0.0;
-                            Dl_tilde_g4_l1_plus = 0.0;
-                            for (int index_tau_tilde = 0; index_tau_tilde < pgb2->tau_size_selection; index_tau_tilde++) {
-                              Dl_tilde_g4_l2_minus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_second][bin3][bin2][index_of_selection_third-1][index_tau_tilde]
-                                                          *pgb2->w_trapz[bin2][index_tau_tilde]
-                                                          *pgb2->selection[bin2][index_tau_tilde];
-
-                              Dl_tilde_g4_l2_plus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_second][bin3][bin2][index_of_selection_third][index_tau_tilde]
-                                                          *pgb2->w_trapz[bin2][index_tau_tilde]
-                                                          *pgb2->selection[bin2][index_tau_tilde];
-
-                              Dl_tilde_g4_l1_minus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_first][bin3][bin1][index_of_selection_third-1][index_tau_tilde]
-                                                        *pgb2->w_trapz[bin3][index_tau_tilde]
-                                                        *pgb2->selection[bin3][index_tau_tilde];
-
-                              Dl_tilde_g4_l1_plus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_first][bin3][bin1][index_of_selection_third][index_tau_tilde]
-                                                        *pgb2->w_trapz[bin1][index_tau_tilde]
-                                                        *pgb2->selection[bin1][index_tau_tilde];
-                            }
-
-                            Dlg4l2 = Dl_tilde_g4_l2_minus*(pgb2->tau_sampling_selection[bin3][index_of_selection_third]-tau_tilde_third)
-                                          +Dl_tilde_g4_l2_plus*(tau_tilde_third-pgb2->tau_sampling_selection[bin3][index_of_selection_third-1]);
-                            Dlg4l2 /= (pgb2->tau_sampling_selection[bin3][index_of_selection_third] - pgb2->tau_sampling_selection[bin3][index_of_selection_third-1]);
-
-                            Dlg4l1 = Dl_tilde_g4_l1_minus*(pgb2->tau_sampling_selection[bin3][index_of_selection_third]-tau_tilde_third)
-                                          +Dl_tilde_g4_l1_plus*(tau_tilde_third-pgb2->tau_sampling_selection[bin3][index_of_selection_third-1]);
-                            Dlg4l1 /= (pgb2->tau_sampling_selection[bin3][index_of_selection_third] - pgb2->tau_sampling_selection[bin3][index_of_selection_third-1]);
-                          }
-
-                          sum321 +=((chi_bar_third-chi_tilde_third)/chi_tilde_third/chi_bar_third)*Dlg4l2*Dlg4l1*w_trapz_selection_hires[bin3][index_tau_third][index_tau_bessel];
-                        }
-
-                        sum321_integrated += (1.-5.*pgb2->s[bin3][index_tau_third]/2.)*sum321*pgb2->w_trapz[bin3][index_tau_third]*pgb2->selection[bin3][index_tau_third];
-                      }
-
-
-                      sum132_integrated = 0.0;
-                      for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
+                      double z = pba->a_today/pvecback_theo[pba->index_bg_a]-1.;
+                      /* each chi_bar quantity is the upper limit of its respective integral */
+                      double chi_bar_third = tau0 - pgb2->tau_sampling_selection[bin3][index_tau_third];
+                      //for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
+                      for (int index_tau_second = pgb2->index_tau_bin2_start; index_tau_second < pgb2->index_tau_bin2_end; index_tau_second++) {
                         double chi_bar_second = tau0 - pgb2->tau_sampling_selection[bin2][index_tau_second];
-                        sum132 = 0.0;
-                        index_of_selection_second = 0;
-                        for (int index_tau_bessel = 0; index_tau_bessel < bessel_boost*((pgb2->tau_size_selection-1)-index_tau_second+1); index_tau_bessel++) {
-                          double chi_tilde_second = tau0-pgb2->tau_sampling_selection_hires[bin2][index_tau_second][index_tau_bessel];
-                          double tau_tilde_second = pgb2->tau_sampling_selection_hires[bin2][index_tau_second][index_tau_bessel];
+                        //for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
+
+                            //for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
+                        for (int index_tau_first = pgb2->index_tau_bin1_start; index_tau_first < pgb2->index_tau_bin1_end; index_tau_first++) {
+                              //for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
+                          double chi_bar_first = tau0 - pgb2->tau_sampling_selection[bin1][index_tau_first];
+                          //Three integrations with limits up to each time index_y
+                          index_of_selection_first = 0;
+                          index_of_selection_second = 0;
+                          index_of_selection_third = 0;
 
 
-                          index_of_tau_sampling_selection(tau_tilde_second,
-                                          bin2,
-                                          &index_of_selection_second,
-                                          pgb2);
-
-                          if (index_of_selection_second == 0) {
-                            index_of_selection_second =1;
-                            //Dlg4l1 = pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_first][bin2][bin1][pgb2->bin_mean_index_selection[bin2]][pgb2->bin_mean_index_selection[bin1]];
-                            //Dlg4l3 = pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_third][bin2][bin1][pgb2->bin_mean_index_selection[bin2]][pgb2->bin_mean_index_selection[bin1]];
-                          }
-
-                          else{
-
-                            Dl_tilde_g4_l1_minus = 0.0;
-                            Dl_tilde_g4_l1_plus = 0.0;
-                            Dl_tilde_g4_l3_minus = 0.0;
-                            Dl_tilde_g4_l3_plus = 0.0;
-                            for (int index_tau_tilde = 0; index_tau_tilde < pgb2->tau_size_selection; index_tau_tilde++) {
-                              Dl_tilde_g4_l1_minus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_first][bin2][bin1][index_of_selection_second-1][index_tau_tilde]
-                                                          *pgb2->w_trapz[bin1][index_tau_tilde]
-                                                          *pgb2->selection[bin1][index_tau_tilde];
-
-                              Dl_tilde_g4_l1_plus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_first][bin2][bin1][index_of_selection_second][index_tau_tilde]
-                                                          *pgb2->w_trapz[bin1][index_tau_tilde]
-                                                          *pgb2->selection[bin1][index_tau_tilde];
-
-                              Dl_tilde_g4_l3_minus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_third][bin2][bin3][index_of_selection_second-1][index_tau_tilde]
-                                                          *pgb2->w_trapz[bin3][index_tau_tilde]
-                                                          *pgb2->selection[bin3][index_tau_tilde];
-
-                              Dl_tilde_g4_l3_plus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_third][bin2][bin3][index_of_selection_second][index_tau_tilde]
-                                                          *pgb2->w_trapz[bin3][index_tau_tilde]
-                                                          *pgb2->selection[bin3][index_tau_tilde];
 
 
+                          /* There's three separate integrations that occur in this loop due to the three permutations about z1,z2 and z3/ */
+                          sum123 = 0.0;
+                          for (int index_tau_bessel = 0; index_tau_bessel < bessel_boost*((pgb2->tau_size_selection-1)-index_tau_first+1); index_tau_bessel++) {
+                            double chi_tilde_first = tau0-pgb2->tau_sampling_selection_hires[bin1][index_tau_first][index_tau_bessel];
+                            double tau_tilde_first = pgb2->tau_sampling_selection_hires[bin1][index_tau_first][index_tau_bessel];
+
+
+                            index_of_tau_sampling_selection(tau_tilde_first,
+                                            bin1,
+                                            &index_of_selection_first,
+                                            pgb2);
+
+                            if (index_of_selection_first == 0) {
+                              index_of_selection_first =1;
+                              //Dlg4l2 = pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_second][bin1][bin2][pgb2->bin_mean_index_selection[bin1]][pgb2->bin_mean_index_selection[bin2]];
+                              //Dlg4l3 = pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_third][bin1][bin2][pgb2->bin_mean_index_selection[bin1]][pgb2->bin_mean_index_selection[bin2]];
+                            }
+
+                            else{
+
+                              Dl_tilde_g4_l2_minus = 0.0;
+                              Dl_tilde_g4_l2_plus = 0.0;
+                              Dl_tilde_g4_l3_minus = 0.0;
+                              Dl_tilde_g4_l3_plus = 0.0;
+
+                              for (int index_tau_tilde = 0; index_tau_tilde < pgb2->tau_size_selection; index_tau_tilde++) {
+                                Dl_tilde_g4_l2_minus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_second][bin1][bin2][index_of_selection_first-1][index_tau_second]
+                                                          *pgb2->w_trapz[bin2][index_tau_tilde]
+                                                          *pgb2->selection[bin2][index_tau_tilde];
+                                Dl_tilde_g4_l2_plus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_second][bin1][bin2][index_of_selection_first][index_tau_second]
+                                                          *pgb2->w_trapz[bin2][index_tau_tilde]
+                                                          *pgb2->selection[bin2][index_tau_tilde];
+
+                                Dl_tilde_g4_l3_minus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_third][bin1][bin3][index_of_selection_first-1][index_tau_third]
+                                                            *pgb2->w_trapz[bin3][index_tau_tilde]
+                                                            *pgb2->selection[bin3][index_tau_tilde];
+
+                                Dl_tilde_g4_l3_plus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_third][bin1][bin3][index_of_selection_first][index_tau_third]
+                                                            *pgb2->w_trapz[bin3][index_tau_tilde]
+                                                            *pgb2->selection[bin3][index_tau_tilde];
+
+                              }
+
+                              Dlg4l2 = Dl_tilde_g4_l2_minus*(pgb2->tau_sampling_selection[bin1][index_of_selection_first]-tau_tilde_first)
+                                            +Dl_tilde_g4_l2_plus*(tau_tilde_first-pgb2->tau_sampling_selection[bin1][index_of_selection_first-1]);
+                              Dlg4l2 /= (pgb2->tau_sampling_selection[bin1][index_of_selection_first] - pgb2->tau_sampling_selection[bin1][index_of_selection_first-1]);
+
+                              Dlg4l3 = Dl_tilde_g4_l3_minus*(pgb2->tau_sampling_selection[bin1][index_of_selection_first]-tau_tilde_first)
+                                            +Dl_tilde_g4_l3_plus*(tau_tilde_first-pgb2->tau_sampling_selection[bin1][index_of_selection_first-1]);
+                              Dlg4l3 /= (pgb2->tau_sampling_selection[bin1][index_of_selection_first] - pgb2->tau_sampling_selection[bin1][index_of_selection_first-1]);
                             }
 
 
-                            Dlg4l1 = Dl_tilde_g4_l1_minus*(pgb2->tau_sampling_selection[bin2][index_of_selection_second]-tau_tilde_second)
-                                          +Dl_tilde_g4_l1_plus*(tau_tilde_second-pgb2->tau_sampling_selection[bin2][index_of_selection_second-1]);
-                            Dlg4l1 /= (pgb2->tau_sampling_selection[bin2][index_of_selection_second] - pgb2->tau_sampling_selection[bin2][index_of_selection_second-1]);
-
-                            Dlg4l3 = Dl_tilde_g4_l3_minus*(pgb2->tau_sampling_selection[bin2][index_of_selection_second]-tau_tilde_second)
-                                          +Dl_tilde_g4_l3_plus*(tau_tilde_second-pgb2->tau_sampling_selection[bin2][index_of_selection_second-1]);
-                            Dlg4l3 /= (pgb2->tau_sampling_selection[bin2][index_of_selection_second] - pgb2->tau_sampling_selection[bin2][index_of_selection_second-1]);
+                            sum123 +=((chi_bar_first-chi_tilde_first)/chi_tilde_first/chi_bar_first)*Dlg4l2*Dlg4l3*w_trapz_selection_hires[bin1][index_tau_first][index_tau_bessel];
+                          }
+                          sum123_integrated = 0.0;
+                          for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
+                            sum123_integrated += (1.-5.*pgb2->s[bin1][index_tau_first]/2.)*sum123*pgb2->w_trapz[bin1][index_tau_first]*pgb2->selection[bin1][index_tau_first];
                           }
 
+                          sum321 = 0.0;
+                          for (int index_tau_bessel = 0; index_tau_bessel < bessel_boost*((pgb2->tau_size_selection-1)-index_tau_third+1); index_tau_bessel++) {
 
-                          sum132 +=((chi_bar_second-chi_tilde_second)/chi_tilde_second/chi_bar_second)*Dlg4l1*Dlg4l3*w_trapz_selection_hires[bin2][index_tau_second][index_tau_bessel];
-                        }
 
-                        sum132_integrated += (1.-5.*pgb2->s[bin2][index_tau_second]/2.)*sum132*pgb2->w_trapz[bin2][index_tau_second]*pgb2->selection[bin2][index_tau_second];
-                      }
+                            double chi_tilde_third = tau0-pgb2->tau_sampling_selection_hires[bin3][index_tau_third][index_tau_bessel];
+                            double tau_tilde_third = pgb2->tau_sampling_selection_hires[bin3][index_tau_third][index_tau_bessel];
 
-                      double part123 = sum123_integrated
-                                      *(a_result_nabla123*sqrt(l2)*sqrt(l2+1)*sqrt(l3)*sqrt(l3+1)*(l2*(l2+1)+l3*(l3+1))
-                                      +(c_result_nabla123*sqrt(l2+2)*sqrt(l2+1)*sqrt(l2+0)*sqrt(l2-1)*sqrt(l3+2)*sqrt(l3+1)*sqrt(l3+0)*sqrt(l3-1))
-                                      +l2*(l2+1)*l3*(l3+1));
 
-                      double part321 = sum321_integrated
-                                      *(a_result_nabla321*sqrt(l2)*sqrt(l2+1)*sqrt(l1)*sqrt(l1+1)*(l2*(l2+1)+l1*(l1+1))
-                                      +(c_result_nabla321*sqrt(l2+2)*sqrt(l2+1)*sqrt(l2+0)*sqrt(l2-1)*sqrt(l1+2)*sqrt(l1+1)*sqrt(l1+0)*sqrt(l1-1))
-                                      +l2*(l2+1)*l1*(l1+1));
+                            index_of_tau_sampling_selection(tau_tilde_third,
+                                            bin3,
+                                            &index_of_selection_third,
+                                            pgb2);
 
-                      double part132 = sum132_integrated
-                                      *(a_result_nabla132*sqrt(l1)*sqrt(l1+1)*sqrt(l3)*sqrt(l3+1)*(l1*(l1+1)+l3*(l3+1))
-                                      +(c_result_nabla132*sqrt(l1+2)*sqrt(l1+1)*sqrt(l1+0)*sqrt(l1-1)*sqrt(l3+2)*sqrt(l3+1)*sqrt(l3+0)*sqrt(l3-1))
-                                      +l1*(l1+1)*l3*(l3+1));
+                            if (index_of_selection_third == 0) {
+                              index_of_selection_third = 1;
+                              //Dlg4l2 = pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_second][bin3][bin2][pgb2->bin_mean_index_selection[bin3]][pgb2->bin_mean_index_selection[bin2]];
+                              //Dlg4l1 = pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_first][bin3][bin2][pgb2->bin_mean_index_selection[bin3]][pgb2->bin_mean_index_selection[bin2]];
+                            }
 
-                      bisp_nabla = -1.*(part123+part321+part132);
+                            else{
 
-                      pgb2->obs_redbi[pgb2->index_bisp_int_nabla2_DPsi1_DPsi1][index_l_first-index_l_first_min][index_l_second-index_l_second_min][index_l_third-index_l_third_min][bin1][bin2][bin3] = bisp_nabla;
-                      //fprintf(f, "%d        %d        %d        %g        %g\n", ptr->l[index_l_first], ptr->l[index_l_second], ptr->l[index_l_third], z, bisp_nabla);
+                              Dl_tilde_g4_l2_minus = 0.0;
+                              Dl_tilde_g4_l2_plus = 0.0;
+                              Dl_tilde_g4_l1_minus = 0.0;
+                              Dl_tilde_g4_l1_plus = 0.0;
+                              for (int index_tau_tilde = 0; index_tau_tilde < pgb2->tau_size_selection; index_tau_tilde++) {
+                                Dl_tilde_g4_l2_minus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_second][bin3][bin2][index_of_selection_third-1][index_tau_second]
+                                                            *pgb2->w_trapz[bin2][index_tau_tilde]
+                                                            *pgb2->selection[bin2][index_tau_tilde];
 
+                                Dl_tilde_g4_l2_plus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_second][bin3][bin2][index_of_selection_third][index_tau_second]
+                                                            *pgb2->w_trapz[bin2][index_tau_tilde]
+                                                            *pgb2->selection[bin2][index_tau_tilde];
+
+                                Dl_tilde_g4_l1_minus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_first][bin3][bin1][index_of_selection_third-1][index_tau_first]
+                                                          *pgb2->w_trapz[bin3][index_tau_tilde]
+                                                          *pgb2->selection[bin3][index_tau_tilde];
+
+                                Dl_tilde_g4_l1_plus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_first][bin3][bin1][index_of_selection_third][index_tau_first]
+                                                          *pgb2->w_trapz[bin1][index_tau_tilde]
+                                                          *pgb2->selection[bin1][index_tau_tilde];
+                              }
+
+                              Dlg4l2 = Dl_tilde_g4_l2_minus*(pgb2->tau_sampling_selection[bin3][index_of_selection_third]-tau_tilde_third)
+                                            +Dl_tilde_g4_l2_plus*(tau_tilde_third-pgb2->tau_sampling_selection[bin3][index_of_selection_third-1]);
+                              Dlg4l2 /= (pgb2->tau_sampling_selection[bin3][index_of_selection_third] - pgb2->tau_sampling_selection[bin3][index_of_selection_third-1]);
+
+                              Dlg4l1 = Dl_tilde_g4_l1_minus*(pgb2->tau_sampling_selection[bin3][index_of_selection_third]-tau_tilde_third)
+                                            +Dl_tilde_g4_l1_plus*(tau_tilde_third-pgb2->tau_sampling_selection[bin3][index_of_selection_third-1]);
+                              Dlg4l1 /= (pgb2->tau_sampling_selection[bin3][index_of_selection_third] - pgb2->tau_sampling_selection[bin3][index_of_selection_third-1]);
+                            }
+
+
+                            sum321 +=((chi_bar_third-chi_tilde_third)/chi_tilde_third/chi_bar_third)*Dlg4l2*Dlg4l1*w_trapz_selection_hires[bin3][index_tau_third][index_tau_bessel];
+                          }
+
+                          for (int index_tau_third = 0; index_tau_third < pgb2->tau_size_selection; index_tau_third++) {
+                            sum321_integrated += (1.-5.*pgb2->s[bin3][index_tau_third]/2.)*sum321*pgb2->w_trapz[bin3][index_tau_third]*pgb2->selection[bin3][index_tau_third];
+                          }
+
+                          sum132 = 0.0;
+                          for (int index_tau_bessel = 0; index_tau_bessel < bessel_boost*((pgb2->tau_size_selection-1)-index_tau_second+1); index_tau_bessel++) {
+                            double chi_tilde_second = tau0-pgb2->tau_sampling_selection_hires[bin2][index_tau_second][index_tau_bessel];
+                            double tau_tilde_second = pgb2->tau_sampling_selection_hires[bin2][index_tau_second][index_tau_bessel];
+
+
+                            index_of_tau_sampling_selection(tau_tilde_second,
+                                            bin2,
+                                            &index_of_selection_second,
+                                            pgb2);
+
+                            if (index_of_selection_second == 0) {
+                              index_of_selection_second =1;
+                              //Dlg4l1 = pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_first][bin2][bin1][pgb2->bin_mean_index_selection[bin2]][pgb2->bin_mean_index_selection[bin1]];
+                              //Dlg4l3 = pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_third][bin2][bin1][pgb2->bin_mean_index_selection[bin2]][pgb2->bin_mean_index_selection[bin1]];
+                            }
+
+                            else{
+
+                              Dl_tilde_g4_l1_minus = 0.0;
+                              Dl_tilde_g4_l1_plus = 0.0;
+                              Dl_tilde_g4_l3_minus = 0.0;
+                              Dl_tilde_g4_l3_plus = 0.0;
+                              for (int index_tau_tilde = 0; index_tau_tilde < pgb2->tau_size_selection; index_tau_tilde++) {
+                                Dl_tilde_g4_l1_minus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_first][bin2][bin1][index_of_selection_second-1][index_tau_first]
+                                                            *pgb2->w_trapz[bin1][index_tau_tilde]
+                                                            *pgb2->selection[bin1][index_tau_tilde];
+
+                                Dl_tilde_g4_l1_plus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_first][bin2][bin1][index_of_selection_second][index_tau_first]
+                                                            *pgb2->w_trapz[bin1][index_tau_tilde]
+                                                            *pgb2->selection[bin1][index_tau_tilde];
+
+                                Dl_tilde_g4_l3_minus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_third][bin2][bin3][index_of_selection_second-1][index_tau_third]
+                                                            *pgb2->w_trapz[bin3][index_tau_tilde]
+                                                            *pgb2->selection[bin3][index_tau_tilde];
+
+                                Dl_tilde_g4_l3_plus += pgb2->Dl[pgb2->index_type_g4][pgb2->index_type_delta][index_l_third][bin2][bin3][index_of_selection_second][index_tau_third]
+                                                            *pgb2->w_trapz[bin3][index_tau_tilde]
+                                                            *pgb2->selection[bin3][index_tau_tilde];
+
+
+                              }
+
+
+                              Dlg4l1 = Dl_tilde_g4_l1_minus*(pgb2->tau_sampling_selection[bin2][index_of_selection_second]-tau_tilde_second)
+                                            +Dl_tilde_g4_l1_plus*(tau_tilde_second-pgb2->tau_sampling_selection[bin2][index_of_selection_second-1]);
+                              Dlg4l1 /= (pgb2->tau_sampling_selection[bin2][index_of_selection_second] - pgb2->tau_sampling_selection[bin2][index_of_selection_second-1]);
+
+                              Dlg4l3 = Dl_tilde_g4_l3_minus*(pgb2->tau_sampling_selection[bin2][index_of_selection_second]-tau_tilde_second)
+                                            +Dl_tilde_g4_l3_plus*(tau_tilde_second-pgb2->tau_sampling_selection[bin2][index_of_selection_second-1]);
+                              Dlg4l3 /= (pgb2->tau_sampling_selection[bin2][index_of_selection_second] - pgb2->tau_sampling_selection[bin2][index_of_selection_second-1]);
+                            }
+
+
+                            sum132 +=((chi_bar_second-chi_tilde_second)/chi_tilde_second/chi_bar_second)*Dlg4l1*Dlg4l3*w_trapz_selection_hires[bin2][index_tau_second][index_tau_bessel];
+                          }
+                          sum132_integrated = 0.0;
+                          for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
+                            sum132_integrated += (1.-5.*pgb2->s[bin2][index_tau_second]/2.)*sum132*pgb2->w_trapz[bin2][index_tau_second]*pgb2->selection[bin2][index_tau_second];
+                          }
+
+                          double part123 = sum123_integrated
+                                          *(a_result_nabla123*sqrt(l2)*sqrt(l2+1)*sqrt(l3)*sqrt(l3+1)*(l2*(l2+1)+l3*(l3+1))
+                                          +(c_result_nabla123*sqrt(l2+2)*sqrt(l2+1)*sqrt(l2+0)*sqrt(l2-1)*sqrt(l3+2)*sqrt(l3+1)*sqrt(l3+0)*sqrt(l3-1))
+                                          +l2*(l2+1)*l3*(l3+1));
+
+                          double part321 = sum321_integrated
+                                          *(a_result_nabla321*sqrt(l2)*sqrt(l2+1)*sqrt(l1)*sqrt(l1+1)*(l2*(l2+1)+l1*(l1+1))
+                                          +(c_result_nabla321*sqrt(l2+2)*sqrt(l2+1)*sqrt(l2+0)*sqrt(l2-1)*sqrt(l1+2)*sqrt(l1+1)*sqrt(l1+0)*sqrt(l1-1))
+                                          +l2*(l2+1)*l1*(l1+1));
+
+                          double part132 = sum132_integrated
+                                          *(a_result_nabla132*sqrt(l1)*sqrt(l1+1)*sqrt(l3)*sqrt(l3+1)*(l1*(l1+1)+l3*(l3+1))
+                                          +(c_result_nabla132*sqrt(l1+2)*sqrt(l1+1)*sqrt(l1+0)*sqrt(l1-1)*sqrt(l3+2)*sqrt(l3+1)*sqrt(l3+0)*sqrt(l3-1))
+                                          +l1*(l1+1)*l3*(l3+1));
+
+                          bisp_nabla = -1.*(part123+part321+part132);
+
+                          pgb2->obs_redbi[pgb2->index_bisp_int_nabla2_DPsi1_DPsi1][index_l_first-index_l_first_min][index_l_second-index_l_second_min][index_l_third-index_l_third_min][bin1][bin2][bin3] = bisp_nabla;
+                          //fprintf(f, "%d        %d        %d        %g        %g\n", ptr->l[index_l_first], ptr->l[index_l_second], ptr->l[index_l_third], z, bisp_nabla);
+                        } // end of tau_first
+                      } //end_of_tau_second
+                    } //end of tau_third
                   } // end of index_l_first
                 } // end of index_l_second
               } // end of index_l_third
@@ -10623,689 +10377,348 @@ int galbispectra2_init (
 
 
     if (pgb2->index_bisp_so_lens != -1) {
+      printf("Computing bispectrum for second-order lensing (Limber)...\n");
+      double * pvecback_tau_first;
+      double * pvecback_tau_second;
+      double * pvecback_tau_third;
+      int last_index_tau_first, last_index_tau_second, last_index_tau_third;
+      class_alloc1D(pvecback_tau_first, pba->bg_size, pgb2->error_message);
+      class_alloc1D(pvecback_tau_second, pba->bg_size, pgb2->error_message);
+      class_alloc1D(pvecback_tau_third, pba->bg_size, pgb2->error_message);
+      double heaviside123, heaviside321, heaviside132;
+      double delta123, delta321, delta132;
 
-      if (pgb2->unobserv_bisp_flag != -1) {
+      int index_tau_1_found, index_tau_2_found, index_tau_3_found;
+      double T_nu3_minus, T_nu3_plus, T_nu3_interp;
+      double T_nu2_minus, T_nu2_plus, T_nu2_interp;
+      double T_nu1_minus, T_nu1_plus, T_nu1_interp;
+      double sum123, sum321, sum132;
+      double Pk_1, Pk_2, Pk_3;
+      int index_of_nu1;
+      int index_of_nu2;
+      int index_of_nu3;
 
-        printf("Computing bispectrum for second-order lensing (Limber)...\n");
-        double * pvecback_tau_first;
-        double * pvecback_tau_second;
-        double * pvecback_tau_third;
-        int last_index_tau_first, last_index_tau_second, last_index_tau_third;
-        class_alloc1D(pvecback_tau_first, pba->bg_size, pgb2->error_message);
-        class_alloc1D(pvecback_tau_second, pba->bg_size, pgb2->error_message);
-        class_alloc1D(pvecback_tau_third, pba->bg_size, pgb2->error_message);
-        double heaviside123, heaviside321, heaviside132;
-        double delta123, delta321, delta132;
 
-        int index_tau_1_found, index_tau_2_found, index_tau_3_found;
-        double T_nu3_minus, T_nu3_plus, T_nu3_interp;
-        double T_nu2_minus, T_nu2_plus, T_nu2_interp;
-        double T_nu1_minus, T_nu1_plus, T_nu1_interp;
-        double sum123, sum321, sum132;
-        double Pk_1, Pk_2, Pk_3;
-        int index_of_nu1;
-        int index_of_nu2;
-        int index_of_nu3;
 
-        int last_index;
 
-        double * pvecback_theo;
 
-        class_alloc(pvecback_theo, pba->bg_size * sizeof(double), pba->error_message);
-        FILE * f;
-        const char* directory = "output/";
-        const char* fileName = "_theo_bisp_";
-        const char* fileType = ".dat";
-        char name_buffer[600];
-        f = NULL;
-        sprintf(name_buffer,"%s%s%s%s%s",directory, ppr->ini_filename, fileName, pgb2->bisp_type_labels[pgb2->index_bisp_so_lens], fileType);
-        f = fopen(name_buffer,"w");
-        print_theo_bisp_file_header(pgb2->index_bisp_so_lens,
-                                    ppt,
-                                    ppt2,
-                                    ptr,
-                                    pba,
-                                    ppr,
-                                    pgb2,
-                                    f);
-        double * a_temp_arrayDlens;
-        class_alloc1D(a_temp_arrayDlens, ptr->l_size[ppt->index_md_scalars], pgb2->error_message);
-        double bisp_so_lens;
-        double F123, F321, F132;
-        double part123, part321, part132;
-        double nu_3;
-        for (int bin3 = 0; bin3 < ppt->selection_num; bin3++) {
-          for (int bin2 = 0; bin2 < ppt->selection_num; bin2++) {
-            for (int bin1 = 0; bin1 < ppt->selection_num; bin1++) {
-              for(int index_l_third = index_l_third_min; index_l_third < index_l_third_max+1; index_l_third++){
-                int l3 = ptr->l[index_l_third];
-                for(int index_l_second = index_l_second_min; index_l_second < index_l_second_max+1; index_l_second++){
-                  int l2 = ptr->l[index_l_second];
-                  for(int index_l_first = index_l_first_min; index_l_first < index_l_first_max+1; index_l_first++){
-                    if ((pgb2->equilateral_bisp_flag != -1) && ((index_l_first != index_l_second) || (index_l_first != index_l_third) || (index_l_third != index_l_second)) ) {
-                      continue;
-                    }
-                    if ((pgb2->folded_bisp_flag != -1) && (index_l_first != index_l_second)  ) {
-                      continue;
-                    }
-                    fprintf(f, "######l1 = %d, l2 = %d, l3 = %d\n", ptr->l[index_l_first], ptr->l[index_l_second], ptr->l[index_l_third]);
-                    int l1 = ptr->l[index_l_first];
-                    last_index_tau_third = 0;
-                    sum123 = 0.0;
-                    sum321 = 0.0;
-                    sum132 = 0.0;
 
-                    for (int index_tau_third = 0; index_tau_third < pgb2->tau_size_selection; index_tau_third++) {
+
+
+      int last_index;
+
+      double * pvecback_theo;
+
+      class_alloc(pvecback_theo, pba->bg_size * sizeof(double), pba->error_message);
+      FILE * f;
+      const char* directory = "output/";
+      const char* fileName = "_theo_bisp_";
+      const char* fileType = ".dat";
+      char name_buffer[600];
+      f = NULL;
+      sprintf(name_buffer,"%s%s%s%s%s",directory, ppr->ini_filename, fileName, pgb2->bisp_type_labels[pgb2->index_bisp_so_lens], fileType);
+      f = fopen(name_buffer,"w");
+      print_theo_bisp_file_header(pgb2->index_bisp_so_lens,
+                                  ppt,
+                                  ppt2,
+                                  ptr,
+                                  pba,
+                                  ppr,
+                                  pgb2,
+                                  f);
+      double * a_temp_arrayDlens;
+      class_alloc1D(a_temp_arrayDlens, ptr->l_size[ppt->index_md_scalars], pgb2->error_message);
+      double bisp_so_lens;
+      double F123, F321, F132;
+      double part123, part321, part132;
+      double nu_3;
+      for (int bin3 = 0; bin3 < ppt->selection_num; bin3++) {
+        for (int bin2 = 0; bin2 < ppt->selection_num; bin2++) {
+          for (int bin1 = 0; bin1 < ppt->selection_num; bin1++) {
+            for(int index_l_third = index_l_third_min; index_l_third < index_l_third_max+1; index_l_third++){
+              int l3 = ptr->l[index_l_third];
+              for(int index_l_second = index_l_second_min; index_l_second < index_l_second_max+1; index_l_second++){
+                int l2 = ptr->l[index_l_second];
+                for(int index_l_first = index_l_first_min; index_l_first < index_l_first_max+1; index_l_first++){
+                  if ((pgb2->equilateral_bisp_flag != -1) && ((index_l_first != index_l_second) || (index_l_first != index_l_third) || (index_l_third != index_l_second)) ) {
+                    continue;
+                  }
+                  if ((pgb2->folded_bisp_flag != -1) && (index_l_first != index_l_second)  ) {
+                    continue;
+                  }
+                  fprintf(f, "######l1 = %d, l2 = %d, l3 = %d\n", ptr->l[index_l_first], ptr->l[index_l_second], ptr->l[index_l_third]);
+                  int l1 = ptr->l[index_l_first];
+                  last_index_tau_third = 0;
+                  sum123 = 0.0;
+                  sum321 = 0.0;
+                  sum132 = 0.0;
+
+                  for (int index_tau_third = 0; index_tau_third < pgb2->tau_size_selection; index_tau_third++) {
+
+                    class_call(background_at_tau(pba,
+                                                 pgb2->tau_sampling_selection[bin3][index_tau_third],
+                                                 pba->long_info,
+                                                 pba->inter_normal,
+                                                 &last_index_tau_third,
+                                                 pvecback_tau_third),
+                                                 pba->error_message,
+                                                 pgb2->error_message);
+
+                    double chi_third = (tau0-pgb2->tau_sampling_selection[bin3][index_tau_third]);
+
+                    double tau_third = pgb2->tau_sampling_selection[bin3][index_tau_third];
+                    double z_third = pba->a_today/pvecback_tau_third[pba->index_bg_a]-1.;
+                    nu_3 = (l3+0.5)/(tau0-pgb2->tau_sampling_selection[bin3][index_tau_third]);
+
+
+                    index_of_nu3 = 0;
+                    strictlyIncreasing_Search(nu_3,
+                                              pgb2->k_bessel,
+                                              pgb2->k_size_bessel,
+                                              &index_of_nu3);
+
+                    linearFixed_Search(tau_third,
+                                       pgb2->tau_sampling_selection[bin3],
+                                       pgb2->tau_size_selection,
+                                       &index_tau_3_found);
+
+
+
+                    T_nu3_minus = pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_3_found-1][index_of_nu3-1]*(pgb2->k_bessel[index_of_nu3]-nu_3)
+                                  +pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_3_found-1][index_of_nu3]*(nu_3-pgb2->k_bessel[index_of_nu3-1]);
+                    T_nu3_minus /= (pgb2->k_bessel[index_of_nu3] - pgb2->k_bessel[index_of_nu3-1]);
+
+                    T_nu3_plus = pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_3_found][index_of_nu3-1]*(pgb2->k_bessel[index_of_nu3]-nu_3)
+                                  +pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_3_found][index_of_nu3]*(nu_3-pgb2->k_bessel[index_of_nu3-1]);
+                    T_nu3_plus /= (pgb2->k_bessel[index_of_nu3] - pgb2->k_bessel[index_of_nu3-1]);
+
+                    T_nu3_interp = T_nu3_minus*(pgb2->tau_sampling_cls[index_tau_3_found]-tau_third)+T_nu3_plus*(tau_third-pgb2->tau_sampling_cls[index_tau_3_found-1]);
+
+
+                    last_index_tau_second = 0;
+                    index_of_nu2 = 0;
+                    //for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
+                    for (int index_tau_second = pgb2->index_tau_bin2_start; index_tau_second < pgb2->index_tau_bin2_end; index_tau_second++) {
 
                       class_call(background_at_tau(pba,
-                                                   pgb2->tau_sampling_selection[bin3][index_tau_third],
+                                                   pgb2->tau_sampling_selection[bin2][index_tau_second],
                                                    pba->long_info,
                                                    pba->inter_normal,
-                                                   &last_index_tau_third,
-                                                   pvecback_tau_third),
+                                                   &last_index_tau_second,
+                                                   pvecback_tau_second),
                                                    pba->error_message,
                                                    pgb2->error_message);
 
-                      double chi_third = (tau0-pgb2->tau_sampling_selection[bin3][index_tau_third]);
-
-                      double tau_third = pgb2->tau_sampling_selection[bin3][index_tau_third];
-                      double z_third = pba->a_today/pvecback_tau_third[pba->index_bg_a]-1.;
-                      nu_3 = (l3+0.5)/(tau0-pgb2->tau_sampling_selection[bin3][index_tau_third]);
-
-
-                      index_of_nu3 = 0;
-                      strictlyIncreasing_Search(nu_3,
+                      double chi_second = (tau0-pgb2->tau_sampling_selection[bin2][index_tau_second]);
+                      double tau_second = pgb2->tau_sampling_selection[bin2][index_tau_second];
+                      double z_second = pba->a_today/pvecback_tau_second[pba->index_bg_a]-1.;
+                      double nu_2 = (l2+0.5)/(tau0-pgb2->tau_sampling_selection[bin2][index_tau_second]);
+                      index_of_nu2 = 0;
+                      strictlyIncreasing_Search(nu_2,
                                                 pgb2->k_bessel,
                                                 pgb2->k_size_bessel,
-                                                &index_of_nu3);
+                                                &index_of_nu2);
 
-                      linearFixed_Search(tau_third,
-                                         pgb2->tau_sampling_selection[bin3],
+                      linearFixed_Search(tau_second,
+                                         pgb2->tau_sampling_selection[bin2],
                                          pgb2->tau_size_selection,
-                                         &index_tau_3_found);
+                                         &index_tau_2_found);
 
 
 
-                      T_nu3_minus = pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_3_found-1][index_of_nu3-1]*(pgb2->k_bessel[index_of_nu3]-nu_3)
-                                    +pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_3_found-1][index_of_nu3]*(nu_3-pgb2->k_bessel[index_of_nu3-1]);
-                      T_nu3_minus /= (pgb2->k_bessel[index_of_nu3] - pgb2->k_bessel[index_of_nu3-1]);
+                      T_nu2_minus = pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_2_found-1][index_of_nu2-1]*(pgb2->k_bessel[index_of_nu2]-nu_2)
+                                    +pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_2_found-1][index_of_nu2]*(nu_2-pgb2->k_bessel[index_of_nu2-1]);
+                      T_nu2_minus /= (pgb2->k_bessel[index_of_nu2] - pgb2->k_bessel[index_of_nu2-1]);
 
-                      T_nu3_plus = pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_3_found][index_of_nu3-1]*(pgb2->k_bessel[index_of_nu3]-nu_3)
-                                    +pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_3_found][index_of_nu3]*(nu_3-pgb2->k_bessel[index_of_nu3-1]);
-                      T_nu3_plus /= (pgb2->k_bessel[index_of_nu3] - pgb2->k_bessel[index_of_nu3-1]);
+                      T_nu2_plus = pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_2_found][index_of_nu2-1]*(pgb2->k_bessel[index_of_nu2]-nu_2)
+                                    +pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_2_found][index_of_nu2]*(nu_2-pgb2->k_bessel[index_of_nu2-1]);
+                      T_nu2_plus /= (pgb2->k_bessel[index_of_nu2] - pgb2->k_bessel[index_of_nu2-1]);
 
-                      T_nu3_interp = T_nu3_minus*(pgb2->tau_sampling_cls[index_tau_3_found]-tau_third)+T_nu3_plus*(tau_third-pgb2->tau_sampling_cls[index_tau_3_found-1]);
+                      T_nu2_interp = T_nu2_minus*(pgb2->tau_sampling_cls[index_tau_2_found]-tau_second)+T_nu2_plus*(tau_second-pgb2->tau_sampling_cls[index_tau_2_found-1]);
 
-
-                      last_index_tau_second = 0;
-                      index_of_nu2 = 0;
-                      //for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
-                      for (int index_tau_second = pgb2->index_tau_bin2_start; index_tau_second < pgb2->index_tau_bin2_end; index_tau_second++) {
-
+                      last_index_tau_first = 0;
+                      index_of_nu1 = 0;
+                      //for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
+                      for (int index_tau_first = pgb2->index_tau_bin1_start; index_tau_first < pgb2->index_tau_bin1_end; index_tau_first++) {
                         class_call(background_at_tau(pba,
-                                                     pgb2->tau_sampling_selection[bin2][index_tau_second],
+                                                     pgb2->tau_sampling_selection[bin1][index_tau_first],
                                                      pba->long_info,
                                                      pba->inter_normal,
-                                                     &last_index_tau_second,
-                                                     pvecback_tau_second),
+                                                     &last_index_tau_first,
+                                                     pvecback_tau_first),
                                                      pba->error_message,
                                                      pgb2->error_message);
 
-                        double chi_second = (tau0-pgb2->tau_sampling_selection[bin2][index_tau_second]);
-                        double tau_second = pgb2->tau_sampling_selection[bin2][index_tau_second];
-                        double z_second = pba->a_today/pvecback_tau_second[pba->index_bg_a]-1.;
-                        double nu_2 = (l2+0.5)/(tau0-pgb2->tau_sampling_selection[bin2][index_tau_second]);
-                        index_of_nu2 = 0;
-                        strictlyIncreasing_Search(nu_2,
+                        double chi_first = (tau0-pgb2->tau_sampling_selection[bin1][index_tau_first]);
+                        double tau_first = pgb2->tau_sampling_selection[bin1][index_tau_first];
+                        double z_first= pba->a_today/pvecback_tau_first[pba->index_bg_a]-1.;
+                        double nu_1 = (l1+0.5)/(tau0-pgb2->tau_sampling_selection[bin1][index_tau_first]);
+
+
+                        index_of_nu1 = 0;
+
+                        strictlyIncreasing_Search(nu_1,
                                                   pgb2->k_bessel,
                                                   pgb2->k_size_bessel,
-                                                  &index_of_nu2);
+                                                  &index_of_nu1);
 
-                        linearFixed_Search(tau_second,
-                                           pgb2->tau_sampling_selection[bin2],
+                        linearFixed_Search(tau_first,
+                                           pgb2->tau_sampling_selection[bin1],
                                            pgb2->tau_size_selection,
-                                           &index_tau_2_found);
-
-
-
-                        T_nu2_minus = pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_2_found-1][index_of_nu2-1]*(pgb2->k_bessel[index_of_nu2]-nu_2)
-                                      +pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_2_found-1][index_of_nu2]*(nu_2-pgb2->k_bessel[index_of_nu2-1]);
-                        T_nu2_minus /= (pgb2->k_bessel[index_of_nu2] - pgb2->k_bessel[index_of_nu2-1]);
-
-                        T_nu2_plus = pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_2_found][index_of_nu2-1]*(pgb2->k_bessel[index_of_nu2]-nu_2)
-                                      +pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_2_found][index_of_nu2]*(nu_2-pgb2->k_bessel[index_of_nu2-1]);
-                        T_nu2_plus /= (pgb2->k_bessel[index_of_nu2] - pgb2->k_bessel[index_of_nu2-1]);
-
-                        T_nu2_interp = T_nu2_minus*(pgb2->tau_sampling_cls[index_tau_2_found]-tau_second)+T_nu2_plus*(tau_second-pgb2->tau_sampling_cls[index_tau_2_found-1]);
-
-                        last_index_tau_first = 0;
-                        index_of_nu1 = 0;
-                        //for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
-                        for (int index_tau_first = pgb2->index_tau_bin1_start; index_tau_first < pgb2->index_tau_bin1_end; index_tau_first++) {
-                          class_call(background_at_tau(pba,
-                                                       pgb2->tau_sampling_selection[bin1][index_tau_first],
-                                                       pba->long_info,
-                                                       pba->inter_normal,
-                                                       &last_index_tau_first,
-                                                       pvecback_tau_first),
-                                                       pba->error_message,
-                                                       pgb2->error_message);
-
-                          double chi_first = (tau0-pgb2->tau_sampling_selection[bin1][index_tau_first]);
-                          double tau_first = pgb2->tau_sampling_selection[bin1][index_tau_first];
-                          double z_first= pba->a_today/pvecback_tau_first[pba->index_bg_a]-1.;
-                          double nu_1 = (l1+0.5)/(tau0-pgb2->tau_sampling_selection[bin1][index_tau_first]);
-
-
-                          index_of_nu1 = 0;
-
-                          strictlyIncreasing_Search(nu_1,
-                                                    pgb2->k_bessel,
-                                                    pgb2->k_size_bessel,
-                                                    &index_of_nu1);
-
-                          linearFixed_Search(tau_first,
-                                             pgb2->tau_sampling_selection[bin1],
-                                             pgb2->tau_size_selection,
-                                             &index_tau_1_found);
-
-
-
-                          T_nu1_minus = pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_1_found-1][index_of_nu1-1]*(pgb2->k_bessel[index_of_nu1]-nu_1)
-                                        +pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_1_found-1][index_of_nu1]*(nu_1-pgb2->k_bessel[index_of_nu1-1]);
-                          T_nu1_minus /= (pgb2->k_bessel[index_of_nu1] - pgb2->k_bessel[index_of_nu1-1]);
-
-                          T_nu1_plus = pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_1_found][index_of_nu1-1]*(pgb2->k_bessel[index_of_nu1]-nu_1)
-                                        +pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_1_found][index_of_nu1]*(nu_1-pgb2->k_bessel[index_of_nu1-1]);
-                          T_nu1_plus /= (pgb2->k_bessel[index_of_nu1] - pgb2->k_bessel[index_of_nu1-1]);
-
-                          T_nu1_interp = T_nu1_minus*(pgb2->tau_sampling_cls[index_tau_1_found]-tau_first)+T_nu1_plus*(tau_first-pgb2->tau_sampling_cls[index_tau_1_found-1]);
-
-
-
-                          F2_kernel((l1+0.5)/(tau0-pgb2->tau_sampling_selection[bin3][index_tau_third]), nu_2, nu_3, &F123);
-                          F2_kernel((l3+0.5)/(tau0-pgb2->tau_sampling_selection[bin1][index_tau_first]), nu_2, nu_1, &F321);
-                          F2_kernel((l2+0.5)/(tau0-pgb2->tau_sampling_selection[bin3][index_tau_third]), nu_1, nu_3, &F132);
-
-                          delta(chi_second-chi_third, &delta123);
-                          delta(chi_second-chi_first, &delta321);
-                          delta(chi_first-chi_third, &delta132);
-
-                          heaviside(z_first-z_third, &heaviside123);
-                          heaviside(z_third-z_first, &heaviside321);
-                          heaviside(z_second-z_third, &heaviside132);
-
-
-                          class_call(primordial_spectrum_at_k(ppm, ppt->index_md_scalars, linear, nu_1, &Pk_1), ppm->error_message, pgb2->error_message);
-                          class_call(primordial_spectrum_at_k(ppm, ppt->index_md_scalars, linear, nu_2, &Pk_2), ppm->error_message, pgb2->error_message);
-                          class_call(primordial_spectrum_at_k(ppm, ppt->index_md_scalars, linear, nu_3, &Pk_3), ppm->error_message, pgb2->error_message);
-
-
-
-                          part123 = -24.
-                                    *(1.-5.*pgb2->s[bin1][index_tau_first]/2.)
-                                    *heaviside123
-                                    *(chi_first-chi_third)
-                                    /chi_first
-                                    /chi_third
-                                    *pvecback_tau_third[pba->index_bg_H]
-                                    *pvecback_tau_third[pba->index_bg_H]
-                                    *pvecback_tau_third[pba->index_bg_a]
-                                    *pvecback_tau_third[pba->index_bg_a]
-                                    *pvecback_tau_third[pba->index_bg_Omega_m]
-                                    *delta123
-                                    /chi_third
-                                    /chi_third
-                                    *Pk_2
-                                    *Pk_3
-                                    *(2*_PI_*_PI_)                /* These 6 lines are for the Conversion of Pk*Pk */
-                                    *(2*_PI_*_PI_)
-                                    /nu_2
-                                    /nu_2
-                                    /nu_2
-                                    /nu_3
-                                    /nu_3
-                                    /nu_3
-                                    *T_nu2_interp
-                                    *T_nu2_interp
-                                    *T_nu3_interp
-                                    *T_nu3_interp
-                                    *l1
-                                    *(l1+1)
-                                    /(2*l1+1)
-                                    /(2*l1+1)
-                                    *F123;
-
-                          part321 = -24.
-                                    *(1.-5.*pgb2->s[bin3][index_tau_third]/2.)
-                                    *heaviside321
-                                    *(chi_third-chi_first)
-                                    /chi_first
-                                    /chi_third
-                                    *pvecback_tau_first[pba->index_bg_H]
-                                    *pvecback_tau_first[pba->index_bg_H]
-                                    *pvecback_tau_first[pba->index_bg_a]
-                                    *pvecback_tau_first[pba->index_bg_a]
-                                    *pvecback_tau_first[pba->index_bg_Omega_m]
-                                    *delta321
-                                    /chi_first
-                                    /chi_first
-                                    *Pk_2
-                                    *Pk_1
-                                    *(2*_PI_*_PI_)
-                                    *(2*_PI_*_PI_)
-                                    /nu_2
-                                    /nu_2
-                                    /nu_2
-                                    /nu_1
-                                    /nu_1
-                                    /nu_1
-                                    *T_nu2_interp
-                                    *T_nu2_interp
-                                    *T_nu1_interp
-                                    *T_nu1_interp
-                                    *l3
-                                    *(l3+1)
-                                    /(2*l3+1)
-                                    /(2*l3+1)
-                                    *F321;
-
-                          part132 = -24.
-                                    *(1.-5.*pgb2->s[bin2][index_tau_second]/2.)
-                                    *heaviside132
-                                    *(chi_second-chi_third)
-                                    /chi_second
-                                    /chi_third
-                                    *pvecback_tau_third[pba->index_bg_H]
-                                    *pvecback_tau_third[pba->index_bg_H]
-                                    *pvecback_tau_third[pba->index_bg_a]
-                                    *pvecback_tau_third[pba->index_bg_a]
-                                    *pvecback_tau_third[pba->index_bg_Omega_m]
-                                    *delta123
-                                    /chi_third
-                                    /chi_third
-                                    *Pk_1
-                                    *Pk_3
-                                    *(2*_PI_*_PI_)
-                                    *(2*_PI_*_PI_)
-                                    /nu_1
-                                    /nu_1
-                                    /nu_1
-                                    /nu_3
-                                    /nu_3
-                                    /nu_3
-                                    *T_nu1_interp
-                                    *T_nu1_interp
-                                    *T_nu3_interp
-                                    *T_nu3_interp
-                                    *l2
-                                    *(l2+1)
-                                    /(2*l2+1)
-                                    /(2*l2+1)
-                                    *F132;
-
-
-                          bisp_so_lens = part123+part132+part321;
-
-
-                          //pgb2->redbi[pgb2->index_bisp_so_lens][index_l_first-index_l_first_min][index_l_second-index_l_second_min][index_l_third-index_l_third_min][bin1*pgb2->tau_size_selection+index_tau_first-pgb2->index_tau_bin1_start]
-                            //       [bin2*pgb2->tau_size_selection+index_tau_second-pgb2->index_tau_bin2_start][bin3*pgb2->tau_size_selection+index_tau_third] = bisp_so_lens;
-                          fprintf(f, "%d        %d        %d        %g        %g\n", ptr->l[index_l_first], ptr->l[index_l_second], ptr->l[index_l_third], z_third, bisp_so_lens);
-
-                        } // end of tau_first
-                      } //end_of_tau_second
-                    } //end of tau_third
-                  } // end of index_l_first
-                } // end of index_l_second
-              } // end of index_l_third
-            } // end of bin1
-          } //end of bin2
-        } //end of bin3
-      } //end of unobserv_bisp_flag
-
-      if (pgb2->observ_bisp_flag != -1) {
-
-        printf("Computing bispectrum for second-order lensing (Limber)...\n");
-        double * pvecback_tau_first;
-        double * pvecback_tau_second;
-        double * pvecback_tau_third;
-        int last_index_tau_first, last_index_tau_second, last_index_tau_third;
-        class_alloc1D(pvecback_tau_first, pba->bg_size, pgb2->error_message);
-        class_alloc1D(pvecback_tau_second, pba->bg_size, pgb2->error_message);
-        class_alloc1D(pvecback_tau_third, pba->bg_size, pgb2->error_message);
-        double heaviside123, heaviside321, heaviside132;
-        double delta123, delta321, delta132;
-
-        int index_tau_1_found, index_tau_2_found, index_tau_3_found;
-        double T_nu3_minus, T_nu3_plus, T_nu3_interp;
-        double T_nu2_minus, T_nu2_plus, T_nu2_interp;
-        double T_nu1_minus, T_nu1_plus, T_nu1_interp;
-        double sum123, sum321, sum132;
-        double Pk_1, Pk_2, Pk_3;
-        int index_of_nu1;
-        int index_of_nu2;
-        int index_of_nu3;
-
-        int last_index;
-
-        double * pvecback_theo;
-
-        class_alloc(pvecback_theo, pba->bg_size * sizeof(double), pba->error_message);
-
-        double * a_temp_arrayDlens;
-        class_alloc1D(a_temp_arrayDlens, ptr->l_size[ppt->index_md_scalars], pgb2->error_message);
-        double bisp_so_lens;
-        double F123, F321, F132;
-        double part123, part321, part132;
-        double nu_3;
-        double sum_tau_first;
-        double sum_tau_second;
-        double sum_tau_third;
-        double sum_tau_first_test;
-        double sum_tau_second_test;
-        double sum_tau_third_test;
-        for (int bin3 = 0; bin3 < ppt->selection_num; bin3++) {
-          for (int bin2 = 0; bin2 < ppt->selection_num; bin2++) {
-            for (int bin1 = 0; bin1 < ppt->selection_num; bin1++) {
-              for(int index_l_third = index_l_third_min; index_l_third < index_l_third_max+1; index_l_third++){
-                int l3 = ptr->l[index_l_third];
-                for(int index_l_second = index_l_second_min; index_l_second < index_l_second_max+1; index_l_second++){
-                  int l2 = ptr->l[index_l_second];
-                  for(int index_l_first = index_l_first_min; index_l_first < index_l_first_max+1; index_l_first++){
-                    if ((pgb2->equilateral_bisp_flag != -1) && ((index_l_first != index_l_second) || (index_l_first != index_l_third) || (index_l_third != index_l_second)) ) {
-                      continue;
-                    }
-                    if ((pgb2->folded_bisp_flag != -1) && (index_l_first != index_l_second)  ) {
-                      continue;
-                    }
-
-                    int l1 = ptr->l[index_l_first];
-                    last_index_tau_third = 0;
-                    sum123 = 0.0;
-                    sum321 = 0.0;
-                    sum132 = 0.0;
-                    sum_tau_third = 0.0;
-                    sum_tau_third_test = 0.0;
-                    for (int index_tau_third = 0; index_tau_third < pgb2->tau_size_selection; index_tau_third++) {
-
-                      class_call(background_at_tau(pba,
-                                                   pgb2->tau_sampling_selection[bin3][index_tau_third],
-                                                   pba->long_info,
-                                                   pba->inter_normal,
-                                                   &last_index_tau_third,
-                                                   pvecback_tau_third),
-                                                   pba->error_message,
-                                                   pgb2->error_message);
-
-                      double chi_third = (tau0-pgb2->tau_sampling_selection[bin3][index_tau_third]);
-
-                      double tau_third = pgb2->tau_sampling_selection[bin3][index_tau_third];
-                      double z_third = pba->a_today/pvecback_tau_third[pba->index_bg_a]-1.;
-                      nu_3 = (l3+0.5)/(tau0-pgb2->tau_sampling_selection[bin3][index_tau_third]);
-
-
-                      index_of_nu3 = 0;
-                      strictlyIncreasing_Search(nu_3,
-                                                pgb2->k_bessel,
-                                                pgb2->k_size_bessel,
-                                                &index_of_nu3);
-
-                      linearFixed_Search(tau_third,
-                                         pgb2->tau_sampling_selection[bin3],
-                                         pgb2->tau_size_selection,
-                                         &index_tau_3_found);
-
-
-
-                      T_nu3_minus = pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_3_found-1][index_of_nu3-1]*(pgb2->k_bessel[index_of_nu3]-nu_3)
-                                    +pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_3_found-1][index_of_nu3]*(nu_3-pgb2->k_bessel[index_of_nu3-1]);
-                      T_nu3_minus /= (pgb2->k_bessel[index_of_nu3] - pgb2->k_bessel[index_of_nu3-1]);
-
-                      T_nu3_plus = pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_3_found][index_of_nu3-1]*(pgb2->k_bessel[index_of_nu3]-nu_3)
-                                    +pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_3_found][index_of_nu3]*(nu_3-pgb2->k_bessel[index_of_nu3-1]);
-                      T_nu3_plus /= (pgb2->k_bessel[index_of_nu3] - pgb2->k_bessel[index_of_nu3-1]);
-
-                      T_nu3_interp = T_nu3_minus*(pgb2->tau_sampling_cls[index_tau_3_found]-tau_third)+T_nu3_plus*(tau_third-pgb2->tau_sampling_cls[index_tau_3_found-1]);
-
-
-                      last_index_tau_second = 0;
-                      index_of_nu2 = 0;
-                      sum_tau_second = 0.0;
-                      sum_tau_second_test = 0.0;
-                      for (int index_tau_second = 0; index_tau_second < pgb2->tau_size_selection; index_tau_second++) {
-
-
-                        class_call(background_at_tau(pba,
-                                                     pgb2->tau_sampling_selection[bin2][index_tau_second],
-                                                     pba->long_info,
-                                                     pba->inter_normal,
-                                                     &last_index_tau_second,
-                                                     pvecback_tau_second),
-                                                     pba->error_message,
-                                                     pgb2->error_message);
-
-                        double chi_second = (tau0-pgb2->tau_sampling_selection[bin2][index_tau_second]);
-                        double tau_second = pgb2->tau_sampling_selection[bin2][index_tau_second];
-                        double z_second = pba->a_today/pvecback_tau_second[pba->index_bg_a]-1.;
-                        double nu_2 = (l2+0.5)/(tau0-pgb2->tau_sampling_selection[bin2][index_tau_second]);
-                        index_of_nu2 = 0;
-                        strictlyIncreasing_Search(nu_2,
-                                                  pgb2->k_bessel,
-                                                  pgb2->k_size_bessel,
-                                                  &index_of_nu2);
-
-                        linearFixed_Search(tau_second,
-                                           pgb2->tau_sampling_selection[bin2],
-                                           pgb2->tau_size_selection,
-                                           &index_tau_2_found);
-
-
-
-                        T_nu2_minus = pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_2_found-1][index_of_nu2-1]*(pgb2->k_bessel[index_of_nu2]-nu_2)
-                                      +pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_2_found-1][index_of_nu2]*(nu_2-pgb2->k_bessel[index_of_nu2-1]);
-                        T_nu2_minus /= (pgb2->k_bessel[index_of_nu2] - pgb2->k_bessel[index_of_nu2-1]);
-
-                        T_nu2_plus = pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_2_found][index_of_nu2-1]*(pgb2->k_bessel[index_of_nu2]-nu_2)
-                                      +pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_2_found][index_of_nu2]*(nu_2-pgb2->k_bessel[index_of_nu2-1]);
-                        T_nu2_plus /= (pgb2->k_bessel[index_of_nu2] - pgb2->k_bessel[index_of_nu2-1]);
-
-                        T_nu2_interp = T_nu2_minus*(pgb2->tau_sampling_cls[index_tau_2_found]-tau_second)+T_nu2_plus*(tau_second-pgb2->tau_sampling_cls[index_tau_2_found-1]);
-
-                        last_index_tau_first = 0;
-                        index_of_nu1 = 0;
-                        sum_tau_first = 0.0;
-                        sum_tau_first_test = 0.0;
-                        for (int index_tau_first = 0; index_tau_first < pgb2->tau_size_selection; index_tau_first++) {
-
-                          class_call(background_at_tau(pba,
-                                                       pgb2->tau_sampling_selection[bin1][index_tau_first],
-                                                       pba->long_info,
-                                                       pba->inter_normal,
-                                                       &last_index_tau_first,
-                                                       pvecback_tau_first),
-                                                       pba->error_message,
-                                                       pgb2->error_message);
-
-                          double chi_first = (tau0-pgb2->tau_sampling_selection[bin1][index_tau_first]);
-                          double tau_first = pgb2->tau_sampling_selection[bin1][index_tau_first];
-                          double z_first= pba->a_today/pvecback_tau_first[pba->index_bg_a]-1.;
-                          double nu_1 = (l1+0.5)/(tau0-pgb2->tau_sampling_selection[bin1][index_tau_first]);
-
-
-                          index_of_nu1 = 0;
-
-                          strictlyIncreasing_Search(nu_1,
-                                                    pgb2->k_bessel,
-                                                    pgb2->k_size_bessel,
-                                                    &index_of_nu1);
-
-                          linearFixed_Search(tau_first,
-                                             pgb2->tau_sampling_selection[bin1],
-                                             pgb2->tau_size_selection,
-                                             &index_tau_1_found);
-
-
-
-                          T_nu1_minus = pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_1_found-1][index_of_nu1-1]*(pgb2->k_bessel[index_of_nu1]-nu_1)
-                                        +pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_1_found-1][index_of_nu1]*(nu_1-pgb2->k_bessel[index_of_nu1-1]);
-                          T_nu1_minus /= (pgb2->k_bessel[index_of_nu1] - pgb2->k_bessel[index_of_nu1-1]);
-
-                          T_nu1_plus = pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_1_found][index_of_nu1-1]*(pgb2->k_bessel[index_of_nu1]-nu_1)
-                                        +pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_1_found][index_of_nu1]*(nu_1-pgb2->k_bessel[index_of_nu1-1]);
-                          T_nu1_plus /= (pgb2->k_bessel[index_of_nu1] - pgb2->k_bessel[index_of_nu1-1]);
-
-                          T_nu1_interp = T_nu1_minus*(pgb2->tau_sampling_cls[index_tau_1_found]-tau_first)+T_nu1_plus*(tau_first-pgb2->tau_sampling_cls[index_tau_1_found-1]);
-
-
-
-                          F2_kernel((l1+0.5)/(tau0-pgb2->tau_sampling_selection[bin3][index_tau_third]), nu_2, nu_3, &F123);
-                          F2_kernel((l3+0.5)/(tau0-pgb2->tau_sampling_selection[bin1][index_tau_first]), nu_2, nu_1, &F321);
-                          F2_kernel((l2+0.5)/(tau0-pgb2->tau_sampling_selection[bin3][index_tau_third]), nu_1, nu_3, &F132);
-
-                          delta(chi_second-chi_third, &delta123);
-                          delta(chi_second-chi_first, &delta321);
-                          delta(chi_first-chi_third, &delta132);
-
-                          heaviside(z_first-z_third, &heaviside123);
-                          heaviside(z_third-z_first, &heaviside321);
-                          heaviside(z_second-z_third, &heaviside132);
-
-
-                          class_call(primordial_spectrum_at_k(ppm, ppt->index_md_scalars, linear, nu_1, &Pk_1), ppm->error_message, pgb2->error_message);
-                          class_call(primordial_spectrum_at_k(ppm, ppt->index_md_scalars, linear, nu_2, &Pk_2), ppm->error_message, pgb2->error_message);
-                          class_call(primordial_spectrum_at_k(ppm, ppt->index_md_scalars, linear, nu_3, &Pk_3), ppm->error_message, pgb2->error_message);
-
-
-
-                          part123 = -24.
-                                    *(1.-5.*pgb2->s[bin1][index_tau_first]/2.)
-                                    *heaviside123
-                                    *(chi_first-chi_third)
-                                    /chi_first
-                                    /chi_third
-                                    *pvecback_tau_third[pba->index_bg_H]
-                                    *pvecback_tau_third[pba->index_bg_H]
-                                    *pvecback_tau_third[pba->index_bg_a]
-                                    *pvecback_tau_third[pba->index_bg_a]
-                                    *pvecback_tau_third[pba->index_bg_Omega_m]
-                                    *delta123
-                                    /chi_third
-                                    /chi_third
-                                    *Pk_2
-                                    *Pk_3
-                                    *(2*_PI_*_PI_)                /* These 6 lines are for the Conversion of Pk*Pk */
-                                    *(2*_PI_*_PI_)
-                                    /nu_2
-                                    /nu_2
-                                    /nu_2
-                                    /nu_3
-                                    /nu_3
-                                    /nu_3
-                                    *T_nu2_interp
-                                    *T_nu2_interp
-                                    *T_nu3_interp
-                                    *T_nu3_interp
-                                    *l1
-                                    *(l1+1)
-                                    /(2*l1+1)
-                                    /(2*l1+1)
-                                    *F123;
-
-                          part321 = -24.
-                                    *(1.-5.*pgb2->s[bin3][index_tau_third]/2.)
-                                    *heaviside321
-                                    *(chi_third-chi_first)
-                                    /chi_first
-                                    /chi_third
-                                    *pvecback_tau_first[pba->index_bg_H]
-                                    *pvecback_tau_first[pba->index_bg_H]
-                                    *pvecback_tau_first[pba->index_bg_a]
-                                    *pvecback_tau_first[pba->index_bg_a]
-                                    *pvecback_tau_first[pba->index_bg_Omega_m]
-                                    *delta321
-                                    /chi_first
-                                    /chi_first
-                                    *Pk_2
-                                    *Pk_1
-                                    *(2*_PI_*_PI_)
-                                    *(2*_PI_*_PI_)
-                                    /nu_2
-                                    /nu_2
-                                    /nu_2
-                                    /nu_1
-                                    /nu_1
-                                    /nu_1
-                                    *T_nu2_interp
-                                    *T_nu2_interp
-                                    *T_nu1_interp
-                                    *T_nu1_interp
-                                    *l3
-                                    *(l3+1)
-                                    /(2*l3+1)
-                                    /(2*l3+1)
-                                    *F321;
-
-                          part132 = -24.
-                                    *(1.-5.*pgb2->s[bin2][index_tau_second]/2.)
-                                    *heaviside132
-                                    *(chi_second-chi_third)
-                                    /chi_second
-                                    /chi_third
-                                    *pvecback_tau_third[pba->index_bg_H]
-                                    *pvecback_tau_third[pba->index_bg_H]
-                                    *pvecback_tau_third[pba->index_bg_a]
-                                    *pvecback_tau_third[pba->index_bg_a]
-                                    *pvecback_tau_third[pba->index_bg_Omega_m]
-                                    *delta123
-                                    /chi_third
-                                    /chi_third
-                                    *Pk_1
-                                    *Pk_3
-                                    *(2*_PI_*_PI_)
-                                    *(2*_PI_*_PI_)
-                                    /nu_1
-                                    /nu_1
-                                    /nu_1
-                                    /nu_3
-                                    /nu_3
-                                    /nu_3
-                                    *T_nu1_interp
-                                    *T_nu1_interp
-                                    *T_nu3_interp
-                                    *T_nu3_interp
-                                    *l2
-                                    *(l2+1)
-                                    /(2*l2+1)
-                                    /(2*l2+1)
-                                    *F132;
-
-
-                          bisp_so_lens = part123+part132+part321;
-
-                          sum_tau_first += bisp_so_lens*pgb2->selection[bin1][index_tau_first]*pgb2->w_trapz[bin1][index_tau_first];
-                          sum_tau_first_test += pgb2->selection[bin1][index_tau_first]*pgb2->w_trapz[bin1][index_tau_first];
-                          //pgb2->redbi[pgb2->index_bisp_so_lens][index_l_first-index_l_first_min][index_l_second-index_l_second_min][index_l_third-index_l_third_min][bin1*pgb2->tau_size_selection+index_tau_first-pgb2->index_tau_bin1_start]
-                            //       [bin2*pgb2->tau_size_selection+index_tau_second-pgb2->index_tau_bin2_start][bin3*pgb2->tau_size_selection+index_tau_third] = bisp_so_lens;
-
-                        } // end of tau_first
-                        sum_tau_second += sum_tau_first*pgb2->selection[bin2][index_tau_second]*pgb2->w_trapz[bin2][index_tau_second];
-                        sum_tau_second_test += pgb2->selection[bin2][index_tau_second]*pgb2->w_trapz[bin2][index_tau_second];
-                      } //end_of_tau_second
-
-                      sum_tau_third += sum_tau_second*pgb2->selection[bin3][index_tau_third]*pgb2->w_trapz[bin3][index_tau_third];
-                      sum_tau_third_test += pgb2->selection[bin3][index_tau_third]*pgb2->w_trapz[bin3][index_tau_third];
-                    } //end of tau_third
-                    printf("test_sum = *%g* (should be = 1)\n", sum_tau_third_test);
-                    pgb2->obs_redbi[pgb2->index_bisp_so_lens][index_l_first-index_l_first_min][index_l_second-index_l_second_min][index_l_third-index_l_third_min][bin1][bin2][bin3] = sum_tau_third;
-                  } // end of index_l_first
-                } // end of index_l_second
-              } // end of index_l_third
-            } // end of bin1
-          } //end of bin2
-        } //end of bin3
-      } //end of observ_bisp_flag
-
-    } //end so_lens
+                                           &index_tau_1_found);
+
+
+
+                        T_nu1_minus = pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_1_found-1][index_of_nu1-1]*(pgb2->k_bessel[index_of_nu1]-nu_1)
+                                      +pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_1_found-1][index_of_nu1]*(nu_1-pgb2->k_bessel[index_of_nu1-1]);
+                        T_nu1_minus /= (pgb2->k_bessel[index_of_nu1] - pgb2->k_bessel[index_of_nu1-1]);
+
+                        T_nu1_plus = pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_1_found][index_of_nu1-1]*(pgb2->k_bessel[index_of_nu1]-nu_1)
+                                      +pgb2->first_order_sources[pgb2->index_source_delta_m][index_tau_1_found][index_of_nu1]*(nu_1-pgb2->k_bessel[index_of_nu1-1]);
+                        T_nu1_plus /= (pgb2->k_bessel[index_of_nu1] - pgb2->k_bessel[index_of_nu1-1]);
+
+                        T_nu1_interp = T_nu1_minus*(pgb2->tau_sampling_cls[index_tau_1_found]-tau_first)+T_nu1_plus*(tau_first-pgb2->tau_sampling_cls[index_tau_1_found-1]);
+
+
+
+                        F2_kernel((l1+0.5)/(tau0-pgb2->tau_sampling_selection[bin3][index_tau_third]), nu_2, nu_3, &F123);
+                        F2_kernel((l3+0.5)/(tau0-pgb2->tau_sampling_selection[bin1][index_tau_first]), nu_2, nu_1, &F321);
+                        F2_kernel((l2+0.5)/(tau0-pgb2->tau_sampling_selection[bin3][index_tau_third]), nu_1, nu_3, &F132);
+
+                        delta(chi_second-chi_third, &delta123);
+                        delta(chi_second-chi_first, &delta321);
+                        delta(chi_first-chi_third, &delta132);
+
+                        heaviside(z_first-z_third, &heaviside123);
+                        heaviside(z_third-z_first, &heaviside321);
+                        heaviside(z_second-z_third, &heaviside132);
+
+
+                        class_call(primordial_spectrum_at_k(ppm, ppt->index_md_scalars, linear, nu_1, &Pk_1), ppm->error_message, pgb2->error_message);
+                        class_call(primordial_spectrum_at_k(ppm, ppt->index_md_scalars, linear, nu_2, &Pk_2), ppm->error_message, pgb2->error_message);
+                        class_call(primordial_spectrum_at_k(ppm, ppt->index_md_scalars, linear, nu_3, &Pk_3), ppm->error_message, pgb2->error_message);
+
+
+
+                        part123 = -24.
+                                  *(1.-5.*pgb2->s[bin1][index_tau_first]/2.)
+                                  *heaviside123
+                                  *(chi_first-chi_third)
+                                  /chi_first
+                                  /chi_third
+                                  *pvecback_tau_third[pba->index_bg_H]
+                                  *pvecback_tau_third[pba->index_bg_H]
+                                  *pvecback_tau_third[pba->index_bg_a]
+                                  *pvecback_tau_third[pba->index_bg_a]
+                                  *pvecback_tau_third[pba->index_bg_Omega_m]
+                                  *delta123
+                                  /chi_third
+                                  /chi_third
+                                  *Pk_2
+                                  *Pk_3
+                                  *(2*_PI_*_PI_)                /* These 6 lines are for the Conversion of Pk*Pk */
+                                  *(2*_PI_*_PI_)
+                                  /nu_2
+                                  /nu_2
+                                  /nu_2
+                                  /nu_3
+                                  /nu_3
+                                  /nu_3
+                                  *T_nu2_interp
+                                  *T_nu2_interp
+                                  *T_nu3_interp
+                                  *T_nu3_interp
+                                  *l1
+                                  *(l1+1)
+                                  /(2*l1+1)
+                                  /(2*l1+1)
+                                  *F123;
+
+                        part321 = -24.
+                                  *(1.-5.*pgb2->s[bin3][index_tau_third]/2.)
+                                  *heaviside321
+                                  *(chi_third-chi_first)
+                                  /chi_first
+                                  /chi_third
+                                  *pvecback_tau_first[pba->index_bg_H]
+                                  *pvecback_tau_first[pba->index_bg_H]
+                                  *pvecback_tau_first[pba->index_bg_a]
+                                  *pvecback_tau_first[pba->index_bg_a]
+                                  *pvecback_tau_first[pba->index_bg_Omega_m]
+                                  *delta321
+                                  /chi_first
+                                  /chi_first
+                                  *Pk_2
+                                  *Pk_1
+                                  *(2*_PI_*_PI_)
+                                  *(2*_PI_*_PI_)
+                                  /nu_2
+                                  /nu_2
+                                  /nu_2
+                                  /nu_1
+                                  /nu_1
+                                  /nu_1
+                                  *T_nu2_interp
+                                  *T_nu2_interp
+                                  *T_nu1_interp
+                                  *T_nu1_interp
+                                  *l3
+                                  *(l3+1)
+                                  /(2*l3+1)
+                                  /(2*l3+1)
+                                  *F321;
+
+                        part132 = -24.
+                                  *(1.-5.*pgb2->s[bin2][index_tau_second]/2.)
+                                  *heaviside132
+                                  *(chi_second-chi_third)
+                                  /chi_second
+                                  /chi_third
+                                  *pvecback_tau_third[pba->index_bg_H]
+                                  *pvecback_tau_third[pba->index_bg_H]
+                                  *pvecback_tau_third[pba->index_bg_a]
+                                  *pvecback_tau_third[pba->index_bg_a]
+                                  *pvecback_tau_third[pba->index_bg_Omega_m]
+                                  *delta123
+                                  /chi_third
+                                  /chi_third
+                                  *Pk_1
+                                  *Pk_3
+                                  *(2*_PI_*_PI_)
+                                  *(2*_PI_*_PI_)
+                                  /nu_1
+                                  /nu_1
+                                  /nu_1
+                                  /nu_3
+                                  /nu_3
+                                  /nu_3
+                                  *T_nu1_interp
+                                  *T_nu1_interp
+                                  *T_nu3_interp
+                                  *T_nu3_interp
+                                  *l2
+                                  *(l2+1)
+                                  /(2*l2+1)
+                                  /(2*l2+1)
+                                  *F132;
+
+
+                        bisp_so_lens = part123+part132+part321;
+
+
+                        //pgb2->redbi[pgb2->index_bisp_so_lens][index_l_first-index_l_first_min][index_l_second-index_l_second_min][index_l_third-index_l_third_min][bin1*pgb2->tau_size_selection+index_tau_first-pgb2->index_tau_bin1_start]
+                          //       [bin2*pgb2->tau_size_selection+index_tau_second-pgb2->index_tau_bin2_start][bin3*pgb2->tau_size_selection+index_tau_third] = bisp_so_lens;
+                        fprintf(f, "%d        %d        %d        %g        %g\n", ptr->l[index_l_first], ptr->l[index_l_second], ptr->l[index_l_third], z_third, bisp_so_lens);
+                      } // end of tau_first
+                    } //end_of_tau_second
+                  } //end of tau_third
+                } // end of index_l_first
+              } // end of index_l_second
+            } // end of index_l_third
+          } // end of bin1
+        } //end of bin2
+      } //end of bin3
+    } //end of flag
 
 
     /* We now compute the observed bispectrum contribution from the non-separable bispectra terms. The obs. bisp. for the separable

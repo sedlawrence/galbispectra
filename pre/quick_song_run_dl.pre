@@ -18,7 +18,7 @@ l_logstep = 3.2
 #l_logstep = 1.02
 #l_logstep = 1.25
 #l_logstep = 1.1
-#l_logstep = 1.2
+#l_logstep = 1.3
 l_linstep = 50
 
 
