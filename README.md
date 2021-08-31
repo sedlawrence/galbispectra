@@ -31,10 +31,6 @@ http://fy.chalmers.se/subatom/wigxjpf/
 	INCLUDES = -I../include -I../$(CLASS_DIR)/include -I/<YOUR-PATH-TO>/wigxjpf-1.11/inc/
 	LDFLAGS = -lm -lwigxjpf
 
-	#CFLAGS += -I../wig6j_lib/inc/
-	#LDFLAGS += -L/<YOUR-PATH-TO>/wigxjpf-1.11/lib
-	#LDLIBS += -lwigxjpf -lm
-
 	CFLAGS += -I/<YOUR-PATH-TO>/wigxjpf-1.11/inc/
 	LDFLAGS += -L/<YOUR-PATH-TO>/wigxjpf-1.11/lib/
 	
@@ -43,7 +39,7 @@ http://fy.chalmers.se/subatom/wigxjpf/
     make song
     ./song explanatory_template.ini pre/quick_song_run.pre
 	
-    I have been working with gcc --version gcc (GCC) 10.2.1 20200804 (Red Hat 10.2.1-2)
+    I have been working with the compiler gcc --version gcc (GCC) 10.2.1 20200804 (Red Hat 10.2.1-2)
 
 ## MAC SUPPORT
 
