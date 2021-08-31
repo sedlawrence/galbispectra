@@ -6,7 +6,7 @@ SONG is a second-order Boltzmann code which computes the non-linear evolution of
 
 More precisely, SONG (Second Order Non-Gaussianity) is a second-order Boltzmann code, as it solves the Einstein and Boltzmann equations up to second order in the cosmological perturbations; the physics, mathematics and numerics of SONG are described extensively in G. Pettinari's publicly available [PhD thesis][10], especially in Chapters 5 and 6.
 
-The main additions with respect to galbispectra are modifications or the addition of the following files
+The main additions with respect to SONG are modifications or the addition of the following files
 
 - galbispectra2.c
 - galbispectra2.h
